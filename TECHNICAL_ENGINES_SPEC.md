@@ -130,6 +130,7 @@ interface ConceptNode {
   prerequisites: string[];            // Danh sách node cha bắt buộc phải XANH trước đó
   status: "GRAY" | "YELLOW" | "RED" | "GREEN"; // Trạng thái màu hiện tại (Mặc định: GRAY)
   retry_count: number;                // Số lần giải thích chưa đạt tại node này (0 -> 3)
+  scaffold_level: 1 | 2 | 3;          // Bậc thang giàn giáo nhận thức hiện tại (Khởi tạo: 1)
 
   // B. Thước đo Sư phạm (Nạp vào Prompt để AI thẩm định)
   pedagogical_spec: {
@@ -240,89 +241,240 @@ interface DiagnosticReport {
 ### Câu 5: Kiến trúc Tối ưu hóa Hội thoại - $O(1)$ Token Economics
 
 #### 1. Cấu trúc Payload gửi lên Gemini Flash
-Payload được chia thành 3 khối phân tách nhiệm vụ rõ ràng:
-- **Khối 1: Persona & Cột mốc (Pinned Core - Cố định suốt 1 Node):** Gửi qua `system_instruction`. Định hình vai diễn người bạn học / đứa trẻ tò mò và mục tiêu khái niệm cần nắm.
-- **Khối 2: Mật Lệnh Đạo Diễn (Dynamic Directives):** Đặt đầu mảng `contents`, bọc trong thẻ XML `<DEVELOPER_DIRECTIVE>` để phân tách ranh giới với lời của người dùng và chống rò rỉ prompt.
-- **Khối 3: Cửa sổ Cuốn chiếu (Rolling Window):** Kích thước cố định $N = 2$ lượt hội thoại gần nhất (tối đa 4 messages: 2 của User, 2 của AI). Tin nhắn cũ hơn sẽ bị pop ra khỏi hàng đợi.
+Một Request gửi đi được chia thành 3 khối phân tách nhiệm vụ rõ ràng:
+- **Khối 1: Persona & Cột mốc (Pinned Core - Cố định suốt 1 Node):**
+  - Gửi qua trường `system_instruction` của API.
+  - **Nhiệm vụ:** Định hình nhân vật (Trẻ 10 tuổi ngơ ngác, tò mò) và Mục tiêu sư phạm (VD: *"Mục tiêu: Hiểu con trỏ lưu trữ địa chỉ"*). AI bắt buộc đối chiếu mọi câu nói của người dùng với mục tiêu này.
+  - **Quy tắc giải thích thực hành/code:** Nếu người dùng không thể ví von bằng đồ vật đời thường, nhưng họ nêu đúng cách gõ code, thao tác thực hành, hoặc cách ứng dụng chạy thực tế, hãy chấp nhận đó là một sự giải thích **ĐÚNG**. Đánh `is_valid: true` và bám vào chính thao tác đó để hỏi ngược lại bản chất.
+- **Khối 2: Mật Lệnh Đạo Diễn & Điểm neo Ẩn dụ (Dynamic Directives):**
+  - Nằm ngay đầu mảng `contents` ở lượt gọi hiện tại.
+  - Toàn bộ lệnh điều hướng (từ Backend) và hình ảnh ví von cũ được bọc trong thẻ XML `<DEVELOPER_DIRECTIVE>` để AI không bị "ảo giác" đọc nhầm thành lời người dùng.
+  - **Định dạng chuẩn:** `<DEVELOPER_DIRECTIVE> Lệnh: Bám sát ẩn dụ 'Hộp nhựa'. Ép người dùng giải thích tiếp. </DEVELOPER_DIRECTIVE>`
+- **Khối 3: Cửa sổ Cuốn chiếu (Rolling Window - Đẩy lùi liên tục):**
+  - Kích thước chốt hạ là $N = 2$ lượt hội thoại gần nhất (Tối đa 4 tin nhắn: 2 của User, 2 của AI). Khi tin nhắn thứ 5 xuất hiện, tin nhắn số 1 sẽ bị "pop" (xóa bỏ) khỏi mảng.
+  - **⚠️ LƯU Ý BẮT BUỘC (Chống ô nhiễm lịch sử):** Trước khi Backend lưu câu nói của người dùng vào mảng lịch sử (để chuẩn bị cho lượt cuốn chiếu sau), Backend **BẮT BUỘC PHẢI CẮT BỎ** đoạn thẻ `<DEVELOPER_DIRECTIVE>` ra khỏi tin nhắn. Mảng lịch sử chỉ được phép chứa lời nói thuần túy của con người.
 
-#### 2. Hợp đồng Đầu ra JSON (Single-Pass Output)
+#### 2. Hợp đồng Đầu ra JSON (Single-Pass Output Contract)
+Hệ thống sử dụng Single-Pass Prompting. LLM không trả về chuỗi văn bản thông thường mà bắt buộc trả về định dạng JSON theo đúng Schema sau để Backend điều khiển State Machine:
+
 ```json
 {
-  "is_valid": true,
-  "extracted_jargon_or_error": "",
-  "extracted_metaphor": "Hộp nhựa",
-  "ai_chat_response": "Anh ơi vậy cái hộp nhựa đó chứa được cái gì ạ?"
+  "is_valid": true,                // true nếu vượt qua thử thách / false nếu dùng từ chuyên ngành hoặc sai bản chất
+  "user_surrendered": false,       // BẬT TRUE nếu người dùng bảo "Không biết", "Chịu rồi", "Chỉ anh đi" (Để kích hoạt Dừng Khẩn Cấp)
+  "extracted_jargon_or_error": "", // Lọc ra từ khó / lỗi sai để bám vào bắt bẻ ở lượt sau (nếu is_valid = false)
+  "extracted_metaphor": "Hộp nhựa",// Trích xuất ẩn dụ đời thường để Backend lưu trữ bắc cầu
+  "ai_chat_response": "Anh ơi vậy cái hộp nhựa đó chứa được cái gì ạ?" // Lời thoại thuần túy in ra màn hình UI
 }
 ```
 
 #### 3. Tại sao kiến trúc này đạt tối ưu tuyệt đối $O(1)$?
-- **Khống chế kích thước ngữ cảnh:** Không dồn tích lịch sử chat tuyến tính $O(N)$. Dù chat 5 câu hay 50 câu, payload luôn giữ ở mức hằng số xấp xỉ ~150 tokens.
-- **Tối ưu chi phí và độ trễ:** Chi phí chỉ ~0.0001 USD/lượt, thời gian phản hồi cực nhanh (<800ms) tạo cảm giác hội thoại thời gian thực.
-- **Chống trôi ngữ cảnh (Context Drift):** Chủ động cắt tỉa tin nhắn cũ giúp AI luôn bám chặt vào mục tiêu sư phạm của node đang học.
+- **Triệt tiêu sự phình to tuyến tính ($O(N)$ vs $O(1)$):** Trong ứng dụng chat thông thường, số lượng token tăng tuyến tính $O(N)$ theo mỗi câu nói. Nếu trung bình 1 lượt tốn 30 tokens, đến câu 30 hệ thống phải gửi một cục 900 tokens. Với cấu trúc Rolling Window ($N=2$) kết hợp Pinned Core, tổng lượng tokens đầu vào ở câu thứ 3 hay câu thứ 30 luôn bị khóa cứng ở hằng số $\approx 150$ tokens ($O(1)$).
+- **Độ trễ (Latency) thời gian thực:** API của LLM tính tiền và thời gian phản hồi dựa trên số lượng Input Tokens. Việc gông cùm Input Tokens ở mức $\approx 150$ giúp Gemini Flash phản hồi gần như tức thời (dưới 800ms), tạo cảm giác hội thoại real-time.
+- **Ngăn chặn trôi dạt ngữ cảnh (Context Drift):** Khi chat dài, người dùng hay lan man. Việc chủ động "chặt đứt" các câu chat cũ và liên tục ép AI nhìn vào `system_instruction` buộc AI phải tự động "kéo" người dùng quay lại đúng trọng tâm bài học ban đầu.
 
 ---
 
 ### Câu 6: Xử lý Vòng lặp Bắt bẻ khi Vàng/Đỏ (Targeted Re-prompting)
 
-Backend tiêm mật lệnh ẩn bọc trong thẻ XML `<DEVELOPER_DIRECTIVE>` vào trước câu trả lời của người dùng:
+#### 1. Cơ chế lõi (Giật dây sau rèm)
+AI không tự đoán mò lỗi. Ở lượt trước, LLM đã trả về JSON báo cáo lỗi (chứa trường `extracted_jargon_or_error`). Dựa vào trường này, Backend sẽ tiêm một **Mật Lệnh Ẩn** bọc trong thẻ XML `<DEVELOPER_DIRECTIVE>` vào ngay trước câu chat của người dùng ở lượt tiếp theo. Thẻ XML giúp AI phân biệt rạch ròi lệnh hệ thống với lời người dùng, triệt tiêu rủi ro rò rỉ prompt ra màn hình.
 
-1. **Kịch bản Node VÀNG (Lạm dụng từ chuyên môn / Jargon):**
-   ```text
-   <DEVELOPER_DIRECTIVE>
-   LỆNH: Người dùng vừa dùng từ khóa khó hiểu: '{từ_khó}'. Bạn đóng vai người bạn học tò mò, hãy tỏ ra bối rối với từ này. Yêu cầu họ giải thích lại từ '{từ_khó}' bằng cách ví von với [đồ vật / thức ăn / trò chơi quen thuộc]. KHÔNG lặp lại câu hỏi trước đó. Dưới 30 từ.
-   </DEVELOPER_DIRECTIVE>
-   ```
+#### 2. Cấu trúc Mật Lệnh Ẩn theo kịch bản:
+- **Kịch bản Node VÀNG (Lạm dụng từ chuyên môn / Jargon):**
+  - *Điều kiện:* JSON lượt trước trả về có chứa từ khóa hàn lâm / chuyên ngành.
+  - *Mật lệnh tiêm vào Payload:*
+    ```text
+    <DEVELOPER_DIRECTIVE>
+    LỆNH: Người dùng vừa dùng từ khóa khó hiểu: '{từ_khó}'. Bạn đóng vai trẻ 10 tuổi, hãy tỏ ra bối rối với từ này. Yêu cầu họ giải thích lại từ '{từ_khó}' bằng cách ví von với [đồ vật / thức ăn / trò chơi]. KHÔNG lặp lại câu hỏi trước đó. Dưới 30 từ.
+    </DEVELOPER_DIRECTIVE>
+    ```
+  - *Ví dụ AI xuất ra:* *"Ủa anh ơi, 'Cấp phát động' nghe ghê quá, nó có giống lúc mẹ chia kẹo cho mấy anh em không anh?"*
 
-2. **Kịch bản Node ĐỎ (Sai bản chất / Lỗi logic):**
-   ```text
-   <DEVELOPER_DIRECTIVE>
-   LỆNH: Người dùng vừa giải thích sai logic ở điểm: '{lỗi_logic}'. Nhiệm vụ: Tin hoàn toàn vào logic sai đó và đặt một câu hỏi ngoại lệ cực kỳ vô lý để người dùng tự giật mình nhận ra cái sai của họ. Dưới 30 từ.
-   </DEVELOPER_DIRECTIVE>
-   ```
+- **Kịch bản Node ĐỎ (Sai bản chất / Lỗi logic):**
+  - *Điều kiện:* JSON lượt trước trích xuất được logic sai của người dùng.
+  - *Mật lệnh tiêm vào Payload:*
+    ```text
+    <DEVELOPER_DIRECTIVE>
+    LỆNH: Người dùng vừa giải thích sai logic ở điểm: '{lỗi_logic}'. Nhiệm vụ: Tin hoàn toàn vào logic sai đó và đặt một câu hỏi ngoại lệ cực kỳ vô lý để người dùng tự giật mình nhận ra cái sai của họ. Dưới 30 từ.
+    </DEVELOPER_DIRECTIVE>
+    ```
+  - *Ví dụ AI xuất ra:* *"Wow ảo thuật vậy! Nếu anh lột cái nhãn dán vứt đi thì cái hộp đồ cũng tàng hình biến mất luôn hả anh?"*
 
-3. **Cơ chế Chống lặp câu hỏi (Anti-Loop) qua biến `retry_count` (Tối đa 3 lần):**
-   - **Lần 1:** Đòi ví dụ thực tế / bẫy logic vô lý.
-   - **Lần 2:** Gợi ý ngớ ngẩn (Mớm ví dụ cố tình sai để ép người học sửa lưng AI).
-   - **Lần 3:** Chốt Đỏ & Xin chuyển bài ("Phần này rắc rối quá em chả hiểu gì hết, mình học sang phần khác đi anh!").
+#### 3. Cơ chế Chống lặp câu hỏi (Anti-Loop) & Khóa Trạng Thái
+Để tránh việc AI kẹt trong vòng lặp hỏi đi hỏi lại khi người dùng "cứng đầu" giải thích sai liên tục, Backend duy trì biến đếm `retry_count` (tối đa 3 lần) cho mỗi Node:
+- **Lần 1 (Sai):** Backend tiêm lệnh đòi ví dụ thực tế / bẫy logic vô lý (như Kịch bản 1 & 2).
+- **Lần 2 (Vẫn sai):** Kỹ thuật *"Gợi ý ngớ ngẩn"* — AI mớm một ví dụ CỐ TÌNH SAI/NGỚ NGẨN để ép người học phải sửa lưng AI:
+  - *Mật lệnh:* `<DEVELOPER_DIRECTIVE> LỆNH: Người dùng vẫn bế tắc. Hãy mớm một ví dụ CỐ TÌNH SAI/NGỚ NGẨN để ép họ phải sửa lưng bạn. </DEVELOPER_DIRECTIVE>`
+  - *Ví dụ AI xuất ra:* *"Em vẫn không hiểu... 'Cấp phát động' có phải là giống như em tự lấy kéo cắt trụi tóc của em không anh?"* (Buộc người dùng phải đính chính lại để thông tắc tư duy).
+- **Lần 3 (Bế tắc):** Chốt ĐỎ & Xin chuyển bài:
+  - *Mật lệnh:* `<DEVELOPER_DIRECTIVE> LỆNH: Khóa phần này lại. Hãy tỏ ra chán nản, không muốn học phần này nữa và đòi qua khái niệm mới. </DEVELOPER_DIRECTIVE>`
+  - *Ví dụ AI xuất ra:* *"Thôi phần này rắc rối quá em chả hiểu gì hết, não em rối tung rồi, mình học sang phần khác đi anh!"*
 
-4. **Luồng Sư phạm cho Node bị Đỏ (Targeted Retry):**
-   - Feynman là công cụ chẩn đoán, không phải máy mớm đáp án. Cho qua ở lần 3 để giữ nhịp độ chẩn đoán toàn bài. Sau khi hoàn thành, người học xem bản đồ điểm mù và dùng tính năng *"Phục thù lỗ hổng"* để giải thích lại các node Đỏ.
+#### 4. Luồng Sư phạm: Giải quyết Node bị chốt Đỏ (Targeted Retry)
+- **Vì sao cho qua ở Lần 3?** Bản chất Feynman là công cụ **Chẩn đoán**, không phải máy mớm đáp án. Giải thích sai 3 lần nghĩa là hổng kiến thức nghiêm trọng. Cần cho qua để giữ nhịp độ chẩn đoán các node tiếp theo, tránh làm ức chế người học.
+- **Cơ chế phục thù (Targeted Retry):** Sau khi kết thúc phiên học, hệ thống xuất Mindmap báo cáo. Node Đỏ bị khóa cảnh báo. Người dùng đóng app, tự ôn tập lại tài liệu, sau đó mở app và chọn *"Phục thù lỗ hổng (Retry Red Nodes)"*.
+- *Mật lệnh lúc Retry:*
+  ```text
+  <DEVELOPER_DIRECTIVE>
+  LỆNH: Chào lại người dùng. Nhắc lại hôm trước họ giảng phần '{tên_node}' bạn không hiểu, nay hỏi xem họ có ví dụ nào dễ hiểu hơn chưa.
+  </DEVELOPER_DIRECTIVE>
+  ```
 
 ---
 
 ### Câu 7: Kỹ thuật Bắc cầu Chuyển Node (Context Bridging - Metaphor Retention)
 
-Khi chuyển từ Node A sang Node B, Backend tái sử dụng hình ảnh ẩn dụ người dùng đã dùng thành công ở Node A để mớm vào câu hỏi đầu tiên của Node B:
+#### 1. Vấn đề & Giải pháp Cốt lõi
+- **Vấn đề:** Khi chuyển từ khái niệm A sang khái niệm B, nếu AI nói *"Bây giờ mình học sang bài B nhé"*, hội thoại sẽ cụt lủn, máy móc và làm gãy nhịp Feynman (luồng suy nghĩ liên tục).
+- **Giải pháp:** Kỹ thuật **"Lưu giữ Ẩn dụ" (Metaphor Retention)**. Backend tái sử dụng chính hình ảnh ví von mà người dùng vừa dùng thành công ở Node A (`extracted_metaphor`) để mớm thành câu hỏi mở bài cho Node B.
 
-1. **Cấu trúc Mật Lệnh Chuyển Tiếp (Khi Node A XANH):**
-   ```text
-   <DEVELOPER_DIRECTIVE>
-   LỆNH CHUYỂN NODE:
-   Khái niệm vừa học xong: '{node_A}'.
-   Hình ảnh ví von người dùng vừa dùng: '{user_metaphor}'.
-   Khái niệm tiếp theo cần học: '{node_B}'.
-   Nhiệm vụ: Đóng vai người bạn học tò mò. Tỏ ra thích thú vì đã hiểu '{node_A}' qua hình ảnh '{user_metaphor}'. Sau đó, dùng CHÍNH HÌNH ẢNH ĐÓ để đặt một câu hỏi ngây ngô dọn đường cho khái niệm '{node_B}'. Tuyệt đối không tự giải thích '{node_B}'. Dưới 30 từ.
-   </DEVELOPER_DIRECTIVE>
-   ```
+#### 2. Cấu trúc Mật Lệnh Chuyển Tiếp (Transition Prompt)
+Khi Backend ghi nhận Node A đã đổi màu XANH (`is_valid: true`), Backend lưu `extracted_metaphor`, chuyển active node sang Node B, và tiêm Mật lệnh sau:
+```text
+<DEVELOPER_DIRECTIVE>
+LỆNH CHUYỂN NODE:
+Khái niệm vừa học xong: '{node_A}'.
+Hình ảnh ví von người dùng vừa dùng: '{user_metaphor}'.
+Khái niệm tiếp theo cần học: '{node_B}'.
+Nhiệm vụ: Đóng vai trẻ 10 tuổi. Tỏ ra thích thú vì đã hiểu '{node_A}' qua hình ảnh '{user_metaphor}'. Sau đó, dùng CHÍNH HÌNH ẢNH ĐÓ để đặt một câu hỏi ngây ngô dọn đường cho khái niệm '{node_B}'. Tuyệt đối không tự giải thích '{node_B}'. Dưới 30 từ.
+</DEVELOPER_DIRECTIVE>
+```
 
-2. **Cơ chế Dự phòng (Fallback Prompt) khi Node A bị ĐỎ:**
-   ```text
-   <DEVELOPER_DIRECTIVE>
-   LỆNH CHUYỂN NODE (DỰ PHÒNG): Người dùng không thể giải thích khái niệm trước. Đóng vai người bạn học, tỏ ra chán nản với khái niệm cũ và tò mò hỏi sang khái niệm mới: '{node_B}'. Dưới 30 từ.
-   </DEVELOPER_DIRECTIVE>
-   ```
+- **Ví dụ luồng chạy thực tế:**
+  - `node_A`: *"Con trỏ (Pointer)"*
+  - `user_metaphor`: *"Cái nhãn dán dán lên hộp đồ"* (Lấy từ JSON lượt trước)
+  - `node_B`: *"Giải phóng bộ nhớ (Memory Deallocation)"*
+  - **AI xuất ra:** *"À em hiểu rồi, con trỏ chỉ là cái nhãn dán! Nhưng ủa anh ơi, lột cái nhãn dán vứt đi mà anh quên vứt cái hộp đồ, thì rác có chất đầy nhà không anh?"*
+  *(Người học lập tức nương theo câu hỏi cực kỳ logic này để giải thích tiếp về Rò rỉ / Giải phóng bộ nhớ).*
+
+#### 3. Cơ chế Dự phòng (Fallback Mechanism) khi Node A bị ĐỎ
+Nếu Node A bị chốt ĐỎ (người dùng đầu hàng hoặc sai 3 lần), biến `user_metaphor` bị rỗng (`null`). Backend chuyển sang Mật Lệnh Dự Phòng:
+```text
+<DEVELOPER_DIRECTIVE>
+LỆNH CHUYỂN NODE (DỰ PHÒNG): Người dùng không thể giải thích khái niệm trước. Đóng vai trẻ con, tỏ ra chán nản với khái niệm cũ và tò mò hỏi sang khái niệm mới: '{node_B}'. Dưới 30 từ.
+</DEVELOPER_DIRECTIVE>
+```
+- **Ví dụ AI xuất ra:** *"Thôi cái nhãn dán gì đó rắc rối quá, em không hiểu đâu bỏ qua đi. Thế còn cái 'Giải phóng bộ nhớ' là gì vậy anh, nghe như phim siêu nhân giải cứu thế giới vậy?"*
+
+#### 4. Quy chuẩn Bàn giao cho Backend (Trục 1):
+> *"Toàn bộ luồng AI của dự án chạy qua đúng 1 Endpoint duy nhất. Backend không cần parse text, không cần đoán ý. Backend chỉ cần cấu trúc Payload gửi đúng 4 tin nhắn gần nhất (Rolling Window $N=2$). Tùy trạng thái (Bình thường / Bắt bẻ Vàng / Đỏ / Chuyển Node / Dừng khẩn cấp), Backend chọn đúng chuỗi `<DEVELOPER_DIRECTIVE>` tương ứng nhét vào đầu Payload. Gemini Flash luôn nhả về 1 JSON chuẩn Schema để Backend điều hướng FSM và vẽ màu lên UI. Token luôn giữ $O(1)$, luồng chat không bao giờ bị bế tắc hay thoát vai."*
 
 ---
 
-# PHẦN 3: GIẢI PHÁP SƯ PHẠM MỞ RỘNG: GIÀN GIÁO NHẬN THỨC (COGNITIVE SCAFFOLDING)
+# PHẦN 3: BẢN ĐẶC TẢ TÍCH HỢP: CƠ CHẾ GIÀN GIÁO NHẬN THỨC (COGNITIVE SCAFFOLDING) & DỪNG KHẨN CẤP (EARLY TERMINATION)
 
-Để hỗ trợ người mới học không bị bế tắc, hệ thống áp dụng cơ chế Giàn giáo 3 bậc thang trên cùng Đồ thị Tri thức:
+Để giải quyết bài toán người mới học bị "đơ" hay "trắng não" khi đối mặt với kỹ thuật Feynman từ con số 0, hệ thống đưa vào lý thuyết kinh điển: **Vùng phát triển gần nhất (Vygotsky's Zone of Proximal Development - ZPD)** thông qua cơ chế Giàn giáo 3 bậc thang trên cùng Đồ thị Tri thức (DAG):
 
 ```text
 [Bậc 1: Kích hoạt liên tưởng] ──► [Bậc 2: Khớp nối logic] ──► [Bậc 3: Tự chủ giảng giải]
     (Priming / Anchoring)            (Bridging / Gap Fill)              (Full Feynman)
 ```
 
-1. **Bậc 1 - Kích hoạt liên tưởng (Node Xám):** AI chủ động ném ra tình huống đời thường quen thuộc liên quan đến khái niệm để người học phản xạ bằng trực giác thực tế.
-2. **Bậc 2 - Khớp nối logic (Node Vàng):** AI đặt câu hỏi định hướng để người học liên kết phản xạ trực giác với nguyên lý bản chất.
-3. **Bậc 3 - Feynman toàn phần (Node Xanh):** AI yêu cầu người học tự tóm tắt đúc kết cốt lõi vấn đề bằng một câu ngắn gọn để chứng minh đã làm chủ tri thức hoàn toàn.
+### 1. Kịch bản Minh họa 3 Bậc (Ví dụ: Quy luật Cung - Cầu trong Kinh tế)
+- **Bậc 1: Kích hoạt liên tưởng (Priming - Dành cho người chưa biết gì):**
+  - Khi Node ở trạng thái Xám (Chưa khám phá), AI không hỏi định nghĩa lý thuyết mà chủ động ném ra một tình huống đời thường quen thuộc:
+    > *"Anh ơi, chiều qua mưa to em thấy mấy cô bán áo mưa ngoài cổng trường tăng giá gấp đôi mà người ta vẫn buôn nhau mua. Sao bình thường bán có 10 ngàn mà mưa xuống lại bán 20 ngàn vậy anh?"*
+  - *Nhiệm vụ người học:* Rất nhẹ nhàng, phản hồi theo trực giác: *"Vì lúc đó ai cũng cần gấp mà người bán thì ít"*. Người mới trả lời được ngay mà không quá tải nhận thức.
+- **Bậc 2: Khớp nối logic (Bridging - Chuyển Node sang Vàng):**
+  - Từ trực giác đó, AI đặt câu hỏi định hướng để người học liên kết với bản chất lý thuyết:
+    > *"À, vậy nếu tạnh mưa, không ai mua nữa mà vẫn còn 10 người đứng bán thì giá có bị giảm lại không anh? Cái đó trong bài học gọi là gì?"*
+  - Người học nhận ra nguyên lý cân bằng $\to$ Đồ thị chuyển sang màu Vàng (Hiểu mức độ trực giác).
+- **Bậc 3: Feynman toàn phần (Full Mastery - Chốt Node Xanh):**
+  - Chỉ khi người học qua được Bậc 2, AI mới kích hoạt thử thách chốt chặn để chuyển Node sang màu XANH LÁ:
+    > *"Dạ em hiểu rồi! Vậy bây giờ anh tóm lại cho em một câu ngắn gọn: Tại sao giá cả hàng hóa lại tự tăng giảm được mà không cần ai ép buộc?"*
+  - Lúc này, người học đã có sẵn chất liệu từ Bậc 1 và Bậc 2 để tự tổng hợp thành lời nói của mình mà không còn sợ "trắng não".
+
+---
+
+### 2. Hợp đồng Dữ liệu (JSON Output - Đồng nhất toàn hệ thống)
+AI bắt buộc trả về định dạng JSON chuẩn. Backend dùng các cờ này để điều hướng Máy trạng thái (FSM):
+
+```json
+{
+  "is_valid": true,                // true nếu vượt qua Bậc hiện tại, false nếu giải thích sai / dùng từ chuyên ngành
+  "user_surrendered": false,       // BẬT TRUE nếu người dùng bảo "Không biết", "Chịu rồi", "Chỉ anh đi"
+  "extracted_jargon_or_error": "", // Trích xuất Từ khó / Lỗi sai (chỉ lấy nếu is_valid = false)
+  "extracted_metaphor": "Ví dụ về mua bán áo mưa", // Lưu lại ngữ cảnh để dùng cho bậc sau
+  "ai_chat_response": "Câu thoại của đứa trẻ 10 tuổi..."
+}
+```
+
+---
+
+### 3. Logic Máy Trạng Thái tại Backend (Nhiệm vụ của Trục 1)
+Backend quản lý biến `scaffold_level` (khởi tạo = 1) và biến `retry_count` (khởi tạo = 0) cho mỗi Node.
+
+> **⚠️ LƯU Ý TỐI QUAN TRỌNG (Chống ô nhiễm lịch sử):** Trước khi lưu câu chat của User vào mảng lịch sử (Rolling Window), Backend **BẮT BUỘC PHẢI CẮT BỎ** đoạn thẻ `<DEVELOPER_DIRECTIVE>` ra khỏi câu chat. Lịch sử chỉ được chứa lời thoại thuần túy.
+
+**Luồng chạy của Backend sau khi nhận JSON từ AI:**
+1. **Kiểm tra đầu hàng hoặc quá số lần thử:**
+   - Nếu `user_surrendered == true` HOẶC `retry_count == 3` $\to$ Chốt Node màu **ĐỎ**. Kích hoạt kiểm tra **Dừng khẩn cấp** (Xem Mục 5).
+2. **Nếu chưa đạt (`is_valid == false`):**
+   - Giữ nguyên `scaffold_level`.
+   - Tăng `retry_count += 1`.
+   - Tiêm lệnh Bắt bẻ tương ứng (Kịch bản Jargon hoặc Kịch bản Sai logic từ Câu 6).
+3. **Nếu đạt chuẩn (`is_valid == true` - Vượt qua ải):**
+   - Nếu đang ở **Bậc 1** $\to$ Đẩy lên Bậc 2 (`scaffold_level = 2`), đổi trạng thái Node thành **XÁM SÁNG** (đang khám phá).
+   - Nếu đang ở **Bậc 2** $\to$ Đẩy lên Bậc 3 (`scaffold_level = 3`), đổi màu Node thành **VÀNG** (hiểu trực giác).
+   - Nếu đang ở **Bậc 3** $\to$ Hoàn thành Node, đổi màu Node thành **XANH LÁ**, reset `retry_count = 0`, kích hoạt thuật toán duyệt Topo tìm Node tiếp theo.
+
+---
+
+### 4. Bộ Mật Lệnh Tiêm vào Prompt (Nhiệm vụ của Trục 2 - AI)
+Dựa vào biến `scaffold_level` do Backend truyền, hệ thống bọc thẻ `<DEVELOPER_DIRECTIVE>` và tiêm lệnh tương ứng vào đầu Payload (kèm Tiêu chí chấm điểm `is_valid` rõ ràng để AI đánh giá chuẩn xác):
+
+- **Bậc 1: Kích hoạt liên tưởng (Priming - Thả Neo):**
+  ```text
+  <DEVELOPER_DIRECTIVE>
+  LỆNH BẬC 1: Bắt đầu bài học '{tên_node}'. Đóng vai trẻ 10 tuổi. KHÔNG ĐƯỢC hỏi định nghĩa lý thuyết. HÃY NÓI RẰNG bạn vừa nghe ai đó ví von '{tên_node}' giống như một [đồ vật/sự việc đời thường]. Hãy nhờ người dùng giải thích cách hoạt động của CÁI ĐỒ VẬT đó. Dưới 40 từ.
+  [TIÊU CHÍ CHẤM IS_VALID]: Chấm nương tay. Chỉ cần người dùng giải thích đúng logic của đồ vật đời thường đó, hãy trả về is_valid: true.
+  </DEVELOPER_DIRECTIVE>
+  ```
+
+- **Bậc 2: Khớp nối logic (Bridging):**
+  ```text
+  <DEVELOPER_DIRECTIVE>
+  LỆNH BẬC 2: Người dùng đã trả lời đúng trực giác. Dựa vào ví dụ '{extracted_metaphor}', hãy lật ngược tình huống hoặc thay đổi 1 điều kiện để ép người dùng phải suy luận sâu hơn, tiến gần đến bản chất của '{tên_node}'. Dưới 30 từ.
+  [TIÊU CHÍ CHẤM IS_VALID]: Bắt đầu khắt khe. Nếu lạm dụng từ chuyên ngành đao to búa lớn, đánh is_valid: false.
+  </DEVELOPER_DIRECTIVE>
+  ```
+
+- **Bậc 3: Chốt chặn Feynman (Mastery):**
+  ```text
+  <DEVELOPER_DIRECTIVE>
+  LỆNH BẬC 3: Người dùng đã hiểu logic. Hãy tỏ ra khâm phục. Yêu cầu họ tóm tắt lại toàn bộ nguyên lý '{tên_node}' bằng MỘT câu ngắn gọn nhất, không dùng ví dụ nữa để chốt lại bản chất. Dưới 20 từ.
+  [TIÊU CHÍ CHẤM IS_VALID]: Chấm cực kỳ khắt khe. Người dùng phải chốt đúng trọng tâm lý thuyết. Nếu thiếu ý hoặc sai bản chất, đánh is_valid: false.
+  </DEVELOPER_DIRECTIVE>
+  ```
+
+---
+
+### 5. Cơ chế "Dừng khẩn cấp" (Early Termination)
+Xử lý triệt để trường hợp người học hổng kiến thức nền tảng ngay từ đầu: *"Rễ chết thì không thể mọc ngọn"*.
+
+#### 1. Điều kiện kích hoạt tại Backend:
+Khi một Node bị chốt **ĐỎ** (do `user_surrendered == true` hoặc `retry_count == 3`), Backend kiểm tra xem đây có phải là **Node Gốc (Root Node - node có `in-degree == 0` / không có node cha)** hay không:
+- Nếu đúng là Node Gốc bị ĐỎ $\to$ Dừng ngay lập tức luồng tăng Node mới, tiêm Mật Lệnh Dừng Khẩn Cấp cho lượt chat cuối.
+
+#### 2. Mật lệnh Dừng Khẩn Cấp:
+```text
+<DEVELOPER_DIRECTIVE>
+LỆNH DỪNG KHẨN CẤP: Người dùng đã thất bại ở khái niệm nền tảng '{tên_node}'. Đóng vai trẻ 10 tuổi, tỏ ra hụt hẫng. Từ chối học tiếp các phần sau với lý do 'cái móng chưa xây sao xây được nóc nhà'. Khuyên họ đóng app, đi đọc lại sách rồi quay lại sau. Dưới 40 từ.
+</DEVELOPER_DIRECTIVE>
+```
+
+#### 3. Phản ứng trên UI Frontend:
+- **Khóa buồng lái:** Disable toàn bộ khung nhập text (không cho gửi thêm tin nhắn).
+- **Vẽ bản đồ chẩn đoán (Diagnostic Mindmap):** Render Node Gốc màu **ĐỎ**, tất cả các Node con phụ thuộc phía sau giữ nguyên màu **XÁM** (Bị khóa, không được phép mở).
+- **Thông báo sư phạm bôi đỏ cảnh báo:**
+  > *"⚠️ Lỗi Nền Tảng: Phiên chẩn đoán kết thúc sớm do hổng kiến thức cốt lõi tại khái niệm ['{tên_node}']. Vui lòng ôn tập lại tài liệu trước khi tiếp tục."*
+
+---
+
+### 6. Tóm tắt Luồng Tích hợp Tổng thể Toàn Hệ Thống
+1. **Chống "đơ" cho người mới:** AI chủ động mồi tình huống đời thường quen thuộc (**Bậc 1**).
+2. **Chống "học vẹt / lừa AI":** AI ép chốt hạ bản chất lý thuyết bằng một câu tóm tắt đúc kết (**Bậc 3**).
+3. **Chống "bệnh sính chữ":** Trong quá trình leo 3 bậc, hễ dùng từ ngữ chuyên môn hàn lâm là bị bẻ gãy ngay bằng cơ chế Giật dây sau rèm & Anti-loop (**Câu 6**).
+4. **Bảo vệ tính toàn vẹn sư phạm:** Nếu ngay Bậc 1 của Node nền tảng mà người học bỏ cuộc ("Không biết"), hệ thống kích hoạt **Dừng khẩn cấp (Early Termination)** để tránh lãng phí thời gian.
+5. **Độ tin cậy kỹ thuật:** Toàn bộ cơ chế vận hành ngầm trên Backend, cắt bỏ directive chống ô nhiễm lịch sử, duy trì tuyệt đối ngưỡng **$O(1)$ Token** và độ trễ phản hồi dưới 800ms.
+

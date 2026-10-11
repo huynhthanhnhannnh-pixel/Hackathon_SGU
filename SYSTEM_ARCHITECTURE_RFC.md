@@ -80,6 +80,7 @@ User (Nhập 1-2 câu giải thích)
   └── Phân tích ngữ nghĩa trong 1 lần duy nhất (Single-Pass), nhả JSON:
       {
         "is_valid": true / false,
+        "user_surrendered": true / false,
         "extracted_jargon_or_error": "...",
         "extracted_metaphor": "...",
         "ai_chat_response": "..."
