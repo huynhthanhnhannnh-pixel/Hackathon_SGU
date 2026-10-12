@@ -160,6 +160,7 @@ interface ConceptNode {
     "simplicity": 85,
     "analogy_grounding": 30
   },
+  "intent": "EVALUATION", // "EVALUATION" (Trả lời câu hỏi thử thách) | "ELABORATION" (Nói thêm ý, bổ sung ví dụ)
   "misconception_flag": false,
   "detected_jargons": [],
   "extracted_metaphor": "",
@@ -171,7 +172,12 @@ interface ConceptNode {
 Backend (Người số 1) áp dụng bộ luật logic tường minh để quyết định chuyển màu Node:
 
 ```text
-NẾU misconception_flag == true HOẶC core_accuracy < 50:
+NẾU intent == "ELABORATION":
+    --> Giữ nguyên màu VÀNG
+    --> KHÔNG tăng retry_count (Người học đang nói thêm ý, giải thích bổ sung)
+    --> AI tiếp tục lắng nghe và tiếp nhận ngữ cảnh
+
+NGƯỢC LẠI NẾU misconception_flag == true HOẶC core_accuracy < 50:
     --> Gán màu ĐỎ (Sai bản chất nghiêm trọng / Ngụy biện)
     --> Tăng retry_count += 1
     --> Kích hoạt Mật lệnh phản biện logic sai
@@ -254,14 +260,33 @@ Một Request gửi đi được chia thành 3 khối phân tách nhiệm vụ r
   - Kích thước chốt hạ là $N = 2$ lượt hội thoại gần nhất (Tối đa 4 tin nhắn: 2 của User, 2 của AI). Khi tin nhắn thứ 5 xuất hiện, tin nhắn số 1 sẽ bị "pop" (xóa bỏ) khỏi mảng.
   - **⚠️ LƯU Ý BẮT BUỘC (Chống ô nhiễm lịch sử):** Trước khi Backend lưu câu nói của người dùng vào mảng lịch sử (để chuẩn bị cho lượt cuốn chiếu sau), Backend **BẮT BUỘC PHẢI CẮT BỎ** đoạn thẻ `<DEVELOPER_DIRECTIVE>` ra khỏi tin nhắn. Mảng lịch sử chỉ được phép chứa lời nói thuần túy của con người.
 
-#### 2. Hợp đồng Đầu ra JSON (Single-Pass Output Contract)
-Hệ thống sử dụng Single-Pass Prompting. LLM không trả về chuỗi văn bản thông thường mà bắt buộc trả về định dạng JSON theo đúng Schema sau để Backend điều khiển State Machine:
+#### 2. Hợp đồng Đầu ra JSON (Single-Pass Output Contract - Đồng nhất toàn hệ thống)
+Hệ thống sử dụng Single-Pass Prompting. LLM không trả về chuỗi văn bản thông thường mà bắt buộc trả về định dạng JSON theo đúng Schema chuẩn nhất sau đây:
+
+> 📌 **GHI CHÚ LÀM SLIDE (DÀNH CHO TEAM DESIGN/SLIDE):**  
+> Đây là Hợp đồng API trung tâm của toàn dự án. Slide phần Kỹ thuật chỉ cần show khối JSON tinh gọn này để chứng minh: 1 lượt gọi API giải quyết đồng thời cả **Chấm điểm Rubric**, **Bắt lỗi sư phạm (Node vs. Ngoại lề)**, **Trích xuất ẩn dụ** và **Sinh câu thoại đứa trẻ**!
 
 ```json
 {
-  "is_valid": true,                // true nếu vượt qua thử thách / false nếu dùng từ chuyên ngành hoặc sai bản chất
-  "user_surrendered": false,       // BẬT TRUE nếu người dùng bảo "Không biết", "Chịu rồi", "Chỉ anh đi" (Để kích hoạt Dừng Khẩn Cấp)
-  "extracted_jargon_or_error": "", // Lọc ra từ khó / lỗi sai để bám vào bắt bẻ ở lượt sau (nếu is_valid = false)
+  "scores": {
+    "core_accuracy": 85,          // (0-100) Mức độ chính xác so với core_facts của bài
+    "simplicity": 90,             // (0-100) Mức độ bình dân, mộc mạc (càng ít từ hàn lâm càng cao)
+    "analogy_grounding": 75       // (0-100) Mức độ liên hệ ví dụ thực tế / vượt qua câu hỏi bait
+  },
+  "is_valid": true,                // true nếu lượt này đạt chuẩn / false nếu chưa đạt
+  "user_surrendered": false,       // BẬT TRUE nếu người dùng bảo "Không biết", "Chịu rồi" (Kích hoạt Dừng khẩn cấp)
+
+  // Phân loại lỗi chính xác (Không phạt nhầm màu Node chính)
+  "is_node_misconception": false,  // true: Hiểu sai bản chất Node chính -> GÁN ĐỎ
+  "detected_jargons": [],          // Danh sách từ chuyên môn bị phát hiện -> GÁN VÀNG
+  "peripheral_misconception": {    // Lỗi kiến thức phụ ngoài lề (Vd: RAM) -> Ghi nhận báo cáo Màn 3, KHÔNG làm Đỏ Node
+    "has_error": false,
+    "topic": "",
+    "description": ""
+  },
+  "is_off_topic": false,           // true nếu nói nhảm trêu AI -> GÁN VÀNG & Kéo về bài
+
+  // Ngữ cảnh chuyển giao & Lời thoại UI
   "extracted_metaphor": "Hộp nhựa",// Trích xuất ẩn dụ đời thường để Backend lưu trữ bắc cầu
   "ai_chat_response": "Anh ơi vậy cái hộp nhựa đó chứa được cái gì ạ?" // Lời thoại thuần túy in ra màn hình UI
 }
@@ -391,9 +416,21 @@ AI bắt buộc trả về định dạng JSON chuẩn. Backend dùng các cờ 
 
 ```json
 {
+  "scores": {
+    "core_accuracy": 85,          // (0-100) Mức độ chính xác so với core_facts của bài
+    "simplicity": 90,             // (0-100) Mức độ bình dân, mộc mạc
+    "analogy_grounding": 75       // (0-100) Mức độ liên hệ thực tế / vượt qua câu hỏi bait
+  },
   "is_valid": true,                // true nếu vượt qua Bậc hiện tại, false nếu giải thích sai / dùng từ chuyên ngành
-  "user_surrendered": false,       // BẬT TRUE nếu người dùng bảo "Không biết", "Chịu rồi", "Chỉ anh đi"
-  "extracted_jargon_or_error": "", // Trích xuất Từ khó / Lỗi sai (chỉ lấy nếu is_valid = false)
+  "user_surrendered": false,       // BẬT TRUE nếu người dùng bảo "Không biết", "Chịu rồi" (Kích hoạt Dừng khẩn cấp)
+  "is_node_misconception": false,  // true: Hiểu sai bản chất Node chính -> GÁN ĐỎ
+  "detected_jargons": [],          // Danh sách từ khó bị phát hiện -> GÁN VÀNG
+  "peripheral_misconception": {    // Bắt lỗi ngoài lề (Vd: RAM) -> Lưu báo cáo Màn 3, KHÔNG làm Đỏ Node
+    "has_error": false,
+    "topic": "",
+    "description": ""
+  },
+  "is_off_topic": false,           // true nếu nói chuyện phiếm ngoài lề
   "extracted_metaphor": "Ví dụ về mua bán áo mưa", // Lưu lại ngữ cảnh để dùng cho bậc sau
   "ai_chat_response": "Câu thoại của đứa trẻ 10 tuổi..."
 }
@@ -407,13 +444,17 @@ Backend quản lý biến `scaffold_level` (khởi tạo = 1) và biến `retry_
 > **⚠️ LƯU Ý TỐI QUAN TRỌNG (Chống ô nhiễm lịch sử):** Trước khi lưu câu chat của User vào mảng lịch sử (Rolling Window), Backend **BẮT BUỘC PHẢI CẮT BỎ** đoạn thẻ `<DEVELOPER_DIRECTIVE>` ra khỏi câu chat. Lịch sử chỉ được chứa lời thoại thuần túy.
 
 **Luồng chạy của Backend sau khi nhận JSON từ AI:**
-1. **Kiểm tra đầu hàng hoặc quá số lần thử:**
-   - Nếu `user_surrendered == true` HOẶC `retry_count == 3` $\to$ Chốt Node màu **ĐỎ**. Kích hoạt kiểm tra **Dừng khẩn cấp** (Xem Mục 5).
-2. **Nếu chưa đạt (`is_valid == false`):**
+1. **Kiểm tra bổ sung ý (Elaboration):**
+   - Nếu `intent == "ELABORATION"` (Người học nói thêm: *"Khoan để anh nói thêm..."*, gửi thêm ví dụ hoặc tiếp tục mạch giải thích):
+     - Giữ nguyên `scaffold_level` và **KHÔNG TĂNG `retry_count`**.
+     - AI tiếp thu và duy trì trạng thái lắng nghe cởi mở.
+2. **Kiểm tra đầu hàng hoặc quá số lần thử:**
+   - Nếu `user_surrendered == true` (nói "Chịu rồi" hoặc bấm nút "Tạm bỏ qua") HOẶC `retry_count == 3` $\to$ Chốt Node màu **ĐỎ**. Bé Minh tháo ngòi nổ tâm lý nhẹ nhàng (*"Phần này hơi lắt léo, em ghi sổ tay rồi lát anh em mình xem lại sau nha"*). Kích hoạt kiểm tra **Dừng khẩn cấp** (Xem Mục 5).
+3. **Nếu chưa đạt (`is_valid == false` khi trả lời câu hỏi thử thách):**
    - Giữ nguyên `scaffold_level`.
    - Tăng `retry_count += 1`.
    - Tiêm lệnh Bắt bẻ tương ứng (Kịch bản Jargon hoặc Kịch bản Sai logic từ Câu 6).
-3. **Nếu đạt chuẩn (`is_valid == true` - Vượt qua ải):**
+4. **Nếu đạt chuẩn (`is_valid == true` - Vượt qua ải):**
    - Nếu đang ở **Bậc 1** $\to$ Đẩy lên Bậc 2 (`scaffold_level = 2`), đổi trạng thái Node thành **XÁM SÁNG** (đang khám phá).
    - Nếu đang ở **Bậc 2** $\to$ Đẩy lên Bậc 3 (`scaffold_level = 3`), đổi màu Node thành **VÀNG** (hiểu trực giác).
    - Nếu đang ở **Bậc 3** $\to$ Hoàn thành Node, đổi màu Node thành **XANH LÁ**, reset `retry_count = 0`, kích hoạt thuật toán duyệt Topo tìm Node tiếp theo.

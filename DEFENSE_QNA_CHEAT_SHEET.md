@@ -5,19 +5,34 @@ Tài liệu chuẩn bị các luận điểm phản biện kỹ thuật sắc b�
 
 ---
 
-### CÂU HỎI 1: TẠI SAO PHẢI LÀM HỆ THỐNG LAI (HYBRID) MÀ KHÔNG DÙNG THẲNG LLM ĐỂ ĐIỀU KHIỂN TẤT CẢ?
-- **Thách thức từ BGK:** *"Hiện nay các mô hình ngôn ngữ lớn (LLM) rất thông minh, tại sao không prompt để LLM tự quyết định xem người học hiểu bài chưa và tự chuyển bài tiếp theo?"*
+### CÂU HỎI 1: TẠI SAO PHẢI PHÂN CHIA VAI TRÒ GIỮA BACKEND VÀ AI MÀ KHÔNG ĐỂ AI TỰ QUYẾT ĐỊNH MỌI THỨ?
+- **Thách thức từ BGK:** *"Hiện nay các mô hình AI rất thông minh, tại sao không để AI tự quyết định xem người học hiểu bài chưa và tự chuyển bài tiếp theo?"*
 - **Câu trả lời chuẩn kỹ thuật:**
-  > "Nếu để LLM tự điều khiển tiến trình, hệ thống sẽ mắc phải 2 tử huyệt: **Tính bất định (Non-deterministic)** và **Ảo giác sư phạm (Hallucination)**. LLM có thể dễ dãi bỏ qua cho người học hoặc quyết định nhảy cóc các khái niệm tiên quyết mà không theo thứ tự logic khoa học. 
-  > Vì vậy, kiến trúc SGU-Feynman phân định rạch ròi: LLM chỉ làm nhiệm vụ duy nhất là **Thẩm định ngữ nghĩa (Semantic Evaluation)** ở từng lượt nói. Còn toàn bộ lộ trình, điều kiện tiên quyết và việc chuyển trạng thái màu sắc đều do **Thuật toán Đồ thị (Curriculum DAG) và Bộ điều phối trạng thái (FSM) ở Backend** kiểm soát 100% bằng toán học. Điều này bảo đảm tính sư phạm chặt chẽ và nhất quán tuyệt đối."
+  > "Để hệ thống vận hành ổn định và đúng sư phạm, chúng em phân định rõ vai trò của từng thành phần:
+  > - **Mô hình AI:** Đảm nhận việc xử lý ngôn ngữ tự nhiên. Lúc đầu, AI đọc tài liệu do người dùng tải lên để trích xuất và sinh ra cây sơ đồ các node bài học ban đầu (người dùng có thể xem lại và chỉnh sửa theo ý mình). Trong phiên học, AI đọc câu trả lời của người học để đánh giá mức độ hiểu và đưa ra câu hỏi tiếp theo.
+  > - **Backend điều phối:** Lưu trữ tiến độ bài học trên cây sơ đồ và kiểm soát logic chuyển trạng thái (đổi màu node Xám/Vàng/Xanh, mở khóa bài theo đúng thứ tự).
+  > Nếu để AI tự quyết định toàn bộ luồng đi, AI rất dễ bị ảo giác (hallucination), dễ dãi cho qua hoặc tự nhảy cóc bài học mà không theo thứ tự logic sư phạm."
 
 ---
 
-### CÂU HỎI 2: DỰ ÁN TIẾT KIỆM CHI PHÍ NHƯ THẾ NÀO? KHI HÀNG NGHÌN NGƯỜI CHAT CÙNG LÚC THÌ SAO?
-- **Thách thức từ BGK:** *"Mỗi lượt chat đều gọi API mô hình AI thì chi phí có bị phình to khi người dùng trò chuyện dài không?"*
+### CÂU HỎI 2: DỰ ÁN TIẾT KIỆM CHI PHÍ NHƯ THẾ NÀO SO VỚI MÔ HÌNH CHATBOT THÔNG THƯỜNG?
+- **Thách thức từ BGK:** *"Mỗi lượt chat đều gọi API thì chi phí vận hành sẽ như thế nào khi cuộc trò chuyện kéo dài? Hệ thống tiết kiệm chi phí hơn chatbot thông thường ở điểm nào?"*
 - **Câu trả lời chuẩn kỹ thuật:**
-  > "Đây chính là điểm đột phá về mặt kiến trúc của đội em, bám sát trực diện tiêu chí **'Tiết kiệm chi phí'** của cuộc thi. Các chatbot thông thường tích lũy toàn bộ lịch sử trò chuyện, khiến số lượng token tăng theo cấp số nhân $O(N)$ — chat càng dài càng tốn tiền và chậm.
-  > SGU-Feynman ứng dụng kiến trúc **$O(1)$ Token Economics**: Chúng em dùng cơ chế *Bộ nhớ ngoài (Memory Externalization)* — toàn bộ trạng thái tiến độ đã được lưu trên Đồ thị DAG ở Backend, do đó mỗi request gửi lên AI chỉ gồm thông số node hiện tại và một Cửa sổ Cuốn chiếu (Rolling Window) đúng 2 lượt chat gần nhất. Token đầu vào luôn bị khóa cứng ở mức ~150 tokens cho mọi câu nói. Chi phí chỉ khoảng **0.0001 USD/lượt** (dưới 3 đồng VNĐ) và phản hồi cực nhanh dưới 800ms."
+  > "Hệ thống tối ưu chi phí dựa trên cách tổ chức dữ liệu thông minh giữa Backend và AI:
+  > 1. **Vấn đề của Chatbot thông thường:** Luôn phải gửi dồn toàn bộ lịch sử trò chuyện cũ vào mỗi câu hỏi mới. Càng trò chuyện dài thì lượng dữ liệu gửi đi càng nặng, làm chi phí API tăng vọt và tốc độ phản hồi ngày càng chậm.
+  > 2. **Giải pháp của SGU-Feynman:** Toàn bộ tiến độ và trạng thái học tập đã được lưu trực tiếp trên cây sơ đồ ở Backend. Nhờ vậy, mỗi lượt trao đổi với AI chỉ cần gửi **tin nhắn gần nhất kết hợp với tiêu chuẩn của khái niệm đang học**.
+  > 3. **Hiệu quả thực tế:** Dữ liệu gửi đi ở mỗi lượt luôn giữ ở mức tinh gọn, không bị phình to theo thời gian. Điều này giúp giảm thiểu đáng kể chi phí gọi API cho mỗi phiên học, đồng thời giữ cho tốc độ phản hồi luôn nhanh chóng và ổn định."
+
+---
+
+### CÂU HỎI 2B: TẠI SAO NÓI ĐÂY LÀ "DẠY HỌC THÔNG MINH" TRONG KHI AI KHÔNG ĐỨNG GIẢNG BÀI?
+- **Thách thức từ BGK:** *"Dạy học thông minh là phải có trợ lý AI đứng giảng bài, giải thích cặn kẽ chứ? Ở đây AI chỉ đóng vai đứa trẻ ngồi nghe thì dạy học thông minh ở chỗ nào?"*
+- **Câu trả lời chuẩn kỹ thuật:**
+  > "Nhiều người lầm tưởng dạy học là phải có một ông thầy hoặc con bot nhồi nhét kiến thức một chiều vào đầu học sinh. Trong Khoa học Giáo dục (Pedagogy & Cognitive Science), đó là lối dạy thụ động tạo ra 'ảo tưởng thành thạo' — nghe thì hiểu nhưng khi thi vấn đáp là ú ớ.
+  > SGU-Feynman ứng dụng mô hình **Học qua Giảng dạy (Protégé Effect / Learning by Teaching)**:
+  > 1. **Dạy thông minh nhất là dạy Tự nhận thức (Metacognition):** Khi ép sinh viên phải giảng lại cho đứa trẻ hiểu, não bộ bị buộc phải tự truy xuất, tái cấu trúc và tự tìm ra lỗ hổng của chính mình.
+  > 2. **AI là 'Giảng viên vô hình' (The Invisible Tutor):** Đứa trẻ ở mặt nổi là người nghe ngây ngô, nhưng phía sau là một **Hệ thống chẩn đoán thích ứng**. Nó không mớm đáp án mà giăng giàn giáo nhận thức 3 bậc (Scaffolding): Bắt bẻ từ chuyên môn, phản biện logic sai và ép người học phải suy nghĩ để tự sửa sai.
+  > 3. **Chẩn đoán điểm mù thời gian thực:** Cây đồ thị DAG chỉ ra chính xác sinh viên bị 'gãy' tư duy ở mắt xích nào (ví dụ: vững Biến nhưng hổng Con trỏ), thay vì chỉ chấm điểm đúng/sai chung chung."
 
 ---
 
