@@ -1,123 +1,144 @@
 # HƯỚNG DẪN THIẾT KẾ GIAO DIỆN & THEME CHO FRONTEND DEVELOPER
-## DỰ ÁN: SGU-FEYNMAN (BUỒNG LÁI NHẬN THỨC - COGNITIVE COCKPIT)
+## DỰ ÁN: SIMPLIFEY / SGU-FEYNMAN (BUỒNG LÁI NHẬN THỨC - COGNITIVE COCKPIT)
 
-Tài liệu này được biên soạn riêng cho thành viên phụ trách **Frontend (Giao diện người dùng)**, bao gồm wireframe bố cục, thư viện tham khảo theme thực tế, bảng mã màu (Design Tokens), thông số component và hiệu ứng chuyển động (Micro-interactions) để xây dựng ứng dụng web hiện đại, mượt mà và gây ấn tượng mạnh với Ban Giám khảo.
+Tài liệu này là quy chuẩn thiết kế chính thức (Single Source of Truth về UI/UX) cho hệ thống **SimpliFey**, được đồng bộ trực tiếp từ bản Prototype chuẩn `Cockpit.html`. Tài liệu bao gồm cấu trúc bố cục, hệ thống mã màu (Design Tokens), đặc tả nhân vật SVG "Bé Minh", cơ chế chuyển đổi góc nhìn kép (Bàn học $\leftrightarrow$ Messenger) và luồng Báo cáo Chẩn đoán.
 
 ---
 
-## 1. SƠ ĐỒ BỐ CỤC GIAO DIỆN (UI LAYOUT WIREFRAME)
+## 1. TRIẾT LÝ THẨM MỸ & LÝ DO CHỌN CLEAN LIGHT MODE
 
-### Bố cục Màn hình chính: Buồng lái chia đôi (Split Cockpit)
+Thay vì sử dụng giao diện nền tối (Dark Mode) truyền thống dễ bị bệt màu và lóa mờ khi trình chiếu trên **máy chiếu hội trường lớn (Hội trường lầu 7 khu E - ĐH Sài Gòn)**, SimpliFey áp dụng ngôn ngữ thiết kế **Clean Modern SaaS Light Mode kết hợp Warm Classroom Pastel**:
+
+1. **Độ tương phản tuyệt đối khi Pitching:** Nền sáng (`#F8FAFC`) giúp các đường nối đồ thị DAG, trạng thái màu sắc của Node (Xám / Vàng / Xanh / Đỏ) và chữ trong bong bóng hội thoại nổi bật sắc nét ở khoảng cách nhìn xa 10–15m.
+2. **Bối cảnh Sư phạm Gần gũi (1-on-1 Virtual Tutoring Desk):** Xóa bỏ cảm giác "bị máy móc tra khảo" bằng không gian phòng học ấm áp có cửa sổ nắng, đồng hồ, mặt bàn gỗ, cuốn vở mở sẵn và nhân vật Bé Minh ngồi giơ tay phát biểu.
+3. **Độ sâu công nghệ (SaaS Tech Depth):** Kết hợp các thành phần công nghệ cao lấy cảm hứng từ **Brilliant.org**, **Duolingo**, **Heptabase** và **Linear** (Thanh đo Jargon HUD thời gian thực, Tô màu từ khóa ngữ nghĩa Semantic Highlighting, Mini Radar Viewport).
+
+---
+
+## 2. SƠ ĐỒ BỐ CỤC GIAO DIỆN (UI LAYOUT WIREFRAME)
+
+### Bố cục Màn hình chính: Buồng lái Chia đôi Tỷ lệ 35% / 65% (Khóa cứng `100vh`)
 
 ```text
-┌──────────────────────────────────────────────────────────────────────────────────────────────┐
-│  [Logo SGU-Feynman]   Chuyên đề: Cung - Cầu Kinh tế học      [ Tiến độ: 3/6 Node (50%) ]   │
-├────────────────────────────────────────┬─────────────────────────────────────────────────────┤
-│  CỘT TRÁI: BẢN ĐỒ TRI THỨC (40%)       │  CỘT PHẢI: VÙNG PHẢN XẠ FEYNMAN (60%)               │
-│  (ReactFlow Interactive Canvas)        │  (Focused Node Interactive Stage)                   │
-│                                        │                                                     │
-│   ┌────────────────┐                   │   ┌─────────────────────────────────────────────┐   │
-│   │ [1] Thị trường │ (XANH LÁ - Xong)  │   │ 👶 BÉ MINH (Tò mò):                         │   │
-│   └───────┬────────┘                   │   │ "Dạ nghe giống sách quá anh ơi! Nhưng ví    │   │
-│           │                            │   │ dụ trời mưa to, trước cổng trường chỉ còn   │   │
-│   ┌───────▼────────┐                   │   │ 1 cái áo mưa mà 10 người giành mua thì giá  │   │
-│   │ [2] Cung - Cầu │ (VÀNG - Đang học) │   │ tăng hay giảm ạ?"                           │   │
-│   └───────┬────────┘ (Viền nhịp thở)   │   └─────────────────────────────────────────────┘   │
-│           │                            │                                                     │
-│   ┌───────▼────────┐                   │   ┌─────────────────────────────────────────────┐   │
-│   │ [3] Giá cân bằng│ (XÁM - Bị khóa)  │   │ 👤 BẠN (Người hướng dẫn):                   │   │
-│   └────────────────┘                   │   │ "Giá tăng gấp đôi vì ai cũng cần gấp mà có  │   │
-│                                        │   │ mỗi 1 cái duy nhất em nhé!"                 │   │
-│                                        │   └─────────────────────────────────────────────┘   │
-│                                        │                                                     │
-│   [🔍 Thu phóng]  [🔄 Căn giữa đồ thị] │   ┌─────────────────────────────────────────────┐   │
-│                                        │   │ ⌨️ [Nhập ví dụ đời thường để giải thích...]  │   │
-│                                        │   │                              [ Gửi / Enter ]│   │
-│                                        │   └─────────────────────────────────────────────┘   │
-└────────────────────────────────────────┴─────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ [SimpliFey] [PROTOTYPE] [Chủ đề: Con trỏ C++]  [Đã hoàn thành: 2/5 ▬▬▬▭▭]        [Kết thúc sớm] │
+├───────────────────────────────────┬──────────────────────────────────────────────────────────────┤
+│ CỘT TRÁI: BẢN ĐỒ DAG (35% Width)  │ CỘT PHẢI: SÂN KHẤU PHÒNG HỌC & MESSENGER (65% Width)         │
+│ (Lưới chấm Radial + ReactFlow)    │ (Khung bo tròn 3xl + Gradient Pastel + View Switcher)        │
+│                                   │                                                              │
+│ [+] ┌──────────────────┐  [Radar] │ [Lớp học 1 kèm 1 · Bé Minh] [Giơ tay] [Jargon: 12%] [💬 Mess]│
+│ [−] │ 📍 Địa chỉ ô nhớ │  [Mini]  │                                                              │
+│ [⛶] │    Làm chủ (Xanh)│          │                    ┌───────────────────────────────────────┐ │
+│     └────────┬─────────┘          │                    │ Thầy/Cô ơi, "địa chỉ ô nhớ" là gì     │ │
+│        ┌─────┴─────┐              │         ✨ ✋      │ vậy ạ? Sao máy tính cần nó?           │ │
+│        ▼           ▼              │      ( ◕ ◡ ◕ )     └───────────────────────────────────────┘ │
+│ ┌─────────────┐ ┌─────────────┐   │     ╭─────────╮                                              │
+│ │ Toán tử (&) │ │ Toán tử (*) │   │  ═══╧══📖══🖊️═╧═══  ┌──────────────────────────────────────┐ │
+│ │ Đang học    │ │ Chưa duyệt  │   │  [Bàn học gỗ ấm]    │ Ví như số nhà của bạn: máy tính cần  │ │
+│ └──────┬──────┘ └──────┬──────┘   │                     │ số nhà để biết đồ cất ở ô nào.       │ │
+│        └───────┬───────┘          │                     └──────────────────────────────────────┘ │
+│                ▼                  │                                  [Đạt] [Gia sư (Bạn)]        │
+│        ┌───────────────┐          ├──────────────────────────────────────────────────────────────┤
+│        │ Stack vs Heap │          │ [🟢 Demo Giảng chuẩn] [🟡 Demo Thuật ngữ] [🔴 Demo Sai logic]│
+│        └───────────────┘          ├──────────────────────────────────────────────────────────────┤
+│                                   │ [📓 Hướng dẫn cho bé Minh bằng ví dụ đời thường... ] [ Gửi ] │
+│ [● Chưa duyệt] [● Làm chủ] [...]  │                                                              │
+└───────────────────────────────────┴──────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. TOP CÁC WEBSITE / APP THỰC TẾ ĐỂ THAM KHẢO THEME & HỌC HỎI
+## 3. BẢNG MÃ MÀU & DESIGN TOKENS (TAILWIND CSS & HEX CODES)
 
-Để làm giao diện đẹp chuẩn quốc tế mà không bị phèn hay thô, bạn Frontend nên ghé thăm và "sao chép" tư duy thiết kế của các trang sau:
+### 3.1. Màu nền & Bề mặt (Surfaces & Backgrounds)
+* **Nền tổng thể (App Body):** `#F8FAFC` (`bg-slate-50`, chữ chính `text-slate-800`)
+* **Nền Cột Trái (DAG Canvas):** `#F8FAFC` phủ lưới chấm bi `bg-[radial-gradient(#CBD5E1_1px,transparent_1px)] [background-size:18px_18px]`
+* **Nền Cột Phải (View 1 - Phòng học 1 kèm 1):** Gradient ấm `bg-gradient-to-b from-indigo-50/50 via-slate-50 to-amber-50/30`, chân tường gỗ `from-amber-100/70 to-amber-100`
+* **Nền Cột Phải (View 2 - Nhật ký Messenger):** Kính mờ `bg-slate-100/95 backdrop-blur-sm`
 
-| Tên Website / Ứng dụng | Lý do nên tham khảo | Đường link trực tiếp |
-| :--- | :--- | :--- |
-| **Linear.app** | **Vua của thiết kế Dark mode hiện đại:** Đường viền mảnh (1px border), hiệu ứng gradient mờ ảo (subtle glow), đổ bóng cao cấp, cảm giác gõ phím cực kỳ nhanh và mượt mà. | [linear.app](https://linear.app/) |
-| **Heptabase** | **Bố cục chia đôi hoàn hảo:** Bên trái là bảng trắng với các node liên kết bằng mũi tên, bên phải là thẻ ghi chú/tương tác. Đúng 100% với mô hình Buồng lái SGU-Feynman! | [heptabase.com](https://heptabase.com/) |
-| **Brilliant.org** | **Học qua tương tác trực quan:** Nổi tiếng với việc chia nhỏ bài học thành các bước ngắn, bắt người học động não thay vì đọc bài giảng chán ngắt. | [brilliant.org](https://brilliant.org/) |
-| **Raycast** | **Độ tinh tế của Typography & Icon:** Khoảng cách lề (padding/margin) cực chuẩn, font chữ sắc nét, phối màu trạng thái (Success, Warning, Danger) rất dịu mắt. | [raycast.com](https://raycast.com/) |
-| **shadcn/ui** | **Thư viện Component chuẩn cho React & Tailwind:** Có sẵn code copy-paste cho nút bấm (Button), Hộp thoại (Dialog/Modal), Thẻ (Card), Khung gõ chữ (Textarea)... | [ui.shadcn.com](https://ui.shadcn.com/) |
-| **Godly.website & Mobbin** | **Kho cảm hứng UI/UX đỉnh cao:** Nơi tổng hợp các giao diện web app đẹp nhất thế giới hiện nay để xem và lấy ý tưởng làm theme. | [godly.website](https://godly.website/) |
+### 3.2. Bảng Quy đổi Trạng thái Node (Đồng bộ Backend FSM $\leftrightarrow$ Frontend UI)
+
+Để đảm bảo không xảy ra xung đột tên biến giữa Backend (`TECHNICAL_ENGINES_SPEC.md`) và giao diện Prototype (`Cockpit.html`), Frontend sử dụng bảng ánh xạ chuẩn sau:
+
+| Mã Backend FSM | Mã Prototype UI | Nhãn Hiển thị | Màu Viền / Icon | Màu Nền Card | Hiệu ứng Thị giác Đặc biệt |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`GRAY`** | `UNVISITED` | Chưa duyệt | `#94A3B8` (Slate) | `#FFFFFF` | Icon nền xám `#F1F5F9`, đường nối nét liền `#CBD5E1` |
+| **`YELLOW` (Active)** | `FOCUS` | Đang phỏng vấn | `#3B82F6` (Blue) | `#FFFFFF` | **Viền xanh phát sáng nhịp thở (`ring` animation)** + Đường nối nét đứt chạy động (`.flow`) |
+| **`YELLOW` (Warn)** | `JARGON_HEAVY` | Lạm dụng thuật ngữ | `#F59E0B` (Amber) | `#FFFBEB` | Hiển thị bộ đếm `thử lại 1/3`, icon vàng `#FEF3C7` |
+| **`GREEN`** | `MASTERED` | Làm chủ | `#10B981` (Emerald)| `#F0FDF4` | Icon xanh ngọc `#D1FAE5`, chữ `#059669` |
+| **`RED`** | `FAILED` | Sai bản chất | `#EF4444` (Rose) | `#FEF2F2` | Icon đỏ `#FEE2E2`, khóa cảnh báo điểm mù |
+
+### 3.3. Bảng màu Tô sáng Ngữ nghĩa (Semantic Highlighting trong Bubble)
+Khi người học gửi câu giải thích, hệ thống tự động quét và bọc thẻ `<span>` tô sáng trực tiếp các từ khóa bên trong bong bóng màu Indigo (`bg-indigo-600`):
+* **Từ khóa Ẩn dụ Đời thường (Metaphors):** `bg-emerald-300/30 text-emerald-100 font-bold px-1 rounded underline decoration-emerald-300`
+* **Từ khóa Thuật ngữ Hàn lâm (Jargons):** `bg-amber-300/30 text-amber-100 font-bold px-1 rounded underline decoration-wavy decoration-amber-300`
+
+### 3.4. Typography (Phông chữ)
+* **Phông chữ giao diện & Hội thoại:** `Inter`, sans-serif (Độ đậm `400`, `500`, `600`, `700`, `800`).
+* **Phông chữ số liệu & Telemetry HUD:** `JetBrains Mono`, monospace (Dùng cho bộ đếm ký tự `0/250`, chỉ số `Jargon Risk: 12%`, `Node 2/5`, và điểm `Feynman Score`).
 
 ---
 
-## 3. BẢNG MÃ MÀU DESIGN TOKENS (TAILWIND CSS & HEX CODES)
+## 4. ĐẶC TẢ CHI TIẾT CÁC COMPONENT CỐT LÕI (COMPONENT SPECS)
 
-Khuyến khích làm theo phong cách **Sleek Modern Dark Mode** (nền tối sang trọng, làm nổi bật màu sắc của các Node trên đồ thị):
+### 4.1. Cột Trái: Bản đồ Tri thức DAG (`DagCanvas.tsx`)
+* **Kích thước Node (`ConceptNode`):** Rộng `164px`, padding `8px 10px`, bo góc `12px` (`rounded-xl`), bóng đổ nổi khối nhẹ. Khi hover tự động nhấc nhẹ lên (`transform: translate(-50%, -52%)`).
+* **Đường nối SVG (`BezierEdge`):**
+  * Các node thường: Đường cong Bézier màu `#CBD5E1`, độ dày `2px`.
+  * Node đang phỏng vấn (`active`): Đổi sang màu `#3B82F6`, độ dày `2.5px`, áp dụng class `.flow` (`stroke-dasharray: 7 7` chạy liên tục về phía node con).
+* **Cụm Điều khiển Nổi (Floating Dock & Radar):**
+  * Góc trên bên trái: 3 nút kính mờ (`w-7 h-7 rounded-lg bg-white/90 backdrop-blur`): Phóng to (`+`), Thu nhỏ (`-`), Vừa màn hình (`⛶`).
+  * Góc trên bên phải: Khung **Mini Radar** (`w-20 h-16`) mô phỏng vị trí tổng thể các chấm node trên đồ thị, có chấm xanh nhấp nháy (`animate-ping`) tại node đang học.
+* **Popover Chẩn đoán Nhanh:** Khi click vào bất kỳ node nào trên đồ thị, hiển thị một hộp thoại nhỏ (`#popover`) giải thích lý do vì sao node đó đạt hoặc bị phạt màu Vàng/Đỏ.
 
-### 3.1. Màu nền & Khung viền (Surfaces & Borders)
-* **Nền chính (Background Body):** `#090D16` (Tailwind: `bg-slate-950`)
-* **Nền khung phụ (Card / Panel):** `#0F172A` (Tailwind: `bg-slate-900`)
-* **Nền khung tương tác (Input / Chat Bubble):** `#1E293B` (Tailwind: `bg-slate-800`)
-* **Đường viền mảnh (Subtle Border):** `#334155` với độ trong suốt 50% (Tailwind: `border-slate-700/50`)
+### 4.2. Cột Phải - View 1: Phòng học 1 kèm 1 & Nhân vật Bé Minh (`ClassroomStage.tsx`)
+Toàn bộ nhân vật Bé Minh và bàn học được dựng bằng **Inline SVG** (`viewBox="0 0 520 440"`), hoạt động 100% offline không phụ thuộc file ảnh ngoài, điều khiển qua thuộc tính `data-e` trên thẻ `<svg>`:
 
-### 3.2. Màu sắc Trạng thái 4 Node (Core Concept State Colors)
-
-| Trạng thái Node | Mã màu Hex | Lớp Tailwind CSS | Hiệu ứng thị giác gợi ý |
+| Mã `data-e` | Trạng thái Backend | Biểu cảm & Cử chỉ Tay SVG | Huy hiệu Trạng thái (`#badge`) |
 | :--- | :--- | :--- | :--- |
-| **Màu Xám (GRAY - Khóa)** | `#64748B` | `bg-slate-800 text-slate-400 border-slate-700` | Mờ nhẹ (opacity 60%), icon ổ khóa nhỏ |
-| **Màu Vàng (YELLOW - Đang học)** | `#F59E0B` | `bg-amber-950/40 text-amber-300 border-amber-500` | **Viền phát sáng (Glow)** + Hiệu ứng nhịp thở (Pulse) |
-| **Màu Xanh lá (GREEN - Thấu suốt)** | `#10B981` | `bg-emerald-950/40 text-emerald-300 border-emerald-500` | Icon tích xanh, phát sáng nhẹ viền |
-| **Màu Đỏ (RED - Hổng kiến thức)** | `#EF4444` | `bg-rose-950/40 text-rose-300 border-rose-500` | Icon cảnh báo, viền đỏ nổi bật |
+| **`C`** | `CURIOUS` (Mặc định) | Đầu nghiêng nhẹ `-2deg`, mắt chớp tự nhiên (`.blink`), **tay phải giơ cao vẫy nhẹ (`.wave`)**, ngôi sao vàng lấp lánh cạnh bàn tay | `Giơ tay hỏi` (`#2563EB`) |
+| **`T`** | `THINKING` (Chờ API) | Đầu nghiêng `6deg`, mắt ngước nhìn lên suy ngẫm, một tay chống cằm, bong bóng 3 chấm tròn nảy liên tục | `Đang suy nghĩ...` (`#64748B`) |
+| **`J`** | `CONFUSED` (Dính Jargon)| Đầu nghiêng `-8deg`, hai mắt xoáy tròn (`.spin`), **tay đưa lên gãi đầu (`.scratch`)**, bong bóng xoắn ốc rối rắm trên đầu | `Ngơ ngác` (`#D97706`) |
+| **`S`** | `SKEPTICAL` (Sai logic) | Lông mày nhíu chặt, mắt hẹp, miệng bĩu, **hai tay khoanh trước ngực** | `Nghi ngờ` (`#DC2626`) |
+| **`H`** | `HAPPY` (Thấu suốt) | Mắt cười cong hình trăng khuyết, miệng cười tươi, **hai tay vỗ tay (`.clap`)**, bóng đèn sáng bừng trên đỉnh đầu | `Thích thú` (`#059669`) |
 
-### 3.3. Typography (Font chữ)
-* **Font chữ chính:** `Inter` hoặc `Outfit` (tải miễn phí từ Google Fonts) – tạo cảm giác hiện đại, công nghệ.
-* **Font hiển thị code / số liệu:** `JetBrains Mono` hoặc `Fira Code`.
+* **Kích thước Bong bóng Hội thoại (Speech Bubbles):**
+  * **Bong bóng Bé Minh (`#minhBubble`):** Nằm ngay cạnh tay giơ (`left-[62%] bottom-[76%]`), rộng tối đa `430px`, nền trắng viền xanh nhạt, cỡ chữ to rõ **`18px` (`font-bold text-slate-800`)**.
+  * **Bong bóng Gia sư (`#userBubble`):** Nằm góc dưới bên phải đối diện (`right-6 bottom-5`), rộng tối đa `390px`, nền `bg-indigo-600 text-white`, cỡ chữ **`16px` (`font-medium leading-relaxed`)**, kèm huy hiệu kết quả chấm ngay bên dưới.
 
----
+### 4.3. Cột Phải - View 2: Nhật ký Phản biện Messenger (`MessengerFeed.tsx`)
+* **Nút chuyển đổi góc nhìn (`#btnToggleView`):** Đặt cố định ở góc trên bên phải của khung phòng học (`💬 Xem dạng Messenger` $\leftrightarrow$ `🏫 Trở lại bàn học`).
+* **Hiệu ứng chuyển cảnh (Cross-fade & Blur Motion):**
+  * Không dùng `display: none` (`hidden`) gây giật cục. Sử dụng 2 lớp CSS `.view-active` (`opacity: 1; scale(1); blur(0px)`) và `.view-inactive` (`opacity: 0; scale(0.96); translateY(12px); blur(4px)`) với `transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1)`.
+* **Cấu trúc Dòng thời gian (Audit Trail):**
+  * Lưu trữ chính xác 100% các lượt hỏi đáp trong mảng `S.history`.
+  * Phân cách rõ từng mắt xích (`MẮT XÍCH: ĐỊA CHỈ Ô NHỚ · LƯỢT 1`).
+  * Hiển thị 3 khối đồng nhất độ rộng (`max-w-[85%]`, cỡ chữ `15px`): (1) Câu hỏi của Bé Minh $\to$ (2) Câu trả lời của Gia sư (kèm Semantic Highlighting và nhãn `ĐẠT BẢN CHẤT` / `DÍNH THUẬT NGỮ` / `SAI LOGIC`) $\to$ (3) Khối phản hồi cảm xúc của Bé Minh được tô màu nền theo kết quả (Xanh ngọc / Vàng hổ phách / Đỏ san hô).
 
-## 4. CHI TIẾT THIẾT KẾ CÁC THÀNH PHẦN (COMPONENT SPECS)
+### 4.4. Thanh HUD Đo lường Nhận thức & Khung Nhập liệu (`TelemetryAndInput.tsx`)
+* **Cognitive Telemetry HUD:** Đặt trên thanh điều hướng của sân khấu, hiển thị thanh ngang `Jargon Risk` nhảy số phần trăm động (Xanh khi $\le 60\%$, chuyển Vàng cam khi $> 60\%$).
+* **Khung nhập liệu kiểu Sổ tay Gia sư:** Có 2 chấm tròn gáy sổ màu vàng hổ phách bên trái, ô input giới hạn `250` ký tự để ép người học diễn đạt súc tích, hỗ trợ nhấn `Enter` để gửi nhanh.
+* **Thanh Nút Demo Nhanh (Cheat Toolbar cho Ban Giám khảo):** 3 nút bấm (`🟢 Giảng chuẩn`, `🟡 Dính thuật ngữ`, `🔴 Sai logic`) giúp người thuyết trình bơm ngay câu trả lời mẫu vào ô chat trong 0.25s khi đứng trên sân khấu.
 
-### 4.1. Custom Node trên ReactFlow (`ConceptNodeComponent.tsx`)
-* **Hình dạng:** Thẻ bo tròn góc (`rounded-xl`), kích thước cố định khoảng `w-56 h-24`.
-* **Cấu trúc bên trong:**
-  * Hàng trên: Icon trạng thái + Số thứ tự bài học (vd: `#1`).
-  * Hàng giữa: Tên khái niệm in đậm (`font-semibold text-sm`).
-  * Hàng dưới: Huy hiệu trạng thái nhỏ (`badge: Đang học / Đã thấu suốt / Chưa mở`).
-* **Đường nối mũi tên (Edge):**
-  * Dùng `SmoothStep` hoặc `BezierEdge` của ReactFlow.
-  * Nếu Node nguồn đã Xanh $\to$ Đường nối sáng màu `stroke-emerald-400`. Nếu chưa $\to$ Đường nét đứt màu xám `stroke-slate-600 stroke-dasharray-4`.
-
-### 4.2. Avatar Biểu Cảm Động của "Bé Minh" (`PersonaAvatar.tsx`)
-Dùng 1 component SVG đổi icon / màu mắt theo biến `emotion` trả về từ Backend:
-* `CURIOSITY` (Tò mò): Mắt mở to tròn, đầu hơi nghiêng.
-* `CONFUSED` (Ngơ ngác / Hỏi vặn): Lông mày nhíu lại, tay gãi đầu nhẹ.
-* `DELIGHT` (Thấu suốt / Vỡ lẽ): Miệng cười tươi, hai mắt hình trăng khuyết, có hiệu ứng sao lấp lánh nhẹ.
-
-### 4.3. Khung Chat Feynman (`FeynmanChatStage.tsx`)
-* **Không làm scroll vô tận:** Khi chuyển sang node mới, khung chat làm hiệu ứng chuyển cảnh mượt mà (Fade transition) để báo hiệu người học đã bước sang một chặng mới.
-* **Bong bóng tin nhắn của AI:** Đặt bên trái, viền màu tím nhạt/indigo (`border-indigo-500/30`), có gắn huy hiệu "Bé Minh".
-* **Bong bóng tin nhắn của Người dùng:** Đặt bên phải, nền xanh ngọc đậm (`bg-emerald-900/30`), viền xanh ngọc.
-* **Khung gõ chữ (Input Box):**
-  * Tự động giãn dòng (Auto-resize textarea).
-  * Phím tắt tiện lợi: `Enter` để gửi, `Shift + Enter` để xuống dòng.
-  * Nút "Gửi giải thích" có hiệu ứng phát sáng nhẹ khi ô nhập đã có chữ.
-
-### 4.4. Modal Chẩn đoán Nhận thức Cuối phiên (`DiagnosticReportModal.tsx`)
-* Xuất hiện dưới dạng popup chiếm 80% màn hình với nền làm mờ (Backdrop blur).
-* Gồm 2 phần:
-  1. **Tóm tắt kết quả:** Số lượng Node Xanh / Đỏ / Vàng + Thời gian hoàn thành (vd: `11 phút 45 giây`).
-  2. **Bản đồ điểm mù:** Liệt kê các lỗi sai bản chất hoặc kiến thức phụ bị nhầm lẫn kèm khuyến nghị cụ thể để người học tự tin đi thi vấn đáp.
-  3. **Nút Export:** Cho phép xuất ảnh PNG hoặc sao chép bản tóm tắt nhanh.
+### 4.5. Modal Báo cáo Chẩn đoán & Luồng Phục thù (`DiagnosticReportModal.tsx`)
+Khi hoàn thành 100% đồ thị, bấm "Kết thúc sớm", hoặc bị **Dừng khẩn cấp (Early Termination)** do hỏng Root Node, hệ thống bật Modal Báo cáo Màn 3:
+* **Biểu đồ Vòng tròn SVG (`Feynman Score`):** Vòng tròn tiến độ `stroke-dasharray="314"` chạy animation mượt mà hiển thị điểm số tổng kết trên thang 100.
+* **Bảng Phân tách 2 Cột:**
+  * Bên trái: **Mắt xích vững chắc** (Danh sách các node Xanh lá).
+  * Bên phải: **Điểm mù nhận thức** (Danh sách các node Vàng/Đỏ kèm nguyên nhân chi tiết từ `diagnostic_reason` và lỗi kiến thức phụ `peripheral_misconception`).
+* **3 Nút Hành động ở Chân Modal (Closure Actions):**
+  1. `🏠 Về trang chủ`: Reset phiên và quay lại màn hình chọn bài học.
+  2. `📥 Lưu báo cáo (PDF/JSON)`: Kết xuất báo cáo trực tiếp tại trình duyệt (Client-side `window.print()` hoặc tải file `.json` 0đ chi phí server).
+  3. `🎯 Phục thù lỗ hổng (N)`: Chỉ xuất hiện khi có Node Đỏ (`misconceptionNodes.length > 0`). Khi bấm vào, đưa buồng lái về **Chế độ Phục thù** (làm mờ các node Xanh, chỉ khóa mục tiêu vào các node Đỏ để gỡ điểm).
 
 ---
 
-## 5. CHECKLIST TRẢI NGHIỆM CHO FRONTEND (FE POLISH CHECKLIST)
+## 5. CHECKLIST BÀN GIAO CHO FRONTEND KHI RÁP CODE THẬT
 
-- [ ] Cài đặt sẵn `@xyflow/react` (ReactFlow v12) và `lucide-react` (Bộ icon hiện đại).
-- [ ] Bật `backdrop-blur-md` cho thanh Header và các thanh công cụ nổi để tạo cảm giác kính mờ (Glassmorphism).
-- [ ] Thêm hiệu ứng chuyển màu mềm mại bằng CSS `transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)`.
-- [ ] Tạo cảm giác gõ phím nhanh: Disable nút gửi và hiện icon loading xoay tròn khi đang chờ API phản hồi.
+- [ ] **Giữ nguyên bộ SVG trong `Cockpit.html`:** Copy nguyên vẹn hàm `avatarSVG()` và các class animation (`.wave`, `.scratch`, `.clap`, `.spin`, `.blink`) từ file `Cockpit.html` sang component `PersonaAvatar.tsx`.
+- [ ] **Ánh xạ dữ liệu API:** Khi nhận gói tin `AIEvaluationResponse` từ Backend FastAPI, cập nhật đồng thời:
+  - Màu sắc của Node trên DAG Canvas.
+  - Biểu cảm của Bé Minh (`data-e`).
+  - Mảng lịch sử `history` trong Zustand Store để View Messenger luôn đồng bộ.
+  - Chỉ số `hudJargonVal` dựa trên điểm `100 - scores.simplicity`.
+- [ ] **Tích hợp âm thanh Web Audio API:** Giữ lại module `AudioFX` (synthesizer thuần bằng code, không cần file mp3) để phát tiếng *pop* khi gửi tin nhắn và tiếng *chime* khi Node chuyển sang màu Xanh lá.

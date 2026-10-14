@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SimpliFey – Feynman Cognitive Workbench</title>
+<!-- Chặn cảnh báo console của Tailwind CDN -->
+<script>(function(){var w=console.warn;console.warn=function(){var m=String(arguments[0]||'');if(m.indexOf('cdn.tailwindcss.com')>-1||m.indexOf('Tailwind CSS')>-1)return;w.apply(console,arguments);};})();</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ===== WARM ACADEMIC ATELIER TOKENS ===== */
+  :root {
+    --act: #0F766E;
+    --paper: #FAF7F2;
+    --border-warm: #E6E0D4;
+    --espresso: #1C1917;
+    --terracotta: #D95D39;
+    --teal: #0F766E;
+  }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: Inter, system-ui, sans-serif;
+    background-color: #FAF7F2;
+    color: #1C1917;
+  }
+  .font-serif { font-family: 'Fraunces', Georgia, serif; }
+  .font-mono { font-family: 'JetBrains Mono', monospace, ui-monospace; }
+
+  /* ===== NODE (Tactile Warm Academic Card) ===== */
+  .node {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 164px;
+    padding: 9px 12px;
+    border-radius: 14px;
+    cursor: pointer;
+    background: #FFFFFF;
+    border: 1.5px solid #E6E0D4;
+    box-shadow: 0 2px 0 #E6E0D4, 0 8px 20px rgba(28, 25, 23, 0.05);
+    transition: all .25s cubic-bezier(.16, 1, .3, 1);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .node:hover {
+    box-shadow: 0 4px 0 #D6CFC2, 0 12px 24px rgba(28, 25, 23, 0.08);
+    transform: translate(-50%, -53%);
+  }
+  .node .ico {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    flex: none;
+    background: #FAF7F2;
+    color: #78716C;
+    transition: all .25s;
+  }
+  .node[data-s=MASTERED] { border-color: #059669; background: #F0FDF4; }
+  .node[data-s=MASTERED] .ico { background: #D1FAE5; color: #047857; }
+  .node[data-s=JARGON_HEAVY] { border-color: #D97706; background: #FFFBEB; }
+  .node[data-s=JARGON_HEAVY] .ico { background: #FEF3C7; color: #B45309; }
+  .node[data-s=FAILED] { border-color: #DC2626; background: #FEF2F2; }
+  .node[data-s=FAILED] .ico { background: #FEE2E2; color: #B91C1C; }
+  
+  /* Node active focus (Deep Botanical Teal) */
+  .node.focus {
+    border-color: #0F766E;
+    box-shadow: 0 2px 0 #0F766E, 0 0 0 4px #CCFBF1, 0 8px 20px rgba(15, 118, 110, 0.22);
+    animation: ring 2.2s ease-in-out infinite;
+  }
+  .node.focus .ico {
+    background: #0F766E;
+    color: #FFFFFF;
+  }
+  @keyframes ring {
+    50% {
+      box-shadow: 0 2px 0 #0F766E, 0 0 0 7px #CCFBF1, 0 8px 22px rgba(15, 118, 110, 0.28);
+    }
+  }
+
+  .flow { stroke-dasharray: 7 7; animation: flow .8s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset: -14; } }
+  .blink { transform-origin: center; transform-box: fill-box; animation: blink 4s infinite; }
+  @keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.1); } }
+  
+  .dots span {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 4px;
+    border-radius: 9px;
+    background: #0F766E;
+    animation: dt 1s infinite;
+  }
+  .dots span:nth-child(2) { animation-delay: .15s; }
+  .dots span:nth-child(3) { animation-delay: .3s; }
+  @keyframes dt {
+    0%, 80%, 100% { opacity: .3; transform: translateY(0); }
+    40% { opacity: 1; transform: translateY(-4px); }
+  }
+
+  .pop { animation: pop .2s ease-out; }
+  @keyframes pop { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+  
+  .seg { transition: all .4s; }
+  .seg.focus { background: var(--act); animation: pulse2 1.4s infinite; }
+  @keyframes pulse2 { 50% { opacity: .45; } }
+  
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid #0F766E; outline-offset: 2px; }
+
+  /* ===== BÉ MINH PORTRAIT GESTURES ===== */
+  .v { display: none; }
+  svg[data-e=C] .v.C, svg[data-e=T] .v.T, svg[data-e=J] .v.J, svg[data-e=S] .v.S, svg[data-e=H] .v.H { display: inline; }
+  #head, #char { transform-box: view-box; }
+  #head { transform-origin: 230px 250px; transition: transform .35s; }
+  svg[data-e=C] #head { transform: rotate(-2deg); }
+  svg[data-e=T] #head { transform: rotate(6deg) translateY(-2px); }
+  svg[data-e=J] #head { transform: rotate(-8deg); }
+  svg[data-e=S] #head { transform: rotate(3deg); }
+  svg[data-e=H] #head { transform: translateY(-3px); }
+  .spin { transform-box: fill-box; transform-origin: center; animation: spin 1.2s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .scratch { animation: scratch .4s ease-in-out infinite alternate; }
+  @keyframes scratch { to { transform: translate(-6px, 4px); } }
+  .twinkle { transform-box: fill-box; transform-origin: center; animation: tw 1s ease-in-out infinite; }
+  @keyframes tw { 50% { transform: scale(1.35); opacity: .55; } }
+  .wave { transform-box: view-box; transform-origin: 336px 160px; animation: wave .9s ease-in-out infinite alternate; }
+  @keyframes wave { from { transform: rotate(-9deg); } to { transform: rotate(9deg); } }
+  .clap { transform-box: view-box; transform-origin: 230px 300px; animation: clap .4s ease-in-out infinite alternate; }
+  @keyframes clap { to { transform: scaleX(.9); } }
+
+  /* Scrollbar cho Live Diagnostic Stream */
+  #diagnosticStream::-webkit-scrollbar { width: 6px; }
+  #diagnosticStream::-webkit-scrollbar-track { background: transparent; }
+  #diagnosticStream::-webkit-scrollbar-thumb { background: #D6CFC2; border-radius: 10px; }
+  #diagnosticStream::-webkit-scrollbar-thumb:hover { background: #B8B0A2; }
+</style>
+</head>
+<body class="bg-[#FAF7F2] text-[#1C1917] antialiased select-none">
+
+<!-- ===== HEADER (60px) WARM ACADEMIC ATELIER ===== -->
+<header class="h-[60px] px-5 flex items-center gap-5 border-b border-[#E6E0D4] bg-[#FFFFFF] shadow-[0_1px_3px_rgba(28,25,23,0.03)] z-30 relative">
+  <div class="flex items-center gap-2.5">
+    <div class="text-xl font-serif font-black tracking-tight bg-gradient-to-r from-[#1C1917] via-[#7C2D12] to-[#D95D39] bg-clip-text text-transparent">SimpliFey</div>
+    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#FAF7F2] text-[#D95D39] border border-[#E6E0D4]">COGNITIVE WORKBENCH</span>
+  </div>
+  <div class="text-xs font-semibold px-3 py-1.5 rounded-full bg-[#FAF7F2] border border-[#E6E0D4] text-stone-700 flex items-center gap-1.5">
+    <span class="w-1.5 h-1.5 rounded-full bg-[#0F766E]"></span>
+    <span>Con trỏ trong C++</span>
+  </div>
+  <div class="flex-1 max-w-md">
+    <div class="flex justify-between text-[11px] font-semibold text-stone-500 mb-1.5">
+      <span id="progText">Đã hoàn thành: 0/5 Node</span>
+      <span id="progNow" class="font-mono text-teal-700 font-bold">Node 1/5</span>
+    </div>
+    <div id="segs" class="flex gap-1.5"></div>
+  </div>
+  <button id="btnEnd" class="ml-auto text-xs font-semibold px-3.5 py-2 rounded-xl border border-[#E6E0D4] bg-[#FFFFFF] text-stone-600 hover:bg-[#FAF7F2] hover:text-stone-900 shadow-sm transition">Kết thúc sớm</button>
+</header>
+
+<main class="h-[calc(100vh-60px)] flex">
+  <!-- ===== CỘT TRÁI 35%: DAG CANVAS (MÀU GIẤY KEM ẤM & LƯỚI CÁT) ===== -->
+  <section class="w-[35%] relative border-r border-[#E6E0D4] bg-[#FAF7F2] bg-[radial-gradient(#DCD5C7_1.2px,transparent_1.2px)] [background-size:18px_18px] overflow-hidden">
+    <!-- Floating Dock Controls -->
+    <div class="absolute left-3.5 top-3.5 flex flex-col gap-1.5 z-20">
+      <button id="btnZoomIn" title="Phóng to" class="w-7 h-7 rounded-lg bg-white/90 backdrop-blur border border-[#E6E0D4] shadow-sm flex items-center justify-center text-stone-600 hover:bg-[#FAF7F2] hover:text-stone-900 font-bold text-xs transition active:scale-95">+</button>
+      <button id="btnZoomOut" title="Thu nhỏ" class="w-7 h-7 rounded-lg bg-white/90 backdrop-blur border border-[#E6E0D4] shadow-sm flex items-center justify-center text-stone-600 hover:bg-[#FAF7F2] hover:text-stone-900 font-bold text-xs transition active:scale-95">−</button>
+      <button id="btnFitView" title="Vừa màn hình" class="w-7 h-7 rounded-lg bg-white/90 backdrop-blur border border-[#E6E0D4] shadow-sm flex items-center justify-center text-stone-600 hover:bg-[#FAF7F2] hover:text-stone-900 text-xs transition active:scale-95">⛶</button>
+    </div>
+
+    <!-- Mini Radar Viewport -->
+    <div class="absolute right-3.5 top-3.5 w-20 h-16 rounded-xl bg-white/90 backdrop-blur-md border border-[#E6E0D4] p-1.5 shadow-sm hidden sm:block z-20 pointer-events-none">
+      <div class="text-[8px] font-bold text-stone-400 uppercase tracking-wider mb-0.5">Radar</div>
+      <div class="relative w-full h-[38px] bg-[#FAF7F2] rounded border border-[#E6E0D4] overflow-hidden">
+        <div class="absolute w-1.5 h-1.5 rounded-full bg-teal-600 animate-ping" style="left:50%;top:12%"></div>
+        <div class="absolute w-1.5 h-1.5 rounded-full bg-teal-600" style="left:50%;top:12%"></div>
+        <div class="absolute w-1.5 h-1.5 rounded-full bg-stone-300" style="left:24%;top:32%"></div>
+        <div class="absolute w-1.5 h-1.5 rounded-full bg-stone-300" style="left:76%;top:32%"></div>
+        <div class="absolute w-1.5 h-1.5 rounded-full bg-stone-300" style="left:50%;top:56%"></div>
+        <div class="absolute w-1.5 h-1.5 rounded-full bg-stone-300" style="left:50%;top:82%"></div>
+        <div class="absolute inset-0 border border-teal-500/40 bg-teal-500/5 rounded"></div>
+      </div>
+    </div>
+
+    <div id="canvas" class="absolute inset-0 transition-transform duration-300 origin-center">
+      <svg id="edges" class="absolute inset-0 w-full h-full pointer-events-none"></svg>
+      <div id="nodes"></div>
+      <div id="popover" class="hidden absolute z-30 w-64 pop rounded-2xl border border-[#E6E0D4] bg-[#FFFCF7] p-3.5 shadow-[0_2px_0_#E6E0D4,0_12px_28px_rgba(28,25,23,0.08)]"></div>
+    </div>
+
+    <!-- Chú giải màu -->
+    <div class="absolute left-3 right-3 bottom-3 flex flex-wrap gap-1.5 text-[10px] font-semibold text-stone-600 z-10">
+      <span class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur border border-[#E6E0D4] shadow-sm"><i class="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#A8A29E]"></i>Chưa duyệt</span>
+      <span class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur border border-[#E6E0D4] shadow-sm"><i class="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#059669]"></i>Làm chủ</span>
+      <span class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur border border-[#E6E0D4] shadow-sm"><i class="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#D97706]"></i>Thuật ngữ</span>
+      <span class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur border border-[#E6E0D4] shadow-sm"><i class="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#DC2626]"></i>Sai bản chất</span>
+    </div>
+  </section>
+
+  <!-- ===== CỘT PHẢI 65%: FEYNMAN COGNITIVE WORKBENCH ===== -->
+  <section class="w-[65%] flex flex-col h-full min-h-0 p-4 gap-3 bg-[#FAF7F2] overflow-hidden">
+    
+    <!-- KHU VỰC 1: THANH ĐIỀU PHỐI SƯ PHẠM & GIÀN GIÁO 3 BẬC (~64px) -->
+    <div class="bg-white border border-[#E6E0D4] rounded-2xl px-4 py-2.5 shadow-sm flex items-center justify-between gap-3 shrink-0">
+      <!-- Bên trái: Mắt xích đang học + Ẩn dụ đang neo -->
+      <div class="flex items-center gap-2.5 min-w-0">
+        <span id="qLabel" class="text-xs font-bold text-stone-900 truncate max-w-[170px] bg-stone-100 border border-stone-200 px-2.5 py-1 rounded-lg"></span>
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200/90 text-emerald-800 text-[11px] font-semibold whitespace-nowrap shadow-2xs">
+          <span class="text-emerald-600">⚓</span>
+          <span class="text-stone-500 font-normal">Ẩn dụ đang neo:</span>
+          <span id="anchorMetaphor" class="font-bold text-emerald-900">Chưa có</span>
+        </span>
+      </div>
+
+      <!-- Ở giữa: Thang Giàn Giáo 3 Bậc (3-Step Scaffolding Stepper) -->
+      <div class="hidden lg:flex items-center gap-1.5 text-xs font-semibold shrink-0">
+        <div id="scaffStep1" class="flex items-center gap-1.5 px-3 py-1 rounded-xl transition-all"></div>
+        <span class="text-stone-300 font-mono text-[11px]">→</span>
+        <div id="scaffStep2" class="flex items-center gap-1.5 px-3 py-1 rounded-xl transition-all"></div>
+        <span class="text-stone-300 font-mono text-[11px]">→</span>
+        <div id="scaffStep3" class="flex items-center gap-1.5 px-3 py-1 rounded-xl transition-all"></div>
+      </div>
+
+      <!-- Bên phải: Cụm 3 Điểm Số Rubric Live (Rubric Mini-Pills) -->
+      <div class="flex items-center gap-2 shrink-0">
+        <div class="flex flex-col items-end px-2.5 py-1 rounded-xl bg-stone-50 border border-stone-200 text-[11px] font-mono leading-tight">
+          <span class="text-[9px] font-sans font-medium text-stone-400 uppercase tracking-tight">Độ đúng</span>
+          <span id="rubricAcc" class="font-bold text-stone-400">--%</span>
+        </div>
+        <div class="flex flex-col items-end px-2.5 py-1 rounded-xl bg-stone-50 border border-stone-200 text-[11px] font-mono leading-tight">
+          <span class="text-[9px] font-sans font-medium text-stone-400 uppercase tracking-tight">Bình dị</span>
+          <span id="rubricSim" class="font-bold text-stone-400">--%</span>
+        </div>
+        <div class="flex flex-col items-end px-2.5 py-1 rounded-xl bg-stone-50 border border-stone-200 text-[11px] font-mono leading-tight">
+          <span class="text-[9px] font-sans font-medium text-stone-400 uppercase tracking-tight">Thực tế</span>
+          <span id="rubricAna" class="font-bold text-stone-400">--%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- KHU VỰC 2: THẺ TƯƠNG TÁC TRỌNG TÂM CỦA BÉ MINH (SOCRATIC PROMPT CARD) -->
+    <div class="bg-white border-2 border-[#0F766E]/20 rounded-2xl p-4 shadow-sm flex gap-4 items-center shrink-0 relative overflow-hidden">
+      <!-- Khung Avatar Bé Minh (Bust Portrait Avatar Card) -->
+      <div class="w-28 h-28 shrink-0 rounded-2xl bg-[#F3EFE6] border border-[#E6E0D4] overflow-hidden relative shadow-inner flex items-center justify-center">
+        <div id="avatar" class="w-full h-full"></div>
+        <!-- Badge cảm xúc đính ở góc dưới khung avatar -->
+        <span id="badge" class="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-2xs bg-white/95 backdrop-blur-xs whitespace-nowrap"></span>
+      </div>
+
+      <!-- Nội dung Câu Hỏi & Gợi ý Sư phạm -->
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center justify-between gap-2 mb-1">
+          <div class="flex items-center gap-1.5 text-[11px] font-bold text-teal-800 tracking-wide uppercase">
+            <span class="w-2 h-2 rounded-full bg-teal-600 animate-pulse"></span>
+            <span>👶 BÉ MINH (Học sinh lớp 7 - Đóng vai người nghe Feynman)</span>
+          </div>
+          <span id="scaffoldBadge" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-stone-100 text-stone-600 border border-stone-200 uppercase"></span>
+        </div>
+
+        <!-- Câu hỏi chính -->
+        <div id="question" class="text-[17px] font-bold text-[#1C1917] leading-snug"></div>
+        <!-- 3 chấm suy nghĩ khi đang xử lý -->
+        <div id="thinking" class="hidden dots py-1.5">
+          <span></span><span></span><span></span>
+          <span class="text-xs font-semibold text-teal-800 ml-1.5">Bé Minh đang suy ngẫm lời giải thích của bạn...</span>
+        </div>
+
+        <!-- Thanh neo tiêu chuẩn sư phạm bên dưới câu hỏi -->
+        <div class="text-[11px] text-stone-500 mt-2.5 pt-2 border-t border-stone-100 flex flex-wrap items-center gap-x-5 gap-y-1">
+          <div class="flex items-center gap-1.5">
+            <span class="text-emerald-700 font-bold flex items-center gap-1">🎯 Cần làm rõ:</span>
+            <span id="promptTarget" class="font-medium text-stone-800"></span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-amber-700 font-bold flex items-center gap-1">🚫 Kỵ từ chuyên môn:</span>
+            <span id="promptTaboo" class="font-mono text-amber-800/90 font-medium"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KHU VỰC 3: LUỒNG NHẬT KÝ PHẢN BIỆN & CHẤM ĐIỂM (LIVE DIAGNOSTIC STREAM) -->
+    <div id="diagnosticStream" class="flex-1 overflow-y-auto min-h-0 space-y-3 pr-1.5"></div>
+
+    <!-- KHU VỰC 4: BẢNG ĐIỀU KHIỂN & NHẬP LIỆU (FEYNMAN INPUT CONSOLE) -->
+    <div class="flex flex-col gap-2 shrink-0 pt-1 border-t border-stone-200/60">
+      <!-- Dòng trên: Quick Actions & Skip Button -->
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2 flex-1 overflow-x-auto py-0.5">
+          <span class="text-[11px] font-mono uppercase tracking-wider text-stone-400 font-bold flex items-center gap-1 shrink-0">
+            <svg class="w-3.5 h-3.5 text-[#D95D39]" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/></svg>
+            Kịch bản mẫu:
+          </span>
+          <button data-demo="ok" class="demo px-2.5 py-1.5 rounded-xl text-xs font-semibold border shadow-2xs hover:-translate-y-0.5 transition bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 flex items-center gap-1.5 shrink-0 active:scale-95">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span>🟢 Giảng chuẩn</span>
+          </button>
+          <button data-demo="jargon" class="demo px-2.5 py-1.5 rounded-xl text-xs font-semibold border shadow-2xs hover:-translate-y-0.5 transition bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100 flex items-center gap-1.5 shrink-0 active:scale-95">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+            <span>🟡 Bẫy thuật ngữ</span>
+          </button>
+          <button data-demo="fail" class="demo px-2.5 py-1.5 rounded-xl text-xs font-semibold border shadow-2xs hover:-translate-y-0.5 transition bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100 flex items-center gap-1.5 shrink-0 active:scale-95">
+            <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+            <span>🔴 Sai logic</span>
+          </button>
+        </div>
+
+        <!-- Nút Tạm bỏ qua / Ôn sau (Theo FSM Sư phạm) -->
+        <button id="btnSkipNode" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-stone-300 bg-white hover:bg-stone-100 text-stone-700 shadow-2xs hover:-translate-y-0.5 transition active:scale-95 flex items-center gap-1.5 shrink-0">
+          <span>🏳️ Tạm bỏ qua / Ôn sau</span>
+        </button>
+      </div>
+
+      <!-- Dòng dưới: Khung nhập liệu + Bộ đếm ký tự + Nút Gửi -->
+      <div class="flex gap-2.5 items-center">
+        <div class="relative flex-1 flex items-center rounded-2xl bg-white border border-[#D6CFC2] shadow-xs focus-within:border-[#0F766E] focus-within:ring-4 focus-within:ring-teal-500/10 transition-all">
+          <div class="flex flex-col gap-1.5 pl-3.5 pr-2.5">
+            <i class="w-2 h-2 rounded-full bg-[#D4A373]"></i>
+            <i class="w-2 h-2 rounded-full bg-[#D4A373]"></i>
+          </div>
+          <input id="input" type="text" maxlength="250" autocomplete="off" placeholder="Hướng dẫn cho bé Minh bằng ví dụ đời thường... (Enter để gửi)" class="flex-1 h-12 bg-transparent pr-16 text-sm text-stone-800 placeholder-stone-400 font-medium outline-none">
+          <span id="counter" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-mono text-stone-400">0/250</span>
+        </div>
+        <button id="btnSend" disabled class="h-12 px-7 rounded-2xl bg-[#D95D39] hover:bg-[#C2410C] text-white font-bold shadow-[0_2px_0_#9A3412] active:translate-y-0.5 disabled:opacity-40 disabled:hover:bg-[#D95D39] disabled:shadow-none transition-all">Gửi</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ===== MODAL XÁC NHẬN KẾT THÚC ===== -->
+<div id="confirmModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-stone-900/40 backdrop-blur-sm p-4">
+  <div class="pop max-w-sm w-full rounded-2xl bg-[#FFFCF7] border border-[#E6E0D4] shadow-[0_2px_0_#E6E0D4,0_16px_36px_rgba(28,25,23,0.12)] p-6">
+    <p class="font-bold text-lg text-stone-800 mb-5">Bạn có muốn dừng phiên học và xem báo cáo ngay bây giờ?</p>
+    <div class="flex gap-3 justify-end">
+      <button id="confirmNo" class="px-4 py-2 rounded-xl border border-[#E6E0D4] text-stone-600 font-semibold hover:bg-[#FAF7F2] transition">Hủy</button>
+      <button id="confirmYes" class="px-4 py-2 rounded-xl bg-[#D95D39] hover:bg-[#C2410C] text-white font-bold shadow-[0_2px_0_#9A3412] active:translate-y-0.5 transition">Xác nhận</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL BÁO CÁO CHẨN ĐOÁN ===== -->
+<div id="reportModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-stone-900/40 backdrop-blur-sm p-4">
+  <div class="pop max-w-3xl w-full max-h-[94vh] overflow-hidden rounded-2xl bg-[#FFFCF7] border border-[#E6E0D4] p-6 shadow-[0_2px_0_#E6E0D4,0_20px_40px_rgba(28,25,23,0.14)]">
+    <div class="flex items-center justify-between mb-4 pb-2 border-b border-[#E6E0D4]">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">🎓</span>
+        <h2 class="text-xl font-serif font-extrabold text-stone-900">Diagnostic Summary Report</h2>
+      </div>
+      <span class="text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-stone-100 text-stone-600 border border-stone-200">FEYNMAN AUDIT</span>
+    </div>
+    
+    <div class="flex gap-5 items-center mb-5 bg-[#FAF7F2] p-4 rounded-xl border border-[#E6E0D4]">
+      <svg viewBox="0 0 120 120" class="w-32 h-32 shrink-0">
+        <circle cx="60" cy="60" r="50" fill="none" stroke="#E6E0D4" stroke-width="12"/>
+        <circle id="ring" cx="60" cy="60" r="50" fill="none" stroke="#0F766E" stroke-width="12" stroke-linecap="round" stroke-dasharray="314" stroke-dashoffset="314" transform="rotate(-90 60 60)" style="transition:stroke-dashoffset 1s"/>
+        <text id="rScore" x="60" y="62" text-anchor="middle" fill="#1C1917" font-size="30" font-weight="800" font-family="'JetBrains Mono',monospace">0</text>
+        <text x="60" y="80" text-anchor="middle" fill="#78716C" font-size="9" font-weight="600">Feynman Score</text>
+      </svg>
+      <div class="flex-1">
+        <div class="text-xs font-semibold text-stone-600 mb-1.5">Hoàn thành đồ thị: <span id="rPct" class="font-mono text-stone-900 font-bold"></span></div>
+        <div id="rBar" class="flex h-3 rounded-full overflow-hidden bg-stone-200 gap-0.5 border border-stone-300/40"></div>
+        <div class="flex flex-wrap gap-3 text-[11px] font-semibold mt-2.5 font-mono" id="rLegend"></div>
+      </div>
+    </div>
+    
+    <div class="grid grid-cols-2 gap-4">
+      <div class="bg-emerald-50/50 rounded-xl p-3.5 border border-emerald-200/80">
+        <h3 class="font-bold text-emerald-800 mb-2 text-sm flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          Mắt xích vững chắc
+        </h3>
+        <ul id="rGood" class="space-y-2 text-xs"></ul>
+      </div>
+      <div class="bg-rose-50/50 rounded-xl p-3.5 border border-rose-200/80">
+        <h3 class="font-bold text-rose-800 mb-2 text-sm flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+          Điểm mù nhận thức
+        </h3>
+        <ul id="rBad" class="space-y-2 text-xs"></ul>
+      </div>
+    </div>
+    
+    <div class="flex justify-end gap-3 mt-5 pt-3 border-t border-[#E6E0D4]">
+      <button id="btnRetry" class="px-5 py-2.5 rounded-xl bg-[#0F766E] hover:bg-[#115E59] text-white font-bold shadow-[0_2px_0_#0D5B55] active:translate-y-0.5 transition">Luyện tập lại</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===================== WEB AUDIO SYNTHESIZER (MICRO SOUNDS) ===================== */
+const AudioFX = {
+  ctx: null,
+  init(){ if(!this.ctx){ this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } },
+  play(type){
+    try {
+      this.init();
+      if(this.ctx.state === 'suspended') this.ctx.resume();
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      const t = this.ctx.currentTime;
+      if(type==='pop'){
+        osc.frequency.setValueAtTime(420, t);
+        osc.frequency.exponentialRampToValueAtTime(800, t + 0.08);
+        gain.gain.setValueAtTime(0.12, t);
+        gain.gain.linearRampToValueAtTime(0.01, t + 0.08);
+        osc.start(t); osc.stop(t + 0.08);
+      } else if(type==='chime'){
+        osc.frequency.setValueAtTime(523.25, t);
+        osc.frequency.setValueAtTime(659.25, t + 0.09);
+        gain.gain.setValueAtTime(0.1, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+        osc.start(t); osc.stop(t + 0.28);
+      }
+    } catch(e){}
+  }
+};
+
+/* ===================== DỮ LIỆU BÀI HỌC VÀ TIÊU CHUẨN SƯ PHẠM ===================== */
+const COLORS = { UNVISITED: '#A8A29E', MASTERED: '#059669', JARGON_HEAVY: '#D97706', FAILED: '#DC2626' };
+const STATUS_VI = { UNVISITED: 'Chưa duyệt', MASTERED: 'Làm chủ', JARGON_HEAVY: 'Lạm dụng thuật ngữ', FAILED: 'Sai bản chất' };
+const STATUS_TXT = { UNVISITED: 'text-stone-500', MASTERED: 'text-emerald-700', JARGON_HEAVY: 'text-amber-700', FAILED: 'text-rose-700' };
+
+const svgI = p => `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const ICONS = [
+ svgI('<path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>'),
+ svgI('<path d="M17 9c0-3-2-5-4.5-5S8 6 8 8.5c0 5 9 5.500 9 10 0 2-1.500 3-3.500 3S9 19.500 9 17M7 12h10"/>'),
+ svgI('<path d="M12 4v16M5 8l14 8M19 8L5 16"/>'),
+ svgI('<path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 17.500l9 5 9-5"/>'),
+ svgI('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>')
+];
+
+const LESSON = [
+ {id:'n1',label:'Địa chỉ ô nhớ',fx:.5,fy:.1,pre:[],
+  tier: 1, tierLabel: 'BẬC 1: TRỰC GIÁC',
+  target: 'Vị trí lưu trữ dữ liệu trong bộ nhớ RAM',
+  taboo: 'hexadecimal, allocation, byte offset...',
+  q:'Thầy/Cô ơi, "địa chỉ ô nhớ" là gì vậy ạ? Sao máy tính cần nó?',
+  retryQ:'Em vẫn chưa rõ. Nếu RAM là một dãy phố thì địa chỉ ô nhớ là gì ạ?',
+  demo:{ok:'Ví như số nhà của bạn: máy tính cần số nhà để biết món đồ được cất ở ô nào trong dãy phố RAM.',
+        jargon:'Là địa chỉ hexadecimal của vùng nhớ sau khi memory allocation ạ.',
+        fail:'Là tên của biến, biến tên gì thì địa chỉ là tên đó.'},
+  why:{ok:'Dùng ẩn dụ số nhà, đúng bản chất: địa chỉ là vị trí, không phải nội dung.',
+       jargon:'Dồn thuật ngữ (hexadecimal, memory allocation) mà không có ví dụ đời thường.',
+       fail:'Nhầm địa chỉ với tên biến; địa chỉ là vị trí trong bộ nhớ.'}},
+ {id:'n2',label:'Toán tử tham chiếu (&)',fx:.24,fy:.32,pre:['n1'],
+  tier: 2, tierLabel: 'BẬC 2: KHỚP NỐI',
+  target: 'Ý nghĩa toán tử & (hỏi số nhà thay vì món đồ bên trong)',
+  taboo: 'address-of operator, lvalue reference, pointer type...',
+  q:'Thầy/Cô ơi, em thấy dấu & trước tên biến lạ lắm. Nó dùng để làm gì ạ?',
+  retryQ:'Hmm, em chưa hiểu. Dấu & hỏi "đồ trong nhà" hay hỏi "số nhà" ạ?',
+  demo:{ok:'Giống hỏi "nhà bạn số mấy?": & cho ta số nhà của biến, chứ không phải đồ bên trong.',
+        jargon:'& là address-of operator trả về lvalue reference tới địa chỉ của object.',
+        fail:'& là phép cộng hai biến lại với nhau để ra kết quả mới.'},
+  why:{ok:'Phân biệt đúng "số nhà" và "đồ trong nhà" bằng ví dụ gần gũi.',
+       jargon:'Dùng "address-of operator", "lvalue reference" mà không giải thích.',
+       fail:'Nhầm & (lấy địa chỉ) với phép cộng/AND.'}},
+ {id:'n3',label:'Toán tử giải tham chiếu (*)',fx:.76,fy:.32,pre:['n1'],
+  tier: 2, tierLabel: 'BẬC 2: KHỚP NỐI',
+  target: 'Ý nghĩa toán tử * (tìm đến địa chỉ để mở cửa lấy đồ)',
+  taboo: 'dereference operator, indirection, pointer...',
+  q:'Có số nhà rồi, vậy dấu * dùng để làm gì ạ?',
+  retryQ:'Em chưa rõ. Cầm tờ giấy ghi số nhà rồi làm gì tiếp ạ?',
+  demo:{ok:'Giống cầm tờ giấy ghi số nhà rồi đi tới đúng nhà, mở cửa lấy món đồ bên trong ra.',
+        jargon:'* là dereference operator truy cập giá trị của pointer thông qua indirection.',
+        fail:'* là nhân hai số với nhau, con trỏ chỉ là phép nhân thôi.'},
+  why:{ok:'Mô tả đúng: đi theo địa chỉ để lấy giá trị bên trong.',
+       jargon:'Lặp lại "dereference", "indirection" nhưng chưa nói được hành động thực tế.',
+       fail:'Nhầm * giải tham chiếu với phép nhân.'}},
+ {id:'n4',label:'Bộ nhớ Stack vs Heap',fx:.5,fy:.56,pre:['n2','n3'],
+  tier: 3, tierLabel: 'BẬC 3: BẢN CHẤT',
+  target: 'Khác biệt vòng đời & dọn dẹp giữa Stack và Heap',
+  taboo: 'cấp phát tĩnh, LIFO, allocator, new...',
+  q:'Stack với Heap khác nhau chỗ nào ạ? Sao cần hai loại vậy?',
+  retryQ:'Em còn rối. Cái nào tự dọn, cái nào mình phải tự dọn ạ?',
+  demo:{ok:'Stack ví như bàn học: gọn, xong bài là tự dọn. Heap như cái kho: rộng, nhưng bạn phải tự dọn.',
+        jargon:'Stack cấp phát tĩnh theo LIFO, heap cấp phát dynamic bởi allocator qua new.',
+        fail:'Stack và Heap giống nhau, chỉ là hai tên gọi khác của RAM.'},
+  why:{ok:'So sánh bàn học/kho thể hiện đúng khác biệt về vòng đời và quyền quản lý.',
+       jargon:'Dùng "cấp phát tĩnh", "LIFO", "allocator" mà không có hình ảnh.',
+       fail:'Cho rằng Stack và Heap là một; bỏ sót khác biệt về quản lý vòng đời.'}},
+ {id:'n5',label:'Giải phóng bộ nhớ (Delete)',fx:.5,fy:.82,pre:['n4'],
+  tier: 3, tierLabel: 'BẬC 3: BẢN CHẤT',
+  target: 'Hậu quả rò rỉ bộ nhớ (leak) nếu quên delete con trỏ',
+  taboo: 'memory leak, dangling allocation, garbage...',
+  q:'Tại sao phải delete con trỏ ạ? Không xóa thì sao?',
+  retryQ:'Em chưa hiểu. Nếu mượn đồ trong kho mà không trả thì chuyện gì xảy ra ạ?',
+  demo:{ok:'Mượn đồ trong kho thì phải trả; không trả thì kho đầy dần và hết chỗ cho người khác.',
+        jargon:'Không delete sẽ gây memory leak do dangling allocation trên heap.',
+        fail:'Không cần xóa con trỏ vì hệ điều hành tự dọn sạch ngay.'},
+  why:{ok:'Ví dụ mượn/trả đồ nêu đúng hậu quả rò rỉ bộ nhớ.',
+       jargon:'"memory leak", "dangling allocation" chưa kèm ví dụ trực quan.',
+       fail:'Sai: HĐH chỉ thu hồi khi chương trình kết thúc, không phải ngay lập tức.'}}
+];
+
+const EMO = { CURIOUS: ['Giơ tay hỏi', '#0F766E'], CONFUSED: ['Ngơ ngác', '#D97706'], SKEPTICAL: ['Nghi ngờ', '#DC2626'], HAPPY: ['Thấu suốt', '#059669'] };
+const VERDICT_EMO = { MASTERED: 'HAPPY', JARGON_HEAVY: 'CONFUSED', FAILED: 'SKEPTICAL' };
+const K = { CURIOUS: 'C', CONFUSED: 'J', SKEPTICAL: 'S', HAPPY: 'H', THINKING: 'T' };
+const $ = id => document.getElementById(id);
+
+/* ===================== TRẠNG THÁI PHIÊN ===================== */
+let S;
+let zoomLevel = 1;
+function initState(){
+  S = {
+    nodes: LESSON.map(n => ({...n, status: 'UNVISITED', color_code: COLORS.UNVISITED, diagnostic_reason: null, retry_count: 0})),
+    cur: 0,
+    history: [],
+    lastUser: null,
+    answered: false,
+    phase: '',
+    busy: false,
+    emotion: 'CURIOUS',
+    question: LESSON[0].q,
+    done: false,
+    anchorMetaphor: 'Chưa có',
+    rubric: { acc: null, sim: null, ana: null }
+  };
+}
+
+/* ===================== METAPHOR RETENTION & HIGHLIGHTING ===================== */
+function extractMetaphor(text){
+  if(!text) return null;
+  const s = text.toLowerCase();
+  if(s.includes('số nhà') || s.includes('dãy phố')) return 'Số nhà (RAM)';
+  if(s.includes('bàn học')) return 'Bàn học (Stack)';
+  if(s.includes('kho') || s.includes('mượn đồ') || s.includes('trả đồ')) return 'Kho đồ (Heap)';
+  if(s.includes('tờ giấy')) return 'Tờ giấy ghi địa chỉ (*)';
+  if(s.includes('đồ trong nhà') || s.includes('món đồ')) return 'Đồ trong nhà (Giá trị)';
+  return null;
+}
+
+function highlightKeywords(text){
+  if(!text) return '';
+  const metaphors = ['số nhà', 'dãy phố', 'bàn học', 'mượn đồ', 'trả đồ', 'kho', 'đồ trong nhà', 'đồ bên trong', 'vị trí', 'tờ giấy ghi', 'hết chỗ'];
+  const jargons = ['hexadecimal', 'memory allocation', 'lvalue reference', 'address-of operator', 'dereference operator', 'indirection', 'allocator', 'dynamic', 'cấp phát tĩnh', 'cấp phát dynamic', 'lifo', 'memory leak', 'dangling allocation'];
+  let res = text;
+  [...jargons].sort((a,b)=>b.length-a.length).forEach(w => {
+    const re = new RegExp(`(${w})`, 'gi');
+    res = res.replace(re, '<span class="bg-amber-400/25 text-amber-200 font-bold px-1 rounded underline decoration-wavy decoration-amber-400">$1</span>');
+  });
+  [...metaphors].sort((a,b)=>b.length-a.length).forEach(w => {
+    const re = new RegExp(`(${w})`, 'gi');
+    res = res.replace(re, '<span class="bg-emerald-400/25 text-emerald-200 font-bold px-1 rounded underline decoration-emerald-400">$1</span>');
+  });
+  return res;
+}
+
+/* ===================== AVATAR BÉ MINH SVG (BUST PORTRAIT - VIEWBOX CHUẨN) ===================== */
+function avatarSVG(){
+  const skin = '#FFD9B8';
+  const sl = d => `<path d="${d}" stroke="#0A4B46" stroke-width="24" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" stroke="#0F766E" stroke-width="18" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const hand = (x,y) => `<circle cx="${x}" cy="${y}" r="10.5" fill="${skin}"/>`;
+  
+  return `<svg viewBox="145 75 230 265" class="w-full h-full" preserveAspectRatio="xMidYMid meet" data-e="C">
+  <defs>
+    <linearGradient id="gVest" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F766E"/>
+      <stop offset="100%" stop-color="#115E59"/>
+    </linearGradient>
+  </defs>
+  <g id="char">
+   <!-- Sơ mi trắng học sinh bên trong gile -->
+   <rect x="166" y="236" width="128" height="122" rx="28" fill="#F8FAFC"/>
+   <!-- Áo gile học sinh màu Xanh Rêu Học Thuật -->
+   <path d="M158 342C158 296 180 266 230 266C280 266 302 296 302 342Z" fill="url(#gVest)"/>
+   <path d="M230 266C280 266 302 296 302 342H276C278 302 262 276 230 270Z" fill="#042F2E" opacity=".25"/>
+   <rect x="216" y="234" width="28" height="40" rx="12" fill="#F5C9A3"/>
+   <!-- Cổ áo sơ mi trắng lịch sự -->
+   <path d="M204 267l26 26 26-26-10-6h-32z" fill="#FFFFFF" stroke="#E6E0D4" stroke-width="1.5"/>
+   <!-- Cà vạt / Nơ Cam Terracotta điểm nhấn thương hiệu -->
+   <path d="M226 288l4 30 8-30-6-3z" fill="#EA580C"/>
+   <circle cx="230" cy="288" r="4.5" fill="#D95D39"/>
+   <!-- Huy hiệu trường học thêu trên ngực áo -->
+   <circle cx="266" cy="304" r="5" fill="#EA580C"/>
+   <circle cx="266" cy="304" r="2.5" fill="#FED7AA"/>
+
+   <g id="head">
+    <circle cx="187" cy="194" r="8" fill="#F5C9A3"/><circle cx="273" cy="194" r="8" fill="#F5C9A3"/>
+    <ellipse cx="230" cy="190" rx="43" ry="45" fill="${skin}"/>
+    <path d="M184 192C176 140 204 128 230 128C258 128 284 140 276 192C270 168 258 158 244 156C222 168 200 166 194 160C188 168 186 180 184 192Z" fill="#4A3428"/><path d="M222 130q8-16 24-8-10 0-12 10z" fill="#4A3428"/>
+    <circle cx="198" cy="208" r="8" fill="#FDA4AF" opacity=".45"/><circle cx="262" cy="208" r="8" fill="#FDA4AF" opacity=".45"/>
+    <g stroke="#4A3428" stroke-width="3.200" fill="none" stroke-linecap="round">
+     <path class="v C T" d="M202 177q10-7 20-1M238 176q10-6 20 1"/><path class="v J" d="M202 180l20-6M238 174l20 6"/>
+     <path class="v S" stroke-width="3.800" d="M202 172l22 9M236 181l22-9"/><path class="v H" d="M204 178q8-7 16 0M240 178q8-7 16 0"/>
+    </g>
+    <g class="v C"><g class="blink"><circle cx="212" cy="192" r="8.500" fill="#fff"/><circle cx="248" cy="192" r="8.500" fill="#fff"/><circle cx="214" cy="191" r="5.800" fill="#3B2A20"/><circle cx="250" cy="191" r="5.800" fill="#3B2A20"/><circle cx="216" cy="188.500" r="2" fill="#fff"/><circle cx="252" cy="188.500" r="2" fill="#fff"/><circle cx="212" cy="194" r="1" fill="#fff"/><circle cx="248" cy="194" r="1" fill="#fff"/></g></g>
+    <g class="v T"><circle cx="212" cy="192" r="8.500" fill="#fff"/><circle cx="248" cy="192" r="8.500" fill="#fff"/><circle cx="209" cy="188" r="5.500" fill="#3B2A20"/><circle cx="245" cy="188" r="5.500" fill="#3B2A20"/><circle cx="211" cy="185.500" r="1.800" fill="#fff"/><circle cx="247" cy="185.500" r="1.800" fill="#fff"/></g>
+    <g class="v J"><circle cx="212" cy="192" r="9" fill="#fff"/><circle cx="248" cy="192" r="9" fill="#fff"/><circle class="spin" cx="212" cy="192" r="5" fill="none" stroke="#3B2A20" stroke-width="2.400" stroke-dasharray="8 5"/><circle class="spin" cx="248" cy="192" r="5" fill="none" stroke="#3B2A20" stroke-width="2.400" stroke-dasharray="8 5"/></g>
+    <g class="v S"><path d="M200 190h24M236 190h24" stroke="#3B2A20" stroke-width="5" stroke-linecap="round"/><circle cx="212" cy="196" r="3" fill="#3B2A20"/><circle cx="248" cy="196" r="3" fill="#3B2A20"/></g>
+    <path class="v H" d="M203 196q9-13 18 0M239 196q9-13 18 0" stroke="#3B2A20" stroke-width="4.500" fill="none" stroke-linecap="round"/>
+    <path class="v C" d="M218 207q12 17 24 0z" fill="#B91C1C"/><path class="v C" d="M224 213q6 4 12 0" stroke="#FCA5A5" stroke-width="2.500" fill="none"/>
+    <path class="v T" d="M222 214h16" stroke="#B45309" stroke-width="3.200" stroke-linecap="round"/>
+    <path class="v J" d="M216 215q7-6 14 0t14 0" stroke="#B45309" stroke-width="3.200" fill="none" stroke-linecap="round"/>
+    <path class="v S" d="M219 220q11-11 22 0" stroke="#B45309" stroke-width="3.200" fill="none" stroke-linecap="round"/>
+    <path class="v H" d="M213 205q17 24 34 0z" fill="#B91C1C"/><path class="v H" d="M221 215q9 6 18 0" stroke="#FCA5A5" stroke-width="2.500" fill="none"/>
+   </g>
+
+   <!-- Cử chỉ tay động của Bé Minh -->
+   <g class="v C T J">${sl('M172 288L158 322L204 326')}${hand(214,327)}</g>
+   <g class="v C">${sl('M288 288L328 252L334 162')}<g class="wave"><circle cx="336" cy="146" r="12.500" fill="${skin}"/><path d="M328 140v-17M334 137v-21M340 137v-21M346 140v-17M325 149l-11-8" stroke="${skin}" stroke-width="6.500" stroke-linecap="round"/></g></g>
+   <g class="v T">${sl('M288 288L306 326L258 242')}${hand(252,232)}</g>
+   <g class="v J">${sl('M288 288L326 240L274 172')}<g class="scratch">${hand(268,160)}</g></g>
+   <g class="v S">${sl('M172 288L176 322')}${sl('M288 288L284 322')}${sl('M176 322L272 302')}${hand(281,300)}${sl('M284 322L190 304')}${hand(181,302)}</g>
+   <g class="v H"><g class="clap">${sl('M172 288L170 320L222 286')}${sl('M288 288L290 320L238 286')}${hand(226,282)}${hand(234,282)}</g></g>
+   
+   <!-- Hiệu ứng cảm xúc -->
+   <path class="v C twinkle" d="M366 118l4-9 4 9 9 4-9 4-4 9-4-9-9-4z" fill="#F59E0B"/>
+   <g class="v T"><circle class="twinkle" cx="312" cy="176" r="4" fill="#94A3B8"/><circle class="twinkle" style="animation-delay:.2s" cx="326" cy="154" r="6" fill="#94A3B8"/><circle class="twinkle" style="animation-delay:.4s" cx="346" cy="122" r="10" fill="#94A3B8"/></g>
+   <g class="v J"><circle cx="330" cy="104" r="26" fill="#fff" stroke="#CBD5E1" stroke-width="2.500"/><circle cx="302" cy="140" r="5.500" fill="#fff" stroke="#CBD5E1" stroke-width="2"/><circle cx="292" cy="152" r="3.500" fill="#fff" stroke="#CBD5E1" stroke-width="2"/><path class="spin" d="M330 104a3 3 0 1 1 3 3a7 7 0 1 1-7-7a11 11 0 1 1 11 11" fill="none" stroke="#D97706" stroke-width="2.800" stroke-linecap="round"/></g>
+   <g class="v S" stroke="#F87171" stroke-width="3.500" stroke-linecap="round"><path d="M300 160l14-9M308 176h18M300 192l14 9"/></g>
+   <g class="v H"><g class="twinkle"><circle cx="230" cy="92" r="16" fill="#FDE68A" stroke="#F59E0B" stroke-width="3"/><rect x="223" y="106" width="14" height="8" rx="2.500" fill="#F59E0B"/></g><path d="M200 70l-9-7M260 70l9-7M192 92h-12M268 92h12" stroke="#F59E0B" stroke-width="3" stroke-linecap="round"/></g>
+  </g></svg>`;
+}
+
+/* ===================== RENDER DAG CANVAS ===================== */
+function renderDag(){
+  $('nodes').innerHTML = S.nodes.map((n, i) => `<div class="node ${!S.done && i === S.cur ? 'focus' : ''}" data-i="${i}" data-s="${n.status}" style="left:${n.fx*100}%;top:${n.fy*100}%">
+    <div class="ico">${ICONS[i]}</div>
+    <div class="min-w-0">
+      <div class="text-[12px] font-bold text-stone-900 leading-tight">${n.label}</div>
+      <div class="text-[10px] font-semibold mt-0.5 ${STATUS_TXT[n.status]}">${!S.done && i === S.cur && n.status === 'UNVISITED' ? '<span class="text-teal-700 font-bold">Đang phỏng vấn</span>' : STATUS_VI[n.status]}${n.retry_count && n.status !== 'MASTERED' && !(n.retry_count >= 2) ? ' · thử lại ' + n.retry_count + '/2' : ''}</div>
+    </div>
+  </div>`).join('');
+  drawEdges();
+}
+
+function drawEdges(){
+  const svg = $('edges'), W = svg.clientWidth, H = svg.clientHeight, els = [...document.querySelectorAll('.node')];
+  svg.innerHTML = `<defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#A8A29E"/></marker>
+    <marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#0F766E"/></marker>
+  </defs>`;
+  S.nodes.forEach((n, i) => n.pre.forEach(pid => {
+    const pi = S.nodes.findIndex(x => x.id === pid), p = S.nodes[pi];
+    const x1 = p.fx * W, y1 = p.fy * H + els[pi].offsetHeight / 2, x2 = n.fx * W, y2 = n.fy * H - els[i].offsetHeight / 2 - 4, dy = (y2 - y1) / 2;
+    const active = !S.done && i === S.cur;
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M${x1} ${y1} C${x1} ${y1 + dy}, ${x2} ${y2 - dy}, ${x2} ${y2}`);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', active ? '#0F766E' : '#D6CFC2');
+    path.setAttribute('stroke-width', active ? '2.5' : '2');
+    path.setAttribute('marker-end', active ? 'url(#a2)' : 'url(#a1)');
+    if(active) path.setAttribute('class', 'flow');
+    svg.appendChild(path);
+  }));
+}
+
+/* ===================== RENDER WORKBENCH (CỘT PHẢI 65%) ===================== */
+function updateScaffolding(){
+  const curTier = S.nodes[S.cur] ? S.nodes[S.cur].tier : 1;
+  const isDone = S.done;
+
+  const s1 = $('scaffStep1');
+  const s2 = $('scaffStep2');
+  const s3 = $('scaffStep3');
+
+  function renderStep(el, num, label, status){
+    if(status === 'done'){
+      el.className = 'flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 shadow-2xs font-bold text-xs transition-all';
+      el.innerHTML = `<span class="w-4 h-4 rounded-full bg-[#059669] text-white text-[10px] grid place-items-center">✓</span><span>${label}</span>`;
+    } else if(status === 'active'){
+      el.className = 'flex items-center gap-1.5 px-3 py-1 rounded-xl bg-teal-50 border border-[#0F766E]/40 text-[#0F766E] shadow-2xs font-extrabold text-xs ring-2 ring-teal-500/10 transition-all';
+      el.innerHTML = `<span class="w-4 h-4 rounded-full bg-[#0F766E] text-white text-[10px] font-mono grid place-items-center">${num}</span><span>${label}</span>`;
+    } else {
+      el.className = 'flex items-center gap-1.5 px-3 py-1 rounded-xl text-stone-400 font-medium text-xs transition-all';
+      el.innerHTML = `<span class="w-4 h-4 rounded-full bg-stone-200 text-stone-500 text-[10px] font-mono grid place-items-center">${num}</span><span>${label}</span>`;
+    }
+  }
+
+  if(isDone){
+    renderStep(s1, 1, 'Trực giác', 'done');
+    renderStep(s2, 2, 'Khớp nối', 'done');
+    renderStep(s3, 3, 'Bản chất', 'done');
+  } else if(curTier === 1){
+    renderStep(s1, 1, 'Trực giác', 'active');
+    renderStep(s2, 2, 'Khớp nối', 'pending');
+    renderStep(s3, 3, 'Bản chất', 'pending');
+  } else if(curTier === 2){
+    renderStep(s1, 1, 'Trực giác', 'done');
+    renderStep(s2, 2, 'Khớp nối', 'active');
+    renderStep(s3, 3, 'Bản chất', 'pending');
+  } else {
+    renderStep(s1, 1, 'Trực giác', 'done');
+    renderStep(s2, 2, 'Khớp nối', 'done');
+    renderStep(s3, 3, 'Bản chất', 'active');
+  }
+}
+
+function updateRubricPills(){
+  const accEl = $('rubricAcc');
+  const simEl = $('rubricSim');
+  const anaEl = $('rubricAna');
+
+  if(!S.rubric || S.rubric.acc === null){
+    accEl.textContent = '--%';
+    simEl.textContent = '--%';
+    anaEl.textContent = '--%';
+    accEl.className = 'font-bold text-stone-400';
+    simEl.className = 'font-bold text-stone-400';
+    anaEl.className = 'font-bold text-stone-400';
+    return;
+  }
+
+  accEl.textContent = S.rubric.acc + '%';
+  simEl.textContent = S.rubric.sim !== null ? S.rubric.sim + '%' : '--%';
+  anaEl.textContent = S.rubric.ana !== null ? S.rubric.ana + '%' : '--%';
+
+  accEl.className = 'font-bold ' + (S.rubric.acc >= 85 ? 'text-emerald-700' : S.rubric.acc >= 50 ? 'text-amber-700' : 'text-rose-700');
+  simEl.className = 'font-bold ' + (S.rubric.sim >= 80 ? 'text-emerald-700' : S.rubric.sim >= 50 ? 'text-amber-700' : 'text-rose-700');
+  anaEl.className = 'font-bold ' + (S.rubric.ana >= 80 ? 'text-emerald-700' : S.rubric.ana >= 50 ? 'text-amber-700' : 'text-rose-700');
+}
+
+function renderStage(){
+  const av = $('avatar');
+  if(!av.firstChild) av.innerHTML = avatarSVG();
+  const think = S.phase === 'think';
+  av.firstChild.setAttribute('data-e', K[think ? 'THINKING' : S.emotion]);
+  
+  const [lbl, col] = EMO[S.emotion], b = $('badge'), c = think ? '#78716C' : col;
+  b.textContent = think ? 'Đang suy nghĩ...' : lbl;
+  b.style.color = c;
+  b.style.borderColor = c + '40';
+  b.style.background = '#FFFFFF';
+  
+  $('qLabel').textContent = S.done ? 'Hoàn thành bài giảng' : S.nodes[S.cur].label;
+  $('anchorMetaphor').textContent = S.anchorMetaphor;
+  
+  // Scaffolding & Rubric
+  updateScaffolding();
+  updateRubricPills();
+
+  // Prompt card
+  const currNode = S.nodes[S.cur] || S.nodes[S.nodes.length - 1];
+  $('scaffoldBadge').textContent = currNode.tierLabel;
+  $('question').textContent = S.question;
+  $('question').classList.toggle('hidden', think);
+  $('thinking').classList.toggle('hidden', !think);
+  $('promptTarget').textContent = currNode.target;
+  $('promptTaboo').textContent = currNode.taboo;
+
+  // Thanh tiến độ header
+  $('segs').innerHTML = S.nodes.map((n, i) => {
+    const f = !S.done && i === S.cur && n.status === 'UNVISITED';
+    return `<div class="seg h-2 flex-1 rounded-full ${f ? 'focus' : ''}" style="${n.status !== 'UNVISITED' ? `background:${n.color_code};box-shadow:0 0 10px ${n.color_code}88` : f ? '' : 'background:#E6E0D4'}"></div>`;
+  }).join('');
+  const m = S.nodes.filter(n => n.status === 'MASTERED').length;
+  $('progText').textContent = `Đã hoàn thành: ${m}/${S.nodes.length} Node`;
+  $('progNow').textContent = S.done ? 'Hoàn tất' : `Node ${S.cur + 1}/${S.nodes.length}`;
+
+  renderDiagnosticStream();
+}
+
+/* ===================== RENDER DIAGNOSTIC STREAM (KHU VỰC 3) ===================== */
+function renderDiagnosticStream(){
+  const stream = $('diagnosticStream');
+  if(!stream) return;
+
+  if(S.history.length === 0){
+    stream.innerHTML = `
+      <div class="h-full flex flex-col items-center justify-center p-6 text-center rounded-2xl bg-white/70 border border-dashed border-[#E6E0D4]">
+        <div class="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200/80 text-teal-700 flex items-center justify-center text-xl mb-3 shadow-2xs">
+          🧭
+        </div>
+        <h3 class="text-sm font-bold text-stone-900 mb-1">Luồng Chẩn đoán Nhận thức (Cognitive Diagnostic Stream)</h3>
+        <p class="text-xs text-stone-500 max-w-md leading-relaxed mb-4">
+          Hãy đóng vai người hướng dẫn và giải thích câu hỏi trên bằng một ví dụ đời thường ngắn gọn. Hệ thống Single-Pass AI sẽ phân tích và chấm điểm theo 3 tiêu chí Rubric ngay lập tức.
+        </p>
+        <div class="grid grid-cols-3 gap-2.5 max-w-lg w-full text-left">
+          <div class="p-2.5 rounded-xl bg-stone-50 border border-stone-200/70 text-[11px]">
+            <div class="font-bold text-emerald-800 mb-0.5">1. Trực quan hóa</div>
+            <div class="text-stone-500 leading-tight">Dùng ẩn dụ đời sống tương đương (số nhà, kho đồ...)</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-stone-50 border border-stone-200/70 text-[11px]">
+            <div class="font-bold text-amber-800 mb-0.5">2. Tránh Jargon</div>
+            <div class="text-stone-500 leading-tight">Không dùng chính thuật ngữ kỹ thuật để giải thích</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-stone-50 border border-stone-200/70 text-[11px]">
+            <div class="font-bold text-teal-800 mb-0.5">3. Đúng bản chất</div>
+            <div class="text-stone-500 leading-tight">Phân biệt rõ địa chỉ, giá trị và cơ chế thu hồi</div>
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const V_BADGE = {
+    MASTERED: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    JARGON_HEAVY: 'bg-amber-100 text-amber-800 border-amber-300',
+    FAILED: 'bg-rose-100 text-rose-800 border-rose-300'
+  };
+  const V_TITLE = {
+    MASTERED: 'ĐẠT BẢN CHẤT',
+    JARGON_HEAVY: 'LẠM DỤNG THUẬT NGỮ',
+    FAILED: 'SAI LOGIC CỐT LÕI'
+  };
+
+  let html = '';
+  S.history.forEach((h, idx) => {
+    const isSkip = !!h.isSkip;
+    html += `
+      <div class="rounded-2xl bg-white border border-[#E6E0D4] shadow-xs p-4 space-y-3.5 transition-all">
+        <!-- Header Turn Card -->
+        <div class="flex items-center justify-between pb-2 border-b border-stone-100">
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-md bg-[#FAF7F2] text-stone-700 border border-[#E6E0D4] text-[10px] font-mono font-bold uppercase tracking-wider">
+              MẮT XÍCH: ${h.nodeLabel} · LƯỢT ${idx + 1}
+            </span>
+          </div>
+          <span class="text-[10px] font-mono text-stone-400">${h.time}</span>
+        </div>
+
+        <!-- Câu hỏi của Bé Minh -->
+        <div class="flex items-start gap-2.5 text-xs text-stone-600 bg-stone-50/80 rounded-xl p-2.5 border border-stone-200/60">
+          <span class="font-bold text-teal-800 shrink-0">👶 Bé Minh hỏi:</span>
+          <span class="font-medium text-stone-800 leading-relaxed italic">"${h.question}"</span>
+        </div>
+
+        <!-- Lời giảng của Bạn (Gia sư) -->
+        <div class="space-y-1">
+          <div class="text-[11px] font-bold text-stone-500">👨‍🏫 Lời giảng của Bạn (Gia sư):</div>
+          <div class="rounded-2xl rounded-tr-xs bg-[#1C2826] text-[#FAF7F2] p-3.5 text-[14.5px] leading-relaxed break-words font-medium shadow-2xs">
+            ${isSkip ? '<span class="text-amber-200 italic font-mono">🏳️ [Đã chủ động tạm bỏ qua mắt xích này để ôn lại sau]</span>' : highlightKeywords(h.userAnswer)}
+          </div>
+        </div>
+
+        <!-- Dải Phân Tích Sư Phạm (Rubric Breakdown Strip) -->
+        <div class="rounded-xl p-3 border ${
+          isSkip ? 'bg-stone-50 border-stone-200' :
+          h.verdict === 'MASTERED' ? 'bg-emerald-50/70 border-emerald-200' :
+          h.verdict === 'JARGON_HEAVY' ? 'bg-amber-50/70 border-amber-200' :
+          'bg-rose-50/70 border-rose-200'
+        } space-y-2">
+          <!-- Top Row: Badge + Live Rubric Scores -->
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="px-2.5 py-0.5 rounded-md border text-[10px] font-mono font-black ${isSkip ? 'bg-stone-200 text-stone-700 border-stone-300' : V_BADGE[h.verdict]}">
+              ${isSkip ? 'TẠM BỎ QUA' : V_TITLE[h.verdict]}
+            </span>
+            ${!isSkip && h.rubric ? `
+              <div class="flex items-center gap-3 text-[11px] font-mono font-semibold">
+                <span class="${h.rubric.acc >= 85 ? 'text-emerald-700' : 'text-stone-600'}">Độ đúng: <b>${h.rubric.acc}%</b></span>
+                <span class="text-stone-300">|</span>
+                <span class="${h.rubric.sim >= 80 ? 'text-emerald-700' : 'text-amber-700'}">Bình dị: <b>${h.rubric.sim}%</b></span>
+                <span class="text-stone-300">|</span>
+                <span class="${h.rubric.ana >= 80 ? 'text-emerald-700' : 'text-amber-700'}">Thực tế: <b>${h.rubric.ana}%</b></span>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Diagnostic reason -->
+          <div class="text-[12px] text-stone-700 leading-snug">
+            <span class="font-bold text-stone-900">🎯 Chẩn đoán sư phạm:</span> ${h.reason}
+          </div>
+
+          <!-- Phản hồi trực tiếp của Bé Minh -->
+          <div class="text-[13px] font-medium pt-2 border-t border-stone-200/50 flex items-start gap-2 ${
+            isSkip ? 'text-stone-700' :
+            h.verdict === 'MASTERED' ? 'text-emerald-900' :
+            h.verdict === 'JARGON_HEAVY' ? 'text-amber-900' :
+            'text-rose-900'
+          }">
+            <span class="text-sm shrink-0">${isSkip ? '🤝' : h.verdict === 'MASTERED' ? '✨' : h.verdict === 'JARGON_HEAVY' ? '🤔' : '❌'}</span>
+            <span class="italic leading-snug">"<b>Bé Minh:</b> ${h.reaction}"</span>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  stream.innerHTML = html;
+  stream.scrollTop = stream.scrollHeight;
+}
+
+function updateInput(){
+  const v = $('input').value;
+  $('counter').textContent = `${v.length}/250`;
+  $('btnSend').disabled = S.busy || S.done || v.trim().length < 5;
+}
+
+/* ===================== LOGIC THẨM ĐỊNH RUBRIC ===================== */
+function heuristic(t){
+  const s = t.toLowerCase();
+  if(/giống|như|ví dụ|tưởng tượng|chẳng hạn|kho|số nhà|bàn học/.test(s)) return 'MASTERED';
+  return /hexadecimal|offset|lvalue|dereference|indirection|allocator|malloc|dynamic|cấp phát|operator|pointer|object|lifo|memory|allocation|leak|dangling/.test(s) ? 'JARGON_HEAVY' : 'FAILED';
+}
+
+function popPromptCard(){
+  const pc = $('question');
+  pc.classList.remove('pop');
+  void pc.offsetWidth;
+  pc.classList.add('pop');
+}
+
+function submit(text, forced){
+  text = text.trim();
+  if(S.busy || S.done || text.length < 5) return;
+  AudioFX.play('pop');
+  S.busy = true; S.phase = 'think'; S.answered = false; S.lastUser = { a: text, v: null };
+  const qAtTurn = S.question;
+  const currNode = S.nodes[S.cur];
+
+  $('input').value = '';
+  $('input').disabled = true;
+  updateInput();
+  renderStage();
+
+  /* Pha 1 (600ms): Bé Minh suy nghĩ */
+  setTimeout(() => {
+    const verdict = forced || heuristic(text), n = currNode;
+    n.status = verdict;
+    n.color_code = COLORS[verdict];
+    n.diagnostic_reason = n.why[{MASTERED: 'ok', JARGON_HEAVY: 'jargon', FAILED: 'fail'}[verdict]];
+    
+    // Tính toán điểm Rubric Live
+    if(verdict === 'MASTERED'){
+      S.rubric = {
+        acc: Math.floor(92 + Math.random() * 7),
+        sim: Math.floor(88 + Math.random() * 8),
+        ana: Math.floor(90 + Math.random() * 8)
+      };
+      AudioFX.play('chime');
+      // Metaphor Retention
+      const met = extractMetaphor(text);
+      if(met) S.anchorMetaphor = met;
+    } else if(verdict === 'JARGON_HEAVY'){
+      S.rubric = {
+        acc: Math.floor(82 + Math.random() * 6),
+        sim: Math.floor(25 + Math.random() * 12),
+        ana: Math.floor(20 + Math.random() * 15)
+      };
+    } else {
+      S.rubric = {
+        acc: Math.floor(18 + Math.random() * 10),
+        sim: Math.floor(60 + Math.random() * 10),
+        ana: Math.floor(10 + Math.random() * 10)
+      };
+    }
+
+    let advance = verdict === 'MASTERED';
+    if(!advance){
+      n.retry_count++;
+      if(n.retry_count >= 2){
+        n.status = 'FAILED';
+        n.color_code = COLORS.FAILED;
+        n.diagnostic_reason += ' (Đã hỏi vặn 2 lượt vẫn chưa đạt, hệ thống chuyển sang mắt xích kế tiếp.)';
+        advance = true;
+      }
+    }
+    S.lastUser.v = verdict;
+    const reaction = verdict === 'MASTERED' ? 'Ồ, em hiểu rồi! Nghe dễ hiểu quá!' : advance ? 'Hơi lạ nhưng mình qua phần tiếp theo nhé.' : verdict === 'JARGON_HEAVY' ? 'Ủa, từ này là gì ta? Em nghe nhức đầu quá...' : 'Hmm... em thấy không hợp lý lắm.';
+    
+    S.history.push({
+      nodeId: n.id,
+      nodeLabel: n.label,
+      question: qAtTurn,
+      userAnswer: text,
+      verdict: verdict,
+      reason: n.diagnostic_reason,
+      reaction: reaction,
+      rubric: S.rubric,
+      time: new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})
+    });
+
+    let nextQ = n.retryQ;
+    if(advance){
+      if(S.cur < S.nodes.length - 1){
+        S.cur++;
+        nextQ = S.nodes[S.cur].q;
+      } else {
+        S.done = true;
+      }
+    }
+    
+    /* Pha 2 (~1s): Phản ứng */
+    S.phase = 'react'; S.answered = true; S.emotion = VERDICT_EMO[n.status]; S.question = reaction;
+    renderDag(); renderStage(); popPromptCard();
+
+    setTimeout(() => {
+      /* Pha 3: Bé Minh hỏi câu tiếp */
+      S.phase = ''; S.busy = false; $('input').disabled = false;
+      if(S.done){
+        S.emotion = 'HAPPY'; S.question = 'Em hiểu hết các phần rồi! Cảm ơn Thầy/Cô đã hướng dẫn em, mình xem bản đồ chẩn đoán nhé.';
+        renderStage(); updateInput(); popPromptCard(); setTimeout(showReport, 1400); return;
+      }
+      S.emotion = 'CURIOUS'; S.question = nextQ;
+      renderStage(); updateInput(); popPromptCard(); $('input').focus();
+    }, 1000);
+  }, 600);
+}
+
+/* ===================== SKIP NODE (TẠM BỎ QUA THEO FSM SƯ PHẠM) ===================== */
+function skipNode(){
+  if(S.busy || S.done) return;
+  AudioFX.play('pop');
+  S.busy = true; S.phase = 'react'; S.answered = true;
+  
+  const n = S.nodes[S.cur];
+  n.status = 'FAILED';
+  n.color_code = COLORS.FAILED;
+  n.diagnostic_reason = 'Người học chủ động tạm bỏ qua mắt xích này để ôn sau.';
+  n.retry_count = 2;
+
+  S.rubric = { acc: 0, sim: null, ana: null };
+  const reaction = 'Không sao đâu Thầy/Cô! Khái niệm này hơi khó, mình tạm đánh dấu ôn lại sau và sang phần tiếp theo nhé.';
+
+  S.history.push({
+    nodeId: n.id,
+    nodeLabel: n.label,
+    question: S.question,
+    userAnswer: '🏳️ [Tạm bỏ qua / Đánh dấu ôn sau]',
+    verdict: 'FAILED',
+    reason: n.diagnostic_reason,
+    reaction: reaction,
+    isSkip: true,
+    rubric: S.rubric,
+    time: new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})
+  });
+
+  let nextQ = '';
+  if(S.cur < S.nodes.length - 1){
+    S.cur++;
+    nextQ = S.nodes[S.cur].q;
+  } else {
+    S.done = true;
+  }
+
+  S.emotion = 'CONFUSED';
+  S.question = reaction;
+  $('input').value = '';
+  $('input').disabled = true;
+  updateInput();
+  renderDag();
+  renderStage();
+  popPromptCard();
+
+  setTimeout(() => {
+    S.phase = '';
+    S.busy = false;
+    $('input').disabled = false;
+    if(S.done){
+      S.emotion = 'HAPPY';
+      S.question = 'Chúng ta đã đi hết các mắt xích của bài giảng rồi! Mời Thầy/Cô cùng xem bản đồ chẩn đoán nhé.';
+      renderStage();
+      updateInput();
+      popPromptCard();
+      setTimeout(showReport, 1400);
+      return;
+    }
+    S.emotion = 'CURIOUS';
+    S.question = nextQ;
+    renderStage();
+    updateInput();
+    popPromptCard();
+    $('input').focus();
+  }, 1200);
+}
+
+/* ===================== BÁO CÁO CHẨN ĐOÁN ===================== */
+function showReport(){
+  const N = S.nodes.length, cnt = k => S.nodes.filter(n => n.status === k).length;
+  const good = S.nodes.filter(n => n.status === 'MASTERED'), bad = S.nodes.filter(n => n.status === 'JARGON_HEAVY' || n.status === 'FAILED');
+  const score = Math.round((cnt('MASTERED') * 100 + cnt('JARGON_HEAVY') * 40) / N);
+  
+  $('rPct').textContent = Math.round(good.length / N * 100) + '%';
+  $('rScore').textContent = score;
+  $('rBar').innerHTML = S.nodes.map(n => `<div class="flex-1" style="background:${n.color_code}"></div>`).join('');
+  $('rLegend').innerHTML = `<span class="text-emerald-700 font-bold">${cnt('MASTERED')} vững</span><span class="text-amber-700 font-bold">${cnt('JARGON_HEAVY')} thuật ngữ</span><span class="text-rose-700 font-bold">${cnt('FAILED')} hổng</span><span class="text-stone-500">${cnt('UNVISITED')} chưa duyệt</span>`;
+  
+  $('rGood').innerHTML = good.length ? good.map(n => `<li class="rounded-lg border border-emerald-200 bg-emerald-100/60 p-2 font-semibold text-emerald-900">${n.label}</li>`).join('') : '<li class="text-stone-400">Chưa có mắt xích nào.</li>';
+  $('rBad').innerHTML = bad.length ? bad.map(n => `<li class="rounded-lg border p-2 ${n.status === 'FAILED' ? 'border-rose-200 bg-rose-100/60 text-rose-950' : 'border-amber-200 bg-amber-100/60 text-amber-950'}"><div class="font-bold">${n.label}</div><div class="text-stone-600 mt-0.5 text-[11px]">${n.diagnostic_reason}</div></li>`).join('') : '<li class="text-stone-400">Không có điểm mù. Tuyệt vời!</li>';
+  
+  $('reportModal').classList.replace('hidden', 'flex');
+  $('ring').style.strokeDashoffset = 314;
+  setTimeout(() => { $('ring').style.strokeDashoffset = 314 - 314 * score / 100; }, 60);
+}
+
+function reset(){
+  initState();
+  $('reportModal').classList.replace('flex', 'hidden');
+  $('input').disabled = false;
+  $('input').value = '';
+  $('thinking').classList.add('hidden');
+  $('question').classList.remove('hidden');
+  hidePop();
+  renderDag();
+  renderStage();
+  updateInput();
+}
+
+/* ===================== POPOVER ===================== */
+function hidePop(){ $('popover').classList.add('hidden'); }
+$('nodes').addEventListener('click', e => {
+  const el = e.target.closest('.node');
+  if(!el) return;
+  e.stopPropagation();
+  const n = S.nodes[+el.dataset.i], p = $('popover'), cv = $('canvas');
+  p.innerHTML = n.diagnostic_reason ? `<div class="text-xs font-bold mb-1 ${STATUS_TXT[n.status]}">${STATUS_VI[n.status]}</div><div class="text-[13px] text-stone-700 leading-snug">${n.diagnostic_reason}</div>`
+    : '<div class="text-[13px] text-stone-500">Mắt xích này chưa có kết quả chẩn đoán.</div>';
+  p.style.left = Math.min(Math.max(n.fx * cv.clientWidth - 128, 8), cv.clientWidth - 264) + 'px';
+  p.style.top = (n.fy * cv.clientHeight + el.offsetHeight / 2 + 10) + 'px';
+  p.classList.remove('hidden');
+});
+document.addEventListener('click', e => { if(!e.target.closest('#popover')) hidePop(); });
+
+/* ===================== FLOATING CONTROLS (ZOOM & FIT) ===================== */
+$('btnZoomIn').addEventListener('click', () => {
+  zoomLevel = Math.min(1.4, zoomLevel + 0.1);
+  $('canvas').style.transform = `scale(${zoomLevel})`;
+});
+$('btnZoomOut').addEventListener('click', () => {
+  zoomLevel = Math.max(0.75, zoomLevel - 0.1);
+  $('canvas').style.transform = `scale(${zoomLevel})`;
+});
+$('btnFitView').addEventListener('click', () => {
+  zoomLevel = 1;
+  $('canvas').style.transform = 'scale(1)';
+});
+
+/* ===================== SỰ KIỆN GỬI VÀ DEMO ===================== */
+$('input').addEventListener('input', updateInput);
+$('input').addEventListener('keydown', e => {
+  if(e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    submit($('input').value);
+  }
+});
+$('btnSend').addEventListener('click', () => submit($('input').value));
+$('btnSkipNode').addEventListener('click', skipNode);
+
+document.querySelectorAll('.demo').forEach(b => b.addEventListener('click', () => {
+  if(S.busy || S.done) return;
+  const k = b.dataset.demo, text = S.nodes[S.cur].demo[k], forced = { ok: 'MASTERED', jargon: 'JARGON_HEAVY', fail: 'FAILED' }[k];
+  $('input').value = text;
+  updateInput();
+  setTimeout(() => submit(text, forced), 250);
+}));
+
+$('btnEnd').addEventListener('click', () => $('confirmModal').classList.replace('hidden', 'flex'));
+$('confirmNo').addEventListener('click', () => $('confirmModal').classList.replace('flex', 'hidden'));
+$('confirmYes').addEventListener('click', () => {
+  $('confirmModal').classList.replace('flex', 'hidden');
+  showReport();
+});
+$('btnRetry').addEventListener('click', reset);
+
+new ResizeObserver(() => { if(S) drawEdges(); }).observe($('canvas'));
+
+/* ===================== KHỞI TẠO ===================== */
+initState();
+renderDag();
+renderStage();
+updateInput();
+</script>
+</body>
+</html>
