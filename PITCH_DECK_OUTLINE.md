@@ -43,14 +43,33 @@
    - Người dùng giải thích từng node cho người bạn học AI. Khi giải thích đạt yêu cầu bản chất, node chuyển sang màu XANH và mở khóa bài tiếp theo.
 
 ### 2.3. Tình huống minh họa: Bắt bẫy học vẹt & Kích hoạt hiểu sâu
-- **Tình huống (Bài học: Quy luật Cung - Cầu):**  
+- **Tình huống 1 - Thấu suốt bản chất (Node XANH):**  
   *Người học copy câu định nghĩa sách giáo khoa:*  
   > *"Giá cả hàng hóa biến động do mối tương quan giữa cung và cầu trên thị trường."*
-- **Phản xạ của AI:** AI nhận biết đây là câu học vẹt, không khen ngợi dễ dãi mà đặt một tình huống đời thường:  
-  > *"Dạ nghe giống trong sách quá anh ơi! Nhưng ví dụ trời mưa to, trước cổng trường chỉ còn đúng 1 cái áo mưa mà có 10 bạn muốn mua, thì giá cái áo mưa đó tăng hay giảm ạ?"*
-- **Chuyển hóa nhận thức:** Khi người học dùng trực giác thực tế trả lời:  
-  > *"Giá tăng gấp đôi vì ai cũng cần gấp mà có mỗi 1 cái áo thôi."*  
-  $\to$ AI xác nhận đã hiểu đúng bản chất $\to$ **Node trên sơ đồ lập tức chuyển sang màu XANH và mở khóa bài tiếp theo!**
+  - **Phản xạ của AI:** AI nhận biết đây là câu học vẹt, không khen ngợi dễ dãi mà đặt một tình huống đời thường:  
+    > *"Dạ nghe giống trong sách quá anh ơi! Nhưng ví dụ trời mưa to, trước cổng trường chỉ còn đúng 1 cái áo mưa mà có 10 bạn muốn mua, thì giá cái áo mưa đó tăng hay giảm ạ?"*
+  - **Chuyển hóa nhận thức:** Khi người học dùng trực giác thực tế trả lời:  
+    > *"Giá tăng gấp đôi vì ai cũng cần gấp mà có mỗi 1 cái áo thôi."*  
+    $\to$ AI xác nhận đã hiểu đúng bản chất $\to$ **Node trên sơ đồ lập tức chuyển sang màu XANH và mở khóa bài tiếp theo!**
+
+---
+### Bổ sung: Tình huống 2 - Xử lý Lạc đề & Đóng dấu Node ĐỎ (Early Termination)
+* **Lượt 1 - Người học nói nhảm / Lạc đề:** 
+  - Người học nhập: *"Trời mưa thì ở nhà ngủ hoặc đi ăn lẩu cho sướng chứ mua áo mưa chi cho ướt người em ơi."*
+  - **Phản xạ của AI & FSM Backend:** AI bắt cờ `is_off_topic: true`, `core_accuracy < 30`. Backend nhận định người học đang né tránh câu hỏi, gán/giữ Node màu **VÀNG**, tăng biến đếm `retry_count = 1`. Bé Minh nghiêm túc kéo lại bài học: 
+    > *"Ơ anh ơi, đang hỏi chuyện mua bán áo mưa tự nhiên rủ đi ăn lẩu là sao nè! Tập trung trả lời giúp em: Nếu có 1 cái áo mưa mà 10 người giành mua thì giá tăng hay giảm ạ?"*
+* **Lượt 2 - Người học ngoan cố suy luận sai bản chất:**
+  - Người học tiếp tục nói đùa: *"Bán rẻ 2 ngàn cho người ta lấy phước, ai lại đi tăng giá cơ hội thế em."*
+  - **Phản xạ của AI & FSM Backend:** `analogy_grounding < 20`, vi phạm nguyên tắc cân bằng cung cầu thị trường. Backend tăng `retry_count = 2`. Bé Minh mớm ví dụ bẫy ngô nghê (Bậc 2): 
+    > *"Nếu bán rẻ 2 ngàn mà có 10 người nhào vô giành giật đánh nhau thì sao anh? Lúc đó ai trả giá cao hơn để được lấy trước chứ?"*
+* **Lượt 3 - Người học bế tắc / Đầu hàng (`user_surrendered`):**
+  - Người học gõ: *"Chịu rồi, nhức đầu quá không biết giải thích sao nữa."* (hoặc bấm nút *Tạm bỏ qua / Ôn sau*).
+  - **Chuyển hóa & Chốt chặn Sư phạm:** 
+    - Đạt ngưỡng `retry_count >= 3` hoặc `user_surrendered: true`. 
+    - Backend lập tức chuyển Node sang màu **ĐỎ (Lỗ hổng kiến thức nghiêm trọng)**.
+    - Bé Minh tháo ngòi nổ tâm lý nhẹ nhàng: *"Dạ phần này rắc rối quá, em ghi sổ tay rồi lát anh xem lại sau nha."*
+    - **Kích hoạt Dừng khẩn cấp (Early Termination):** Do "Cung - Cầu" là Node Gốc (Root Node), hệ thống khóa buồng lái và bật thông báo: *"⚠️ Cảnh báo hổng kiến thức nền tảng. Bạn cần đọc lại tài liệu trước khi tiếp tục dựng các mắt xích tiếp theo."*
+---
 
 ### 2.4. Bản chất "Dạy Học Thông Minh" (Smart Pedagogy) khi AI không đứng giảng bài
 Nhiều người lầm tưởng: *"Dạy học là phải có một ông thầy hoặc con bot đứng giảng nhồi kiến thức vào đầu học sinh"*. Trong Khoa học Giáo dục hiện đại (Pedagogy & Cognitive Science), SGU-Feynman ứng dụng mô hình **Dạy học thông minh bậc cao**:
