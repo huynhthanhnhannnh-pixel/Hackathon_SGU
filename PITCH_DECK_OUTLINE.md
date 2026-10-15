@@ -103,48 +103,83 @@ Dự án bám sát trực diện tiêu chí **"Ứng dụng AI sáng tạo, ti�
 
 ---
 
-## 5. DÀN Ý 7 SLIDE THUYẾT TRÌNH VÒNG SƠ KHẢO (CHUYỂN GIAO CHO TEAM LÀM SLIDE)
+## 5. DÀN Ý 11 SLIDE THUYẾT TRÌNH VÒNG SƠ KHẢO (ĐỒNG BỘ CHUẨN VỚI SLIDE_PITCH_SCRIPT.MD)
 
 ```text
 SLIDE 1: TIÊU ĐỀ & ĐỊNH VỊ DỰ ÁN
-• Tiêu đề: SGU-FEYNMAN – NỀN TẢNG LUYỆN TƯ DUY & CHẨN ĐOÁN LỖ HỔNG TRI THỨC
-• Subtitle: Ứng dụng Kỹ thuật Feynman & Đồ thị bài học Đảo ngược vai trò
+• Tiêu đề: SGU-FEYNMAN: Khai Phóng Tư Duy Bằng Bản Đồ Liên Kết Nhận Thức
+• Subtitle: Ứng dụng Kỹ thuật Feynman & Đồ thị Tri thức DAG Đảo ngược vai trò sư phạm
 • Tagline chủ đề: "Ứng dụng AI sáng tạo, tiết kiệm chi phí vào dạy và học thông minh"
-• Hình ảnh gợi ý: Logo SGU + Mockup giao diện chia 2 cột (Cột trái cây sơ đồ Node - Cột phải khung trò chuyện).
+• Hình ảnh gợi ý: Nền tối Deep Slate (#0F172A), biểu tượng Đồ thị Tri thức phát sáng kết hợp logo SGU và Mockup Buồng lái.
 
-SLIDE 2: NỖI ĐAU THỰC TIỄN – "ẢO TƯỞNG THÀNH THẠO"
-• Thực trạng: Sinh viên thời GenAI làm bài tập rất nhanh nhờ AI, nhưng đối mặt câu hỏi vấn đáp thì lúng túng vì chưa từng tự cấu trúc lại tri thức (Illusion of Competence).
-• Lỗ hổng Chatbot hiện tại: Đóng vai "người làm hộ" giải thích thay và mớm sẵn câu trả lời -> Biến người học thành người nghe thụ động.
-• Hình ảnh gợi ý: So sánh hình ảnh "Đọc lời giải AI gật gù" vs. "Lúng túng khi tự giải thích lại".
+SLIDE 2: NGHỊCH LÝ THỜI AI: KHI KIẾN THỨC THIẾU ĐI ĐƯỜNG DẪN NHẬN THỨC
+• Thực trạng: Đọc đáp án có sẵn từ GenAI chỉ tạo ra các "Trạm thông tin cô lập (Isolated Nodes)", gây ra Ảo tưởng thành thạo (Illusion of Competence).
+• Lỗ hổng Chatbot thông thường: Đóng vai "người làm hộ" mớm sẵn lời giải -> Biến sinh viên thành người nghe thụ động, đứt gãy liên kết khi thi vấn đáp.
+• Hình ảnh gợi ý: Đối sánh não bộ có các chấm kiến thức lẻ loi, liên kết đứt gãy vs. Sinh viên lúng túng trước câu hỏi vấn đáp.
 
-SLIDE 3: PHƯƠNG PHÁP FEYNMAN & ĐẢO NGƯỢC VAI TRÒ
-• Kỹ thuật Feynman: "Nếu không thể giải thích đơn giản cho một đứa trẻ hiểu, bạn chưa thực sự hiểu nó".
-• Đảo ngược vai trò: Người học đóng vai người dạy/người giải thích; AI đóng vai bạn học tò mò ("Bé Minh") hỏi vặn.
-• Luồng học tập: Người dùng đẩy file slide PDF vào -> AI đọc và sinh sơ đồ bài học -> Người dùng kiểm tra và tinh chỉnh sơ đồ trước khi học.
-• Hình ảnh gợi ý: Quy trình 3 bước từ Nạp tài liệu -> Sinh sơ đồ -> Buồng lái tương tác.
+SLIDE 3: KỸ THUẬT FEYNMAN: ĐÒN BẨY KIẾN TẠO LIÊN KẾT NHẬN THỨC BỀN VỮNG
+• Triết lý Richard Feynman: "Nếu không thể giải thích đơn giản cho một đứa trẻ 10 tuổi hiểu, bạn chưa thực sự hiểu nó."
+• Đảo ngược vai trò: Người học đóng vai người dạy/hướng dẫn; AI đóng vai bạn học tò mò 10 tuổi ("Bé Minh") hỏi vặn.
+• Cơ chế kích hoạt: Ép não bộ người học tự truy xuất, tái cấu trúc ngôn từ mộc mạc và ví von đời thường.
+• Hình ảnh gợi ý: Infographic 4 bước Feynman vòng tròn khép kín + Người học đối thoại cùng Bé Minh.
 
-SLIDE 4: KIẾN TRÚC HỆ THỐNG & PHÂN CHIA VAI TRÒ
-• Phía AI: Đọc tài liệu PDF sinh sơ đồ ban đầu; trong phiên học thì đánh giá câu giải thích và đưa ra câu hỏi tiếp theo.
-• Phía Backend: Quản lý tiến độ bài học trên cây sơ đồ, tiếp nhận kết quả từ AI để tự động đổi màu Node (Xám/Vàng/Xanh) và mở khóa bài tiếp theo theo đúng thứ tự logic.
-• Hình ảnh gợi ý: Sơ đồ luồng dữ liệu 3 bên: Người học <-> Backend điều phối <-> Mô hình AI.
+SLIDE 4: BẢN ĐỒ MẠNG LƯỚI NHẬN THỨC (DAG) & 4 MÀU ĐỘ MẠNH LIÊN KẾT
+• Cấu trúc Đồ thị DAG: Node = Trạm nhận thức | Cạnh = Đường dẫn tiên quyết (Prerequisites).
+• 4 Trạng thái màu chuẩn:
+  - Màu Xám (GRAY): Trạm nhận thức chưa nảy mầm / chưa kích hoạt.
+  - Màu Vàng (YELLOW): Nhánh non yếu / Học vẹt cô lập / Lạm dụng từ chuyên môn.
+  - Màu Xanh (GREEN): Nhánh vững chắc / Thấu suốt bản chất / Liên hệ thực tế.
+  - Màu Đỏ (RED): Nhánh sai lệch bản chất / Điểm mù nhận thức cần phục thù.
+• Hình ảnh gợi ý: Cây đồ thị 5 nodes mẫu (ReactFlow style) hiển thị đủ 4 màu và bảng chú giải sắc nét.
 
-SLIDE 5: CƠ CHẾ VẬN HÀNH TINH GỌN & TIẾT KIỆM CHI PHÍ
-• Vấn đề của Chatbot thông thường: Gửi dồn dập toàn bộ lịch sử trò chuyện -> Càng chat càng nặng, tốn kém chi phí API và phản hồi chậm.
-• Giải pháp SGU-Feynman: Tiến độ lưu trên cây sơ đồ ở Backend; mỗi lượt trao đổi chỉ gửi tin nhắn gần nhất kèm tiêu chuẩn của node hiện tại.
-• Hiệu quả thực tế: Dữ liệu gửi đi luôn tinh gọn, giảm chi phí API đáng kể, phản hồi nhanh và mượt mà.
-• Hình ảnh gợi ý: Biểu đồ so sánh dữ liệu phình to của Chatbot thường vs. Dữ liệu tinh gọn ổn định của SGU-Feynman.
+SLIDE 5: QUY TRÌNH 3 BƯỚC & BUỒNG LÁI NHẬN THỨC 2 CỘT (COCKPIT)
+• Bước 1: Nạp slide PDF -> AI bóc tách tự động sinh Bản đồ Tri thức ban đầu.
+• Bước 2: Người học trực quan hóa & tinh chỉnh cấu trúc đồ thị theo ý muốn.
+• Bước 3: Buồng lái tương tác (Cột trái: Live DAG 34% | Cột phải: Flashcard Workbench 66%).
+• Hình ảnh gợi ý: Wireframe Mockup giao diện màn hình Buồng lái chia đôi (Split Cockpit) với Bé Minh SVG.
 
-SLIDE 6: ĐÁNH GIÁ ĐA TIÊU CHÍ & TÌNH HUỐNG MINH HỌA
-• Chống học vẹt: AI nhận biết câu sao chép sách vở, đặt tình huống đời thường (ví dụ: áo mưa cổng trường) để kiểm tra độ hiểu bản chất.
-• Xử lý tình huống linh hoạt:
-  - Hiểu đúng bản chất -> Node đổi màu XANH và mở khóa bài tiếp theo.
-  - Nhầm lẫn kiến thức phụ ngoài lề -> Giữ màu VÀNG, hướng người học quay lại trọng tâm và lưu vào báo cáo cuối phiên.
-• Hình ảnh gợi ý: Đoạn hội thoại minh họa bắt bẫy học vẹt và Node chuyển màu xanh trên sơ đồ.
+SLIDE 6: MINH HỌA THỰC CHIẾN: BẺ GÃY HỌC VẸT (NODE XANH) & DỪNG KHẨN CẤP (NODE ĐỎ)
+• Nhánh 1 - Hóa XANH (Happy Path):
+  - Lượt 1 (Vàng): Chép định nghĩa sách -> AI bắt bẫy từ chuyên môn cấm dùng & gán VÀNG.
+  - Lượt 2 (Thả mồi): Bé Minh hỏi vặn tình huống áo mưa cổng trường lúc mưa to.
+  - Lượt 3 (Xanh): Người học trả lời trực giác (Cầu > Cung) -> Node XANH rực rỡ, mở khóa bài sau.
+• Nhánh 2 - Chốt ĐỎ & Early Termination (Failure Path):
+  - Lượt 1: Lạc đề (is_off_topic) -> Giữ VÀNG (retry=1), Bé Minh kéo về bài học.
+  - Lượt 2: Ngoan cố sai bản chất -> Giữ VÀNG (retry=2), Bé Minh mồi bẫy ngô nghê Bậc 2.
+  - Lượt 3: Bế tắc / Đầu hàng (user_surrendered / retry>=3) -> Chốt Node ĐỎ.
+  - Root Node hỏng -> Kích hoạt Dừng khẩn cấp (Early Termination), khóa buồng lái để bảo toàn sư phạm.
+• Hình ảnh gợi ý: Split-screen A/B Demo minh họa nhánh hóa XANH vs nhánh chốt ĐỎ kích hoạt Early Termination.
 
-SLIDE 7: TÍNH THỰC TIỄN & KẾ HOẠCH BÀN GIAO 24 GIỜ
-• Khả năng ứng dụng rộng rãi: Áp dụng cho mọi môn học có hệ thống khái niệm (Kinh tế, Lập trình, Vật lý...).
-• Phiên học vi mô (Micro-session): Mỗi phiên 10-15 phút tập trung vào 5-7 khái niệm cốt lõi để rà soát nhanh kiến thức sau buổi học.
-• Sẵn sàng cho 24h Hackathon: Đã hoàn thiện toàn bộ cấu trúc dữ liệu, luồng điều phối và kịch bản AI, sẵn sàng ráp nối giao diện trong 24 giờ.
-• Hình ảnh gợi ý: Lộ trình triển khai 24 giờ của đội ngũ và lời kết thuyết phục trước Ban Giám khảo.
+SLIDE 7: BƯỚC 1: TỐI ƯU DỮ LIỆU GỬI ĐI & ĐÁNH GIÁ TỰ ĐỘNG (O(1) CONTEXT)
+• Gửi dữ liệu tinh gọn: Backend chỉ gửi tiêu chuẩn node đang học + 2 câu chat gần nhất, không dồn lịch sử cũ.
+• Tiết kiệm chi phí & Phản hồi tức thì: Input cố định 150-200 tokens, giảm 90% chi phí API Gemini Flash.
+• Hợp đồng JSON đa tiêu chí: AI trả về AIEvaluationResponse gồm 3 điểm Rubric + Lời thoại Bé Minh đưa thẳng lên UI.
+• Hình ảnh gợi ý: Sơ đồ luồng gửi nhận O(1) Context vs biểu đồ phình to token của chatbot thông thường.
+
+SLIDE 8: BƯỚC 2: ĐỔI MÀU BÀI HỌC & GIÀN GIÁO THÍCH ỨNG 3 CẤP
+• Bộ luật gán màu tất định: Backend kiểm tra ngưỡng Rubric chuẩn (Accuracy >= 75, Simplicity >= 70, Analogy >= 65).
+• Giàn giáo thích ứng (Adaptive Scaffolding):
+  - Nếu trả lời đạt chuẩn ở bất kỳ bậc nào -> Chuyển thẳng sang GREEN.
+  - Nếu chưa đạt -> Giữ YELLOW, tăng retry_count và nâng scaffold_level (1 -> 2 -> 3) để Bé Minh hỏi vặn sâu hơn.
+• Hình ảnh gợi ý: Sơ đồ 3 bậc thang giàn giáo: Priming (Thả neo) -> Bridging (Khớp nối) -> Deep Probe (Phản biện).
+
+SLIDE 9: BƯỚC 3: MỞ KHÓA BÀI HỌC KHÁNG DEADLOCK & BẮC CẦU ẨN DỤ
+• Thuật toán findNextNodeToActivate:
+  - Root Node bị RED -> Early Termination dừng khẩn cấp.
+  - Branch Node bị RED -> Ưu tiên nhánh song song HOẶC kích hoạt Soft-prerequisite Bypass để không bao giờ bị Deadlock!
+• Single-Pass Metaphor Handover: Mượn lại chính ẩn dụ chiếc áo mưa của bài trước để mở đầu bài Giá Trần tiếp theo.
+• Hình ảnh gợi ý: Sơ đồ đồ thị minh họa cơ chế Bypass và đường bắc cầu ẩn dụ giữa 2 nodes liền kề.
+
+SLIDE 10: ĐÁNH GIÁ CHẨN ĐOÁN ĐIỂM MÙ CUỐI PHIÊN & NĂNG LỰC SIÊU NHẬN THỨC
+• Báo cáo chẩn đoán đa chiều: Biểu đồ Radar đo lường độ bao phủ tri thức và Feynman Score.
+• Phân loại nhận thức: Tách bạch rõ ràng Mắt xích vững chắc (GREEN) vs Điểm mù nhận thức (RED/YELLOW).
+• Rèn luyện Siêu nhận thức (Metacognition): Người học nhận thức rõ giới hạn tri thức để ôn tập trúng đích trước kỳ thi.
+• Hình ảnh gợi ý: Mockup Diagnostic Report Modal với vòng tròn Feynman Score, danh sách lỗ hổng và nút "Luyện tập lại".
+
+SLIDE 11: LỘ TRÌNH BÀN GIAO 24 GIỜ & BẢN LĨNH ĐỘI NGŨ SGU-FEYNMAN
+• Chuẩn bị hoàn hảo: Đã đóng băng 100% System Blueprint, Data Schemas, FSM State Machine và Prototype Cockpit.html.
+• Cam kết minh bạch: Bắt đầu lập trình mới 100% từ GitHub Repo trống trong 24h Hackathon.
+• Thông điệp kết: "Dạy học thông minh không phải là dùng AI để giải bài hộ, mà là dùng AI làm chất xúc tác khai phóng tư duy!"
+• Hình ảnh gợi ý: Trục thời gian 24h triển khai, thông tin đội ngũ và lời cảm ơn Hội đồng Giám khảo.
 ```
 

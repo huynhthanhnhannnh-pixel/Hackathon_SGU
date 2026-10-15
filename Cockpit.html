@@ -59,12 +59,14 @@
     color: #64748B;
     transition: all .25s;
   }
-  .node[data-s=MASTERED] { border-color: #10B981; background: #F0FDF9; }
-  .node[data-s=MASTERED] .ico { background: #D1FAE5; color: #10B981; }
-  .node[data-s=JARGON_HEAVY] { border-color: #F59E0B; background: #FFFBEB; }
-  .node[data-s=JARGON_HEAVY] .ico { background: #FEF3C7; color: #D97706; }
-  .node[data-s=FAILED] { border-color: #EF4444; background: #FEF2F2; }
-  .node[data-s=FAILED] .ico { background: #FEE2E2; color: #DC2626; }
+  .node[data-s=GREEN] { border-color: #10B981; background: #F0FDF9; }
+  .node[data-s=GREEN] .ico { background: #D1FAE5; color: #10B981; }
+  .node[data-s=YELLOW] { border-color: #F59E0B; background: #FFFBEB; }
+  .node[data-s=YELLOW] .ico { background: #FEF3C7; color: #D97706; }
+  .node[data-s=RED] { border-color: #EF4444; background: #FEF2F2; }
+  .node[data-s=RED] .ico { background: #FEE2E2; color: #DC2626; }
+  .node[data-s=GRAY] { border-color: #CBD5E1; background: #FFFFFF; }
+  .node[data-s=GRAY] .ico { background: #F1F5F9; color: #94A3B8; }
   
   /* Node active interview focus (Obsidian & Jade) */
   .node.focus {
@@ -186,9 +188,12 @@
     </div>
     <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">COGNITIVE BENCH</span>
   </div>
-  <div class="text-xs font-semibold px-3 py-1 rounded-full bg-[#F8FAFC] border border-[#E2E8F0] text-slate-700 flex items-center gap-1.5">
-    <span class="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span>
-    <span>Con trỏ trong C++</span>
+  <div class="flex items-center gap-2">
+    <label for="topicSelector" class="text-[11px] font-bold text-slate-400 uppercase tracking-wider hidden lg:inline">Chuyên đề:</label>
+    <select id="topicSelector" onchange="switchTopic(this.value)" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-[#F8FAFC] border border-[#CBD5E1] text-slate-800 focus:outline-none focus:border-[#10B981] focus:ring-2 focus:ring-[#10B981]/20 cursor-pointer shadow-2xs transition">
+      <option value="SUPPLY_DEMAND" selected>Bài 1: Quy luật Cung - Cầu (Áo mưa cổng trường)</option>
+      <option value="POINTER_CPP">Bài 2: Con trỏ trong C++</option>
+    </select>
   </div>
   <div class="flex-1 max-w-md">
     <div class="flex justify-between text-[11px] font-semibold text-slate-500 mb-1">
@@ -213,13 +218,7 @@
     <!-- Mini Radar Viewport -->
     <div class="absolute right-3.5 top-3.5 w-20 h-16 rounded-xl bg-white/95 backdrop-blur-md border border-[#E2E8F0] p-1.5 shadow-2xs hidden sm:block z-20 pointer-events-none">
       <div class="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Radar</div>
-      <div class="relative w-full h-[38px] bg-slate-50 rounded border border-[#E2E8F0] overflow-hidden">
-        <div class="absolute w-1.5 h-1.5 rounded-full bg-[#10B981] animate-ping" style="left:50%;top:12%"></div>
-        <div class="absolute w-1.5 h-1.5 rounded-full bg-[#10B981]" style="left:50%;top:12%"></div>
-        <div class="absolute w-1.5 h-1.5 rounded-full bg-slate-300" style="left:24%;top:32%"></div>
-        <div class="absolute w-1.5 h-1.5 rounded-full bg-slate-300" style="left:76%;top:32%"></div>
-        <div class="absolute w-1.5 h-1.5 rounded-full bg-slate-300" style="left:50%;top:56%"></div>
-        <div class="absolute w-1.5 h-1.5 rounded-full bg-slate-300" style="left:50%;top:82%"></div>
+      <div id="miniRadarDots" class="relative w-full h-[38px] bg-slate-50 rounded border border-[#E2E8F0] overflow-hidden">
         <div class="absolute inset-0 border border-[#10B981]/40 bg-[#10B981]/5 rounded"></div>
       </div>
     </div>
@@ -232,10 +231,10 @@
 
     <!-- Chú giải màu -->
     <div class="absolute left-3 right-3 bottom-3 flex flex-wrap gap-1.5 text-[10px] font-semibold text-slate-600 z-10">
-      <span class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur border border-[#E2E8F0] shadow-2xs"><i class="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#94A3B8]"></i>Chưa duyệt</span>
-      <span class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur border border-[#E2E8F0] shadow-2xs"><i class="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#10B981]"></i>Làm chủ</span>
-      <span class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur border border-[#E2E8F0] shadow-2xs"><i class="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#F59E0B]"></i>Thuật ngữ / Gỡ</span>
-      <span class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur border border-[#E2E8F0] shadow-2xs"><i class="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#EF4444]"></i>Sai bản chất</span>
+      <span class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur border border-[#E2E8F0] shadow-2xs"><i class="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#94A3B8]"></i>Chưa duyệt (GRAY)</span>
+      <span class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur border border-[#E2E8F0] shadow-2xs"><i class="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#10B981]"></i>Làm chủ (GREEN)</span>
+      <span class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur border border-[#E2E8F0] shadow-2xs"><i class="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#F59E0B]"></i>Dính thuật ngữ (YELLOW)</span>
+      <span class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur border border-[#E2E8F0] shadow-2xs"><i class="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#EF4444]"></i>Sai bản chất (RED)</span>
     </div>
   </section>
 
@@ -292,7 +291,7 @@
           <div class="flex items-center justify-between gap-3 mb-1.5">
             <div class="text-[10px] font-bold tracking-wider uppercase text-slate-400 flex items-center gap-1.5">
               <span class="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>
-              <span>BÉ MINH · HỌC SINH LỚP 7</span>
+              <span>BÉ MINH · BẠN NHỎ 10 TUỔI</span>
             </div>
             <!-- Badge cảm xúc đính độc lập ở đây -->
             <span id="badge" class="text-xs font-bold px-2.5 py-0.5 rounded-full border shadow-2xs bg-white whitespace-nowrap transition-all duration-300"></span>
@@ -308,7 +307,7 @@
                 <i></i><i></i><i></i>
               </div>
               <span id="thinkingText" class="text-[15px] font-semibold text-stone-600 italic transition-opacity duration-200">
-                Ưm... Để em ngẫm kỹ lại lời Thầy/Cô vừa giảng xem sao...
+                Ưm... Để em ngẫm kỹ lại lời anh vừa giảng xem sao...
               </span>
             </div>
           </div>
@@ -411,6 +410,15 @@
       <span class="text-xs font-mono font-semibold px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">FEYNMAN AUDIT</span>
     </div>
     
+    <!-- Early Termination Alert Banner -->
+    <div id="earlyTerminationBanner" class="hidden mb-4 p-3.5 rounded-2xl bg-rose-50 border border-rose-300 text-rose-900 text-xs font-semibold flex items-center gap-3">
+      <span class="text-2xl shrink-0">🚨</span>
+      <div>
+        <div class="font-bold text-rose-950 uppercase tracking-wide">Dừng Khẩn Cấp (Early Termination)</div>
+        <div class="text-[11.5px] text-rose-800 font-normal mt-0.5">Mắt xích nền tảng (Root Node) bị hổng bản chất (RED). Buồng lái đã tự động khóa toàn bộ nhánh phụ thuộc để ngăn ngừa rỗng kiến thức dây chuyền.</div>
+      </div>
+    </div>
+    
     <div class="flex gap-6 items-center mb-6 bg-[#F8FAFC] p-5 rounded-2xl border border-[#E2E8F0]">
       <svg viewBox="0 0 120 120" class="w-32 h-32 shrink-0">
         <circle cx="60" cy="60" r="50" fill="none" stroke="#E2E8F0" stroke-width="12"/>
@@ -480,108 +488,240 @@ const AudioFX = {
 };
 
 /* ===================== DỮ LIỆU BÀI HỌC VÀ PHẢN HỒI BÉ MINH ===================== */
-const COLORS = { UNVISITED: '#94A3B8', MASTERED: '#10B981', JARGON_HEAVY: '#F59E0B', FAILED: '#EF4444' };
-const STATUS_VI = { UNVISITED: 'Chưa duyệt', MASTERED: 'Làm chủ', JARGON_HEAVY: 'Dính thuật ngữ', FAILED: 'Sai bản chất' };
-const STATUS_TXT = { UNVISITED: 'text-slate-400', MASTERED: 'text-emerald-600', JARGON_HEAVY: 'text-amber-600', FAILED: 'text-rose-600' };
+const COLORS = { GRAY: '#94A3B8', GREEN: '#10B981', YELLOW: '#F59E0B', RED: '#EF4444' };
+const STATUS_VI = { GRAY: 'Chưa duyệt', GREEN: 'Làm chủ', YELLOW: 'Dính thuật ngữ', RED: 'Sai bản chất' };
+const STATUS_TXT = { GRAY: 'text-slate-400', GREEN: 'text-emerald-600', YELLOW: 'text-amber-600', RED: 'text-rose-600' };
 
 const svgI = p => `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const ICONS = [
- svgI('<path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>'),
- svgI('<path d="M17 9c0-3-2-5-4.5-5S8 6 8 8.5c0 5 9 5.500 9 10 0 2-1.500 3-3.500 3S9 19.500 9 17M7 12h10"/>'),
- svgI('<path d="M12 4v16M5 8l14 8M19 8L5 16"/>'),
- svgI('<path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 17.500l9 5 9-5"/>'),
- svgI('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>')
+  svgI('<path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>'),
+  svgI('<path d="M17 9c0-3-2-5-4.5-5S8 6 8 8.5c0 5 9 5.500 9 10 0 2-1.500 3-3.500 3S9 19.500 9 17M7 12h10"/>'),
+  svgI('<path d="M12 4v16M5 8l14 8M19 8L5 16"/>'),
+  svgI('<path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 17.500l9 5 9-5"/>'),
+  svgI('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>')
 ];
 
-const LESSON = [
- {id:'n1',label:'Địa chỉ ô nhớ',fx:.5,fy:.1,pre:[],
-  tier: 1,
-  q:'Thầy/Cô ơi, "địa chỉ ô nhớ" là gì vậy ạ? Sao máy tính cần nó?',
-  retryQ:'Em vẫn chưa rõ. Nếu RAM là một dãy phố thì địa chỉ ô nhớ là gì ạ?',
-  reply:{
-    ok: "À ha, em hiểu rồi! Giống như số nhà trên dãy phố RAM, nhờ có địa chỉ ô nhớ mà máy tính mới biết chính xác món đồ cất ở ngăn nào để tìm tới lấy. Thầy/Cô ví von dễ hiểu quá!",
-    jargon: "Ái chà... Thầy/Cô dùng từ 'hexadecimal' với 'memory allocation' nghe giống sách đại học quá, đầu em quay mòng mòng luôn! Thầy/Cô ví von lại bằng ngôi nhà hay đồ vật ngoài đời giúp em với?",
-    fail: "Ủa khoan đã... Nếu địa chỉ ô nhớ chỉ là tên biến như Thầy/Cô nói, vậy lỡ hai người trùng tên nhau thì máy tính biết tìm ở đâu ạ? Em nghĩ địa chỉ phải là vị trí cụ thể chứ chưa đúng lắm!"
+/* ===================== KHO CHUYÊN ĐỀ (TOPICS) ===================== */
+const TOPICS = {
+  SUPPLY_DEMAND: {
+    id: 'SUPPLY_DEMAND',
+    name: 'Quy luật Cung - Cầu',
+    subtitle: 'Áo mưa cổng trường',
+    nodes: [
+      {
+        id: 'n1', label: 'Quy luật Cung - Cầu', fx: 0.5, fy: 0.12, pre: [], tier: 1,
+        q: 'Anh ơi, trời mưa thì sao giá áo mưa cổng trường lại đắt gấp đôi ngày thường vậy ạ?',
+        retryQ: 'Em vẫn chưa hiểu lắm... Nếu nhiều bạn cần mua mà áo mưa lại ít thì sao người bán tăng giá được ạ?',
+        reply: {
+          ok: "À ha, em hiểu rồi! Giống như 10 bạn ùa ra mà bác bán chỉ còn đúng 2 chiếc áo mưa, ai cũng muốn mua ngay nên sẵn sàng trả giá cao hơn. Cung ít mà Cầu nhiều thì giá tăng vọt, anh ví von dễ hiểu quá!",
+          jargon: "Ái chà... Anh dùng từ 'độ co dãn cầu' với 'cân bằng Pareto' nghe vĩ mô quá, đầu em quay mòng mòng luôn! Anh ví von lại bằng chuyện cổng trường thực tế giúp em với?",
+          fail: "Ủa khoan đã... Anh nói trời mưa người ta bán đắt vì người bán thích gom tiền mua kem ăn hả? Đâu phải tự nhiên thích tăng là được đâu, phải do khan hiếm chứ anh!"
+        },
+        demo: {
+          ok: 'Trời mưa 10 bạn cần mà chỉ có 2 cái áo (Cầu > Cung), ai cũng muốn mua ngay nên giá áo tăng gấp đôi.',
+          jargon: 'Do độ co dãn của cầu theo giá là inelastic trong ngắn hạn dẫn tới điểm cân bằng Pareto dịch chuyển.',
+          fail: 'Vì người bán thích bán đắt để kiếm nhiều tiền đi mua kem, không liên quan gì đến cung cầu cả.'
+        },
+        why: {
+          ok: 'Ẩn dụ 10 người mua 2 áo mưa: nêu đúng bản chất Cầu vượt Cung làm giá tăng.',
+          jargon: 'Lạm dụng thuật ngữ kinh tế học (inelastic, Pareto) mà không giải thích bằng hiện tượng.',
+          fail: 'Lạc đề / ngụy biện: quy cho ý thích chủ quan của người bán, sai bản chất kinh tế học.'
+        }
+      },
+      {
+        id: 'n2', label: 'Điểm Cân bằng Thị trường', fx: 0.28, fy: 0.45, pre: ['n1'], tier: 2,
+        q: 'Vậy khi nào thì giá áo mưa quay trở về mức bình thường 10k một chiếc hả anh?',
+        retryQ: 'Nếu trời tạnh mưa hoặc có thêm 5 bác bán áo mưa nữa chạy tới thì sao ạ?',
+        reply: {
+          ok: "Ồ quá rõ luôn! Khi trời tạnh ráo hoặc có thêm nhiều người cùng mang áo ra bán, số người mua bằng số áo sẵn có thì giá tự dừng ở 10k. Đó là điểm cân bằng!",
+          jargon: "Lại là 'giao điểm đường cung đường cầu' với 'equilibrium price'... Anh nói bằng chuyện người mua kẻ bán ngoài cổng trường được không?",
+          fail: "Ủa, anh bảo giá áo mưa do bác bảo vệ trường ra lệnh quy định bằng luật hả? Bác bảo vệ đâu có quyền định giá áo mưa ngoài đường đâu anh!"
+        },
+        demo: {
+          ok: 'Khi trời tạnh hoặc có thêm người bán, số người cần vừa bằng số áo sẵn có (Cung = Cầu) thì giá giữ nguyên 10k.',
+          jargon: 'Giá đạt Equilibrium khi đường Supply giao với Demand tại điểm tối ưu xã hội.',
+          fail: 'Giá do bác bảo vệ trường ra lệnh bắt buộc phải bán 10k không được tăng.'
+        },
+        why: {
+          ok: 'Nắm đúng: Cung bằng Cầu thì giá ổn định tại điểm cân bằng.',
+          jargon: 'Dùng từ equilibrium, đồ thị cung cầu nhưng thiếu trực quan.',
+          fail: 'Sai bản chất cơ chế thị trường tự do, nhầm với quyết định hành chính.'
+        }
+      },
+      {
+        id: 'n3', label: 'Giá trần (Price Ceiling)', fx: 0.72, fy: 0.45, pre: ['n1'], tier: 2,
+        q: 'Nếu phường bắt buộc ai bán áo mưa cổng trường cũng chỉ được lấy 10k thì sao ạ?',
+        retryQ: 'Nếu bị cấm bán đắt lúc mưa to, bác bán hàng có muốn dầm mưa mang thêm áo đến không ạ?',
+        reply: {
+          ok: "Chuẩn luôn! Bị khống chế giá 10k (Giá trần), bác bán hàng thấy không bõ công dầm mưa nên nghỉ bán luôn, kết quả là học sinh ướt sũng vì không còn ai bán áo mưa nữa!",
+          jargon: "Anh lại nói 'price ceiling gây ra deadweight loss và shortage' rồi... Khó hiểu quá!",
+          fail: "Quy định giá trần thì ai cũng có áo mưa miễn phí mặc thoải mái chứ sao anh?"
+        },
+        demo: {
+          ok: 'Bị ép giá tối đa 10k lúc mưa gió, người bán thấy lỗ công nên cất hàng không bán nữa, học sinh càng khan hiếm áo mưa.',
+          jargon: 'Price ceiling dưới giá cân bằng tạo ra shortage và deadweight loss cho nền kinh tế.',
+          fail: 'Quy định giá trần thì lập tức áo mưa tự sinh ra đầy đường cho mọi người mặc.'
+        },
+        why: {
+          ok: 'Nhận diện đúng: Giá trần triệt tiêu động lực cung, gây khan hiếm thực tế.',
+          jargon: 'Lặp lại shortage, deadweight loss thiếu liên hệ thực tế.',
+          fail: 'Ảo tưởng kinh tế: nhầm giá trần với nguồn cung vô tận.'
+        }
+      },
+      {
+        id: 'n4', label: 'Thị trường Chợ đen', fx: 0.5, fy: 0.8, pre: ['n2', 'n3'], tier: 3,
+        q: 'Khi áo mưa bị cấm bán đắt mà ai cũng cần gấp, họ sẽ làm thế nào để có áo ạ?',
+        retryQ: 'Có ai lén lút bán đằng sau ngõ với giá 50k không anh?',
+        reply: {
+          ok: "Chính xác tuyệt đối! Người ta sẽ lén lút bán trong ngõ hẻm với giá 50k cho ai thực sự cần — đó chính là thị trường chợ đen sinh ra từ giá trần!",
+          jargon: "Thị trường ngầm phát sinh do arbitrage và black market premium... Nghe nhức đầu quá anh ơi!",
+          fail: "Người ta sẽ nhịn mặc áo mưa và đứng yên dưới mưa cả ngày chờ trời nắng."
+        },
+        demo: {
+          ok: 'Vì quá cần mà ngoài cổng bị cấm bán đắt, người ta sẽ lén ra góc ngõ mua áo mưa chui với giá 50k (Chợ đen).',
+          jargon: 'Black market xuất hiện tận dụng chênh lệch giá (arbitrage) để phân phối lại tài nguyên.',
+          fail: 'Mọi người đều chấp nhận ướt mưa đứng yên chờ đến tối chứ không ai tìm cách mua cả.'
+        },
+        why: {
+          ok: 'Giải thích đúng sự xuất hiện tất yếu của chợ đen khi có giá trần và nhu cầu cấp bách.',
+          jargon: 'Thuật ngữ arbitrage, premium không có ví dụ.',
+          fail: 'Bác bỏ hành vi kinh tế tự nhiên của con người.'
+        }
+      }
+    ]
   },
-  demo:{ok:'Ví như số nhà của bạn: máy tính cần số nhà để biết món đồ được cất ở ô nào trong dãy phố RAM.',
-        jargon:'Là địa chỉ hexadecimal của vùng nhớ sau khi memory allocation ạ.',
-        fail:'Là tên của biến, biến tên gì thì địa chỉ là tên đó.'},
-  why:{ok:'Dùng ẩn dụ số nhà, đúng bản chất: địa chỉ là vị trí, không phải nội dung.',
-       jargon:'Dồn thuật ngữ (hexadecimal, memory allocation) mà không có ví dụ đời thường.',
-       fail:'Nhầm địa chỉ với tên biến; địa chỉ là vị trí trong bộ nhớ.'}},
- {id:'n2',label:'Toán tử tham chiếu (&)',fx:.24,fy:.32,pre:['n1'],
-  tier: 2,
-  q:'Thầy/Cô ơi, em thấy dấu & trước tên biến lạ lắm. Nó dùng để làm gì ạ?',
-  retryQ:'Hmm, em chưa hiểu. Dấu & hỏi "đồ trong nhà" hay hỏi "số nhà" ạ?',
-  reply:{
-    ok: "Ồ quá rõ luôn ạ! Vậy là dấu & chỉ đứng ngoài cửa hỏi 'nhà bạn số mấy' để lấy địa chỉ thôi, chứ không chạm vào món đồ cất bên trong. Em nắm chắc phần này rồi!",
-    jargon: "Em lại bị vướng từ 'address-of operator' với 'lvalue reference' rồi Thầy/Cô ơi... Nghe trừu tượng quá, nếu so với chuyện số nhà lúc nãy thì dấu & làm nhiệm vụ gì ạ?",
-    fail: "Hmm, em thấy sai sai rồi ạ! Phép cộng hai số là dấu + mà, sao dấu & đứng trước một biến lại là phép cộng được nhỉ? Hình như nó dùng để hỏi vị trí ô nhớ mới đúng chứ ạ!"
-  },
-  demo:{ok:'Giống hỏi "nhà bạn số mấy?": & cho ta số nhà của biến, chứ không phải đồ bên trong.',
-        jargon:'& là address-of operator trả về lvalue reference tới địa chỉ của object.',
-        fail:'& là phép cộng hai biến lại với nhau để ra kết quả mới.'},
-  why:{ok:'Phân biệt đúng "số nhà" và "đồ trong nhà" bằng ví dụ gần gũi.',
-       jargon:'Dùng "address-of operator", "lvalue reference" mà không giải thích.',
-       fail:'Nhầm & (lấy địa chỉ) với phép cộng/AND.'}},
- {id:'n3',label:'Toán tử giải tham chiếu (*)',fx:.76,fy:.32,pre:['n1'],
-  tier: 2,
-  q:'Có số nhà rồi, vậy dấu * dùng để làm gì ạ?',
-  retryQ:'Em chưa rõ. Cầm tờ giấy ghi số nhà rồi làm gì tiếp ạ?',
-  reply:{
-    ok: "Tuyệt vời! Cầm tờ giấy ghi số nhà trên tay, đi tới đúng căn nhà đó rồi mở cửa lấy món đồ bên trong ra — đó chính là việc của dấu *. Giờ em không bao giờ nhầm dấu & với dấu * nữa!",
-    jargon: "Thầy/Cô ơi, từ 'dereference' với 'indirection' làm em xoắn não quá! Cầm tờ giấy ghi số nhà rồi mình làm hành động gì tiếp theo để thấy món đồ bên trong ạ?",
-    fail: "Ơ kìa, khi đứng giữa hai số thì * mới là phép nhân, còn đây là dấu * đặt ngay trước con trỏ mà Thầy/Cô! Nếu chỉ nhân số thì làm sao mở cửa lấy đồ trong ô nhớ được ạ?"
-  },
-  demo:{ok:'Giống cầm tờ giấy ghi số nhà rồi đi tới đúng nhà, mở cửa lấy món đồ bên trong ra.',
-        jargon:'* là dereference operator truy cập giá trị của pointer thông qua indirection.',
-        fail:'* là nhân hai số với nhau, con trỏ chỉ là phép nhân thôi.'},
-  why:{ok:'Mô tả đúng: đi theo địa chỉ để lấy giá trị bên trong.',
-       jargon:'Lặp lại "dereference", "indirection" nhưng chưa nói được hành động thực tế.',
-       fail:'Nhầm * giải tham chiếu với phép nhân.'}},
- {id:'n4',label:'Bộ nhớ Stack vs Heap',fx:.5,fy:.56,pre:['n2','n3'],
-  tier: 3,
-  q:'Stack với Heap khác nhau chỗ nào ạ? Sao cần hai loại vậy?',
-  retryQ:'Em còn rối. Cái nào tự dọn, cái nào mình phải tự dọn ạ?',
-  reply:{
-    ok: "Ví dụ cái bàn học tự gọn gàng (Stack) với cái nhà kho rộng phải tự dọn (Heap) đỉnh quá Thầy/Cô ơi! Em hiểu ngay tại sao dùng Heap thì rộng rãi nhưng phải có trách nhiệm quản lý rồi ạ!",
-    jargon: "Lại nhiều thuật ngữ quá: 'cấp phát tĩnh', 'LIFO', 'dynamic allocator'... Em mới học lớp 7 chưa hình dung được, cái nào giống bàn học tự dọn, cái nào giống nhà kho phải tự dọn ạ?",
-    fail: "Nếu Stack và Heap giống hệt nhau thì người ta chia làm hai tên gọi làm chi cho mệt hả Thầy/Cô? Chắc chắn phải có một bên tự động dọn và một bên mình phải tự quản lý chứ ạ!"
-  },
-  demo:{ok:'Stack ví như bàn học: gọn, xong bài là tự dọn. Heap như cái kho: rộng, nhưng bạn phải tự dọn.',
-        jargon:'Stack cấp phát tĩnh theo LIFO, heap cấp phát dynamic bởi allocator qua new.',
-        fail:'Stack và Heap giống nhau, chỉ là hai tên gọi khác của RAM.'},
-  why:{ok:'So sánh bàn học/kho thể hiện đúng khác biệt về vòng đời và quyền quản lý.',
-       jargon:'Dùng "cấp phát tĩnh", "LIFO", "allocator" mà không có hình ảnh.',
-       fail:'Cho rằng Stack và Heap là một; bỏ sót khác biệt về quản lý vòng đời.'}},
- {id:'n5',label:'Giải phóng bộ nhớ (Delete)',fx:.5,fy:.82,pre:['n4'],
-  tier: 3,
-  q:'Tại sao phải delete con trỏ ạ? Không xóa thì sao?',
-  retryQ:'Em chưa hiểu. Nếu mượn đồ trong kho mà không trả thì chuyện gì xảy ra ạ?',
-  reply:{
-    ok: "Chuẩn luôn ạ! Mượn kho cất đồ xong mà không dùng 'delete' để trả lại chìa khóa thì kho sẽ chật cứng (rò rỉ bộ nhớ), người khác hết chỗ dùng luôn. Em thuộc làu toàn bộ bài Con trỏ rồi!",
-    jargon: "Cụm từ 'memory leak' với 'dangling allocation' nghe chuyên ngành quá ạ! Nếu nói theo kiểu mượn đồ trong kho mà quên trả thì hậu quả sẽ ra sao hả Thầy/Cô?",
-    fail: "Nguy hiểm quá Thầy/Cô ơi! Lúc chương trình đang chạy mà mình cứ mượn kho mãi không trả, hệ điều hành đâu có tự lấy lại ngay được, máy sẽ bị đầy RAM và treo đơ mất!"
-  },
-  demo:{ok:'Mượn đồ trong kho thì phải trả; không trả thì kho đầy dần và hết chỗ cho người khác.',
-        jargon:'Không delete sẽ gây memory leak do dangling allocation trên heap.',
-        fail:'Không cần xóa con trỏ vì hệ điều hành tự dọn sạch ngay.'},
-  why:{ok:'Ví dụ mượn/trả đồ nêu đúng hậu quả rò rỉ bộ nhớ.',
-       jargon:'"memory leak", "dangling allocation" chưa kèm ví dụ trực quan.',
-       fail:'Sai: HĐH chỉ thu hồi khi chương trình kết thúc, không phải ngay lập tức.'}}
-];
+  POINTER_CPP: {
+    id: 'POINTER_CPP',
+    name: 'Con trỏ trong C++',
+    subtitle: 'Quản lý bộ nhớ máy tính',
+    nodes: [
+      {
+        id: 'n1', label: 'Địa chỉ ô nhớ', fx: 0.5, fy: 0.1, pre: [], tier: 1,
+        q: 'Anh ơi, "địa chỉ ô nhớ" là gì vậy ạ? Sao máy tính cần nó?',
+        retryQ: 'Em vẫn chưa rõ. Nếu RAM là một dãy phố thì địa chỉ ô nhớ là gì ạ?',
+        reply: {
+          ok: "À ha, em hiểu rồi! Giống như số nhà trên dãy phố RAM, nhờ có địa chỉ ô nhớ mà máy tính mới biết chính xác món đồ cất ở ngăn nào để tìm tới lấy. Anh ví von dễ hiểu quá!",
+          jargon: "Ái chà... Anh dùng từ 'hexadecimal' với 'memory allocation' nghe giống sách đại học quá, đầu em quay mòng mòng luôn! Anh ví von lại bằng ngôi nhà hay đồ vật ngoài đời giúp em với?",
+          fail: "Ủa khoan đã... Nếu địa chỉ ô nhớ chỉ là tên biến như anh nói, vậy lỡ hai người trùng tên nhau thì máy tính biết tìm ở đâu ạ? Em nghĩ địa chỉ phải là vị trí cụ thể chứ chưa đúng lắm!"
+        },
+        demo: {
+          ok: 'Ví như số nhà của bạn: máy tính cần số nhà để biết món đồ được cất ở ô nào trong dãy phố RAM.',
+          jargon: 'Là địa chỉ hexadecimal của vùng nhớ sau khi memory allocation ạ.',
+          fail: 'Là tên của biến, biến tên gì thì địa chỉ là tên đó.'
+        },
+        why: {
+          ok: 'Dùng ẩn dụ số nhà, đúng bản chất: địa chỉ là vị trí, không phải nội dung.',
+          jargon: 'Dồn thuật ngữ (hexadecimal, memory allocation) mà không có ví dụ đời thường.',
+          fail: 'Nhầm địa chỉ với tên biến; địa chỉ là vị trí trong bộ nhớ.'
+        }
+      },
+      {
+        id: 'n2', label: 'Toán tử tham chiếu (&)', fx: 0.24, fy: 0.32, pre: ['n1'], tier: 2,
+        q: 'Anh ơi, em thấy dấu & trước tên biến lạ lắm. Nó dùng để làm gì ạ?',
+        retryQ: 'Hmm, em chưa hiểu. Dấu & hỏi "đồ trong nhà" hay hỏi "số nhà" ạ?',
+        reply: {
+          ok: "Ồ quá rõ luôn ạ! Vậy là dấu & chỉ đứng ngoài cửa hỏi 'nhà bạn số mấy' để lấy địa chỉ thôi, chứ không chạm vào món đồ cất bên trong. Em nắm chắc phần này rồi!",
+          jargon: "Em lại bị vướng từ 'address-of operator' với 'lvalue reference' rồi anh ơi... Nghe trừu tượng quá, nếu so với chuyện số nhà lúc nãy thì dấu & làm nhiệm vụ gì ạ?",
+          fail: "Hmm, em thấy sai sai rồi ạ! Phép cộng hai số là dấu + mà, sao dấu & đứng trước một biến lại là phép cộng được nhỉ? Hình như nó dùng để hỏi vị trí ô nhớ mới đúng chứ ạ!"
+        },
+        demo: {
+          ok: 'Giống hỏi "nhà bạn số mấy?": & cho ta số nhà của biến, chứ không phải đồ bên trong.',
+          jargon: '& là address-of operator trả về lvalue reference tới địa chỉ của object.',
+          fail: '& là phép cộng hai biến lại với nhau để ra kết quả mới.'
+        },
+        why: {
+          ok: 'Phân biệt đúng "số nhà" và "đồ trong nhà" bằng ví dụ gần gũi.',
+          jargon: 'Dùng "address-of operator", "lvalue reference" mà không giải thích.',
+          fail: 'Nhầm & (lấy địa chỉ) với phép cộng/AND.'
+        }
+      },
+      {
+        id: 'n3', label: 'Toán tử giải tham chiếu (*)', fx: 0.76, fy: 0.32, pre: ['n1'], tier: 2,
+        q: 'Có số nhà rồi, vậy dấu * dùng để làm gì ạ?',
+        retryQ: 'Em chưa rõ. Cầm tờ giấy ghi số nhà rồi làm gì tiếp ạ?',
+        reply: {
+          ok: "Tuyệt vời! Cầm tờ giấy ghi số nhà trên tay, đi tới đúng căn nhà đó rồi mở cửa lấy món đồ bên trong ra — đó chính là việc của dấu *. Giờ em không bao giờ nhầm dấu & với dấu * nữa!",
+          jargon: "Anh ơi, từ 'dereference' với 'indirection' làm em xoắn não quá! Cầm tờ giấy ghi số nhà rồi mình làm hành động gì tiếp theo để thấy món đồ bên trong ạ?",
+          fail: "Ơ kìa, khi đứng giữa hai số thì * mới là phép nhân, còn đây là dấu * đặt ngay trước con trỏ mà anh! Nếu chỉ nhân số thì làm sao mở cửa lấy đồ trong ô nhớ được ạ?"
+        },
+        demo: {
+          ok: 'Giống cầm tờ giấy ghi số nhà rồi đi tới đúng nhà, mở cửa lấy món đồ bên trong ra.',
+          jargon: '* là dereference operator truy cập giá trị của pointer thông qua indirection.',
+          fail: '* là nhân hai số với nhau, con trỏ chỉ là phép nhân thôi.'
+        },
+        why: {
+          ok: 'Mô tả đúng: đi theo địa chỉ để lấy giá trị bên trong.',
+          jargon: 'Lặp lại "dereference", "indirection" nhưng chưa nói được hành động thực tế.',
+          fail: 'Nhầm * giải tham chiếu với phép nhân.'
+        }
+      },
+      {
+        id: 'n4', label: 'Bộ nhớ Stack vs Heap', fx: 0.5, fy: 0.56, pre: ['n2', 'n3'], tier: 3,
+        q: 'Stack với Heap khác nhau chỗ nào ạ? Sao cần hai loại vậy?',
+        retryQ: 'Em còn rối. Cái nào tự dọn, cái nào mình phải tự dọn ạ?',
+        reply: {
+          ok: "Ví dụ cái bàn học tự gọn gàng (Stack) với cái nhà kho rộng phải tự dọn (Heap) đỉnh quá anh ơi! Em hiểu ngay tại sao dùng Heap thì rộng rãi nhưng phải có trách nhiệm quản lý rồi ạ!",
+          jargon: "Lại nhiều thuật ngữ quá: 'cấp phát tĩnh', 'LIFO', 'dynamic allocator'... Em mới 10 tuổi chưa hình dung được, cái nào giống bàn học tự dọn, cái nào giống nhà kho phải tự dọn ạ?",
+          fail: "Nếu Stack và Heap giống hệt nhau thì người ta chia làm hai tên gọi làm chi cho mệt hả anh? Chắc chắn phải có một bên tự động dọn và một bên mình phải tự quản lý chứ ạ!"
+        },
+        demo: {
+          ok: 'Stack ví như bàn học: gọn, xong bài là tự dọn. Heap như cái kho: rộng, nhưng bạn phải tự dọn.',
+          jargon: 'Stack cấp phát tĩnh theo LIFO, heap cấp phát dynamic bởi allocator qua new.',
+          fail: 'Stack và Heap giống nhau, chỉ là hai tên gọi khác của RAM.'
+        },
+        why: {
+          ok: 'So sánh bàn học/kho thể hiện đúng khác biệt về vòng đời và quyền quản lý.',
+          jargon: 'Dùng "cấp phát tĩnh", "LIFO", "allocator" mà không có hình ảnh.',
+          fail: 'Cho rằng Stack và Heap là một; bỏ sót khác biệt về quản lý vòng đời.'
+        }
+      },
+      {
+        id: 'n5', label: 'Giải phóng bộ nhớ (Delete)', fx: 0.5, fy: 0.82, pre: ['n4'], tier: 3,
+        q: 'Tại sao phải delete con trỏ ạ? Không xóa thì sao?',
+        retryQ: 'Em chưa hiểu. Nếu mượn đồ trong kho mà không trả thì chuyện gì xảy ra ạ?',
+        reply: {
+          ok: "Chuẩn luôn ạ! Mượn kho cất đồ xong mà không dùng 'delete' để trả lại chìa khóa thì kho sẽ chật cứng (rò rỉ bộ nhớ), người khác hết chỗ dùng luôn. Em thuộc làu toàn bộ bài Con trỏ rồi!",
+          jargon: "Cụm từ 'memory leak' với 'dangling allocation' nghe chuyên ngành quá ạ! Nếu nói theo kiểu mượn đồ trong kho mà quên trả thì hậu quả sẽ ra sao hả anh?",
+          fail: "Nguy hiểm quá anh ơi! Lúc chương trình đang chạy mà mình cứ mượn kho mãi không trả, hệ điều hành đâu có tự lấy lại ngay được, máy sẽ bị đầy RAM và treo đơ mất!"
+        },
+        demo: {
+          ok: 'Mượn đồ trong kho thì phải trả; không trả thì kho đầy dần và hết chỗ cho người khác.',
+          jargon: 'Không delete sẽ gây memory leak do dangling allocation trên heap.',
+          fail: 'Không cần xóa con trỏ vì hệ điều hành tự dọn sạch ngay.'
+        },
+        why: {
+          ok: 'Ví dụ mượn/trả đồ nêu đúng hậu quả rò rỉ bộ nhớ.',
+          jargon: '"memory leak", "dangling allocation" chưa kèm ví dụ trực quan.',
+          fail: 'Sai: HĐH chỉ thu hồi khi chương trình kết thúc, không phải ngay lập tức.'
+        }
+      }
+    ]
+  }
+};
+
+let currentTopicKey = 'SUPPLY_DEMAND';
 
 const EMO = { CURIOUS: ['Giơ tay hỏi', '#18181B'], CONFUSED: ['Ngơ ngác', '#D97706'], SKEPTICAL: ['Nghi ngờ', '#DC2626'], HAPPY: ['Thấu suốt', '#10B981'] };
-const VERDICT_EMO = { MASTERED: 'HAPPY', JARGON_HEAVY: 'CONFUSED', FAILED: 'SKEPTICAL' };
+const VERDICT_EMO = { GREEN: 'HAPPY', YELLOW: 'CONFUSED', RED: 'SKEPTICAL' };
 const K = { CURIOUS: 'C', CONFUSED: 'J', SKEPTICAL: 'S', HAPPY: 'H', THINKING: 'T' };
 const $ = id => document.getElementById(id);
 
 /* ===================== TRẠNG THÁI PHIÊN ===================== */
 let S;
 let zoomLevel = 1;
+
 function initState(){
+  const topic = TOPICS[currentTopicKey];
   S = {
-    nodes: LESSON.map(n => ({...n, status: 'UNVISITED', color_code: COLORS.UNVISITED, diagnostic_reason: null, retry_count: 0})),
+    nodes: topic.nodes.map(n => ({
+      ...n,
+      status: 'GRAY',
+      color_code: COLORS.GRAY,
+      diagnostic_reason: null,
+      retry_count: 0,
+      scaffold_level: 1,
+      has_unstable_foundation: false
+    })),
     cur: 0,
     history: [],
     lastUser: null,
@@ -589,19 +729,71 @@ function initState(){
     phase: '',
     busy: false,
     emotion: 'CURIOUS',
-    question: LESSON[0].q,
+    question: topic.nodes[0].q,
     done: false,
+    isEarlyTermination: false,
     showHistory: false,
     anchorMetaphor: 'Chưa có',
-    rubric: { acc: null, sim: null, ana: null },
+    rubric: { core_accuracy: null, simplicity: null, analogy_grounding: null },
     pendingAction: null
   };
+}
+
+function switchTopic(newTopicKey){
+  if(!TOPICS[newTopicKey]) return;
+  currentTopicKey = newTopicKey;
+  reset();
+}
+
+/* ===================== THUẬT TOÁN DUYỆT ĐỒ THỊ KHÁNG DEADLOCK ===================== */
+function findNextNodeIndex(currentNodeIndex, nodes){
+  const currentNode = nodes[currentNodeIndex];
+  
+  // 1. Kiểm tra Early Termination nếu Root Node (in-degree == 0) bị chốt RED
+  if(currentNode.pre.length === 0 && currentNode.status === 'RED'){
+    return { nextIndex: -1, isEarlyTermination: true, reason: 'Root Node bị chốt ĐỎ. Kích hoạt Early Termination dừng khẩn cấp.' };
+  }
+  
+  // 2. Lấy danh sách các node còn ở trạng thái GRAY
+  const grayNodes = nodes.map((n, idx) => ({ node: n, index: idx })).filter(item => item.node.status === 'GRAY');
+  if(grayNodes.length === 0){
+    return { nextIndex: -1, isEarlyTermination: false, reason: 'Tất cả node đã được đánh giá.' };
+  }
+  
+  // 3. Ưu tiên 1 (Strict Path): Tìm node nhánh có 100% cha là GREEN
+  const strictCandidate = grayNodes.find(item => 
+    item.node.pre.length > 0 && item.node.pre.every(pId => nodes.find(n => n.id === pId)?.status === 'GREEN')
+  );
+  if(strictCandidate){
+    return { nextIndex: strictCandidate.index, isEarlyTermination: false, reason: 'Tìm thấy node nhánh song song có 100% cha đạt GREEN.' };
+  }
+  
+  // 4. Ưu tiên 2 (Soft-prerequisite Bypass): Kích hoạt node con có tất cả cha thuộc [GREEN, RED]
+  const bypassCandidate = grayNodes.find(item => 
+    item.node.pre.length > 0 && item.node.pre.every(pId => {
+      const p = nodes.find(n => n.id === pId);
+      return p?.status === 'GREEN' || p?.status === 'RED';
+    })
+  );
+  if(bypassCandidate){
+    bypassCandidate.node.has_unstable_foundation = true;
+    return { nextIndex: bypassCandidate.index, isEarlyTermination: false, reason: 'Kích hoạt Soft-prerequisite Bypass (bỏ qua cha bị RED).' };
+  }
+  
+  // Fallback nếu đồ thị còn node GRAY tiếp theo
+  const nextSequential = grayNodes[0];
+  return { nextIndex: nextSequential ? nextSequential.index : -1, isEarlyTermination: false, reason: 'Chuyển sang node kế tiếp trong danh sách.' };
 }
 
 /* ===================== METAPHOR RETENTION & HIGHLIGHTING ===================== */
 function extractMetaphor(text){
   if(!text) return null;
   const s = text.toLowerCase();
+  // Kinh tế học Cung - Cầu
+  if(s.includes('áo mưa') || s.includes('cổng trường')) return 'Áo mưa cổng trường (Cung - Cầu)';
+  if(s.includes('chợ đen') || s.includes('ngõ')) return 'Góc ngõ bán chui (Chợ đen)';
+  if(s.includes('tạnh') || s.includes('bằng')) return 'Trời tạnh ráo (Điểm cân bằng)';
+  // Con trỏ C++
   if(s.includes('số nhà') || s.includes('dãy phố')) return 'Số nhà (RAM)';
   if(s.includes('bàn học')) return 'Bàn học (Stack)';
   if(s.includes('kho') || s.includes('mượn đồ') || s.includes('trả đồ')) return 'Kho đồ (Heap)';
@@ -612,8 +804,8 @@ function extractMetaphor(text){
 
 function highlightKeywords(text){
   if(!text) return '';
-  const metaphors = ['số nhà', 'dãy phố', 'bàn học', 'mượn đồ', 'trả đồ', 'kho', 'đồ trong nhà', 'đồ bên trong', 'vị trí', 'tờ giấy ghi', 'hết chỗ'];
-  const jargons = ['hexadecimal', 'memory allocation', 'lvalue reference', 'address-of operator', 'dereference operator', 'indirection', 'allocator', 'dynamic', 'cấp phát tĩnh', 'cấp phát dynamic', 'lifo', 'memory leak', 'dangling allocation'];
+  const metaphors = ['áo mưa', 'cổng trường', '10 bạn', '10 người', '2 cái áo', '2 chiếc', 'khan hiếm', 'chợ đen', 'ngõ', 'tạnh ráo', 'số nhà', 'dãy phố', 'bàn học', 'mượn đồ', 'trả đồ', 'kho', 'đồ trong nhà', 'đồ bên trong', 'vị trí', 'tờ giấy ghi', 'hết chỗ'];
+  const jargons = ['co dãn', 'inelastic', 'elastic', 'pareto', 'equilibrium', 'price ceiling', 'deadweight loss', 'shortage', 'arbitrage', 'black market premium', 'hexadecimal', 'memory allocation', 'lvalue reference', 'address-of operator', 'dereference operator', 'indirection', 'allocator', 'dynamic', 'cấp phát tĩnh', 'cấp phát dynamic', 'lifo', 'memory leak', 'dangling allocation'];
   let res = text;
   [...jargons].sort((a,b)=>b.length-a.length).forEach(w => {
     const re = new RegExp(`(${w})`, 'gi');
@@ -629,31 +821,24 @@ function highlightKeywords(text){
 /* ===================== AVATAR BÉ MINH SVG (CHARCOAL SLATE VEST & JADE TIE) ===================== */
 function avatarSVG(){
   const skin = '#FFD9B8';
-  // Áo gile màu Xanh Than Slate phối đường viền Obsidian
   const sl = d => `<path d="${d}" stroke="#1E293B" stroke-width="24" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" stroke="#334155" stroke-width="18" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
   const hand = (x,y) => `<circle cx="${x}" cy="${y}" r="10.5" fill="${skin}"/>`;
   
   return `<svg viewBox="145 75 230 265" class="w-full h-full" preserveAspectRatio="xMidYMid meet" data-e="C">
   <defs>
-    <!-- Gile len màu Xanh Than Slate -->
     <linearGradient id="gVest" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#334155"/>
       <stop offset="100%" stop-color="#1E293B"/>
     </linearGradient>
   </defs>
   <g id="char">
-   <!-- Sơ mi trắng học sinh bên trong gile -->
    <rect x="166" y="236" width="128" height="122" rx="28" fill="#FFFFFF"/>
-   <!-- Áo gile học sinh màu Xanh Than Slate -->
    <path d="M158 342C158 296 180 266 230 266C280 266 302 296 302 342Z" fill="url(#gVest)"/>
    <path d="M230 266C280 266 302 296 302 342H276C278 302 262 276 230 270Z" fill="#0F172A" opacity=".25"/>
    <rect x="216" y="234" width="28" height="40" rx="12" fill="#F5C9A3"/>
-   <!-- Cổ áo sơ mi trắng lịch sự -->
    <path d="M204 267l26 26 26-26-10-6h-32z" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
-   <!-- Cà vạt / Nơ Xanh Ngọc Jade điểm nhấn -->
    <path d="M226 288l4 30 8-30-6-3z" fill="#10B981"/>
    <circle cx="230" cy="288" r="4.5" fill="#059669"/>
-   <!-- Huy hiệu trường học trên ngực áo màu Xanh Ngọc -->
    <circle cx="266" cy="304" r="5" fill="#10B981"/>
    <circle cx="266" cy="304" r="2.5" fill="#A7F3D0"/>
 
@@ -678,7 +863,6 @@ function avatarSVG(){
     <path class="v H" d="M213 205q17 24 34 0z" fill="#B91C1C"/><path class="v H" d="M221 215q9 6 18 0" stroke="#FCA5A5" stroke-width="2.500" fill="none"/>
    </g>
 
-   <!-- Cử chỉ tay động của Bé Minh -->
    <g class="v C T J">${sl('M172 288L158 322L204 326')}${hand(214,327)}</g>
    <g class="v C">${sl('M288 288L328 252L334 162')}<g class="wave"><circle cx="336" cy="146" r="12.500" fill="${skin}"/><path d="M328 140v-17M334 137v-21M340 137v-21M346 140v-17M325 149l-11-8" stroke="${skin}" stroke-width="6.500" stroke-linecap="round"/></g></g>
    <g class="v T">${sl('M288 288L306 326L258 242')}${hand(252,232)}</g>
@@ -686,7 +870,6 @@ function avatarSVG(){
    <g class="v S">${sl('M172 288L176 322')}${sl('M288 288L284 322')}${sl('M176 322L272 302')}${hand(281,300)}${sl('M284 322L190 304')}${hand(181,302)}</g>
    <g class="v H"><g class="clap">${sl('M172 288L170 320L222 286')}${sl('M288 288L290 320L238 286')}${hand(226,282)}${hand(234,282)}</g></g>
    
-   <!-- Hiệu ứng cảm xúc -->
    <path class="v C twinkle" d="M366 118l4-9 4 9 9 4-9 4-4 9-4-9-9-4z" fill="#F59E0B"/>
    <g class="v T"><circle class="twinkle" cx="312" cy="176" r="4" fill="#94A3B8"/><circle class="twinkle" style="animation-delay:.2s" cx="326" cy="154" r="6" fill="#94A3B8"/><circle class="twinkle" style="animation-delay:.4s" cx="346" cy="122" r="10" fill="#94A3B8"/></g>
    <g class="v J"><circle cx="330" cy="104" r="26" fill="#fff" stroke="#CBD5E1" stroke-width="2.500"/><circle cx="302" cy="140" r="5.500" fill="#fff" stroke="#CBD5E1" stroke-width="2"/><circle cx="292" cy="152" r="3.500" fill="#fff" stroke="#CBD5E1" stroke-width="2"/><path class="spin" d="M330 104a3 3 0 1 1 3 3a7 7 0 1 1-7-7a11 11 0 1 1 11 11" fill="none" stroke="#D97706" stroke-width="2.800" stroke-linecap="round"/></g>
@@ -696,25 +879,43 @@ function avatarSVG(){
 }
 
 /* ===================== RENDER DAG CANVAS (CỘT TRÁI 34%) ===================== */
+function renderRadar(){
+  const radar = $('miniRadarDots');
+  if(!radar) return;
+  const dotsHtml = S.nodes.map((n, i) => {
+    const isCur = !S.done && i === S.cur;
+    const bg = n.status === 'GREEN' ? '#10B981' : n.status === 'YELLOW' ? '#F59E0B' : n.status === 'RED' ? '#EF4444' : '#CBD5E1';
+    return `
+      ${isCur ? `<div class="absolute w-1.5 h-1.5 rounded-full bg-[#10B981] animate-ping" style="left:${n.fx*100}%;top:${n.fy*100}%;transform:translate(-50%,-50%)"></div>` : ''}
+      <div class="absolute w-1.5 h-1.5 rounded-full" style="left:${n.fx*100}%;top:${n.fy*100}%;background:${bg};transform:translate(-50%,-50%)"></div>
+    `;
+  }).join('');
+  radar.innerHTML = dotsHtml + '<div class="absolute inset-0 border border-[#10B981]/40 bg-[#10B981]/5 rounded pointer-events-none"></div>';
+}
+
 function renderDag(){
   $('nodes').innerHTML = S.nodes.map((n, i) => {
     const isCur = !S.done && i === S.cur;
-    const isRetrying = isCur && n.retry_count === 1 && n.status !== 'MASTERED';
+    const isRetrying = isCur && n.retry_count > 0 && n.status !== 'GREEN';
     
     let statusText = '';
     if(isRetrying){
-      statusText = '<span class="text-amber-600 font-bold">Đang gỡ · thử lại 1/2</span>';
-    } else if(isCur && n.status === 'UNVISITED'){
+      statusText = `<span class="text-amber-600 font-bold">Đang gỡ · thử lại ${n.retry_count}/3</span>`;
+    } else if(isCur && n.status === 'GRAY'){
       statusText = '<span class="text-[#10B981] font-bold">Đang phỏng vấn</span>';
     } else {
       statusText = STATUS_VI[n.status];
-      if(n.retry_count && n.status !== 'MASTERED' && n.retry_count < 2){
-        statusText += ' · thử lại ' + n.retry_count + '/2';
+      if(n.retry_count && n.status !== 'GREEN' && n.retry_count < 3){
+        statusText += ` · thử lại ${n.retry_count}/3`;
       }
     }
 
+    if(n.has_unstable_foundation && n.status !== 'GRAY'){
+      statusText += ' <span class="text-[9px] font-mono px-1 py-0.2 bg-amber-100 text-amber-800 rounded">Bypass</span>';
+    }
+
     return `<div class="node ${isCur ? 'focus' : ''} ${isRetrying ? 'retrying' : ''}" data-i="${i}" data-s="${n.status}" style="left:${n.fx*100}%;top:${n.fy*100}%">
-      <div class="ico">${ICONS[i]}</div>
+      <div class="ico">${ICONS[i % ICONS.length]}</div>
       <div class="min-w-0">
         <div class="text-[12.5px] font-bold text-slate-900 leading-tight">${n.label}</div>
         <div class="text-[10px] font-semibold mt-0.5 ${isRetrying ? 'text-amber-600' : STATUS_TXT[n.status]}">${statusText}</div>
@@ -722,24 +923,30 @@ function renderDag(){
     </div>`;
   }).join('');
   drawEdges();
+  renderRadar();
 }
 
 function drawEdges(){
   const svg = $('edges'), W = svg.clientWidth, H = svg.clientHeight, els = [...document.querySelectorAll('.node')];
+  if(!els.length) return;
   svg.innerHTML = `<defs>
     <marker id="a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#94A3B8"/></marker>
     <marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#10B981"/></marker>
+    <marker id="a3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#EF4444"/></marker>
   </defs>`;
   S.nodes.forEach((n, i) => n.pre.forEach(pid => {
     const pi = S.nodes.findIndex(x => x.id === pid), p = S.nodes[pi];
+    if(!p || !els[pi] || !els[i]) return;
     const x1 = p.fx * W, y1 = p.fy * H + els[pi].offsetHeight / 2, x2 = n.fx * W, y2 = n.fy * H - els[i].offsetHeight / 2 - 4, dy = (y2 - y1) / 2;
     const active = !S.done && i === S.cur;
+    const isRedParent = p.status === 'RED';
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', `M${x1} ${y1} C${x1} ${y1 + dy}, ${x2} ${y2 - dy}, ${x2} ${y2}`);
     path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', active ? '#10B981' : '#CBD5E1');
+    path.setAttribute('stroke', isRedParent ? '#EF4444' : active ? '#10B981' : '#CBD5E1');
     path.setAttribute('stroke-width', active ? '2.5' : '2');
-    path.setAttribute('marker-end', active ? 'url(#a2)' : 'url(#a1)');
+    if(isRedParent) path.setAttribute('stroke-dasharray', '4 4');
+    path.setAttribute('marker-end', isRedParent ? 'url(#a3)' : active ? 'url(#a2)' : 'url(#a1)');
     if(active) path.setAttribute('class', 'flow');
     svg.appendChild(path);
   }));
@@ -747,7 +954,8 @@ function drawEdges(){
 
 /* ===================== RENDER FLASHCARD WORKBENCH (CỘT PHẢI 66%) ===================== */
 function updateScaffolding(){
-  const curTier = S.nodes[S.cur] ? S.nodes[S.cur].tier : 1;
+  const node = S.nodes[S.cur];
+  const level = node ? (node.scaffold_level || 1) : 1;
   const isDone = S.done;
 
   const s1 = $('scaffStep1');
@@ -767,15 +975,15 @@ function updateScaffolding(){
     }
   }
 
-  if(isDone){
+  if(isDone || (node && node.status === 'GREEN')){
     renderStep(s1, 1, 'Trực giác', 'done');
     renderStep(s2, 2, 'Khớp nối', 'done');
     renderStep(s3, 3, 'Bản chất', 'done');
-  } else if(curTier === 1){
+  } else if(level === 1){
     renderStep(s1, 1, 'Trực giác', 'active');
     renderStep(s2, 2, 'Khớp nối', 'pending');
     renderStep(s3, 3, 'Bản chất', 'pending');
-  } else if(curTier === 2){
+  } else if(level === 2){
     renderStep(s1, 1, 'Trực giác', 'done');
     renderStep(s2, 2, 'Khớp nối', 'active');
     renderStep(s3, 3, 'Bản chất', 'pending');
@@ -792,33 +1000,29 @@ function renderStage(){
   const think = S.phase === 'think';
   av.firstChild.setAttribute('data-e', K[think ? 'THINKING' : S.emotion]);
   
-  // Badge cảm xúc dời ra ngoài avatar, đặt ngang hàng phụ đề Bé Minh
   const [lbl, col] = EMO[S.emotion], b = $('badge'), c = think ? '#0D9488' : col;
   b.textContent = think ? 'Đang ngẫm nghĩ...' : lbl;
   b.style.color = c;
   b.style.borderColor = c + '40';
   b.style.background = '#FFFFFF';
   
-  // Scaffolding Stepper & Node Label
   $('qLabel').textContent = S.done ? 'Hoàn thành bài giảng' : S.nodes[S.cur].label;
   $('anchorMetaphor').textContent = S.anchorMetaphor;
   updateScaffolding();
 
-  // Question (19px vừa vặn, sắc nét)
   $('question').textContent = S.question;
   $('question').classList.toggle('hidden', think);
   $('thinking').classList.toggle('hidden', !think);
 
-  // Cập nhật số lượt nhật ký
   $('historyCount').textContent = S.history.length;
   $('historyBtnText').innerHTML = S.showHistory ? '✕ Đóng lại' : `Nhật ký (<span id="historyCount">${S.history.length}</span>)`;
 
   // Thanh tiến độ header
   $('segs').innerHTML = S.nodes.map((n, i) => {
-    const f = !S.done && i === S.cur && n.status === 'UNVISITED';
-    return `<div class="seg h-2 flex-1 rounded-full ${f ? 'focus' : ''}" style="${n.status !== 'UNVISITED' ? `background:${n.color_code};box-shadow:0 0 8px ${n.color_code}66` : f ? '' : 'background:#E2E8F0'}"></div>`;
+    const f = !S.done && i === S.cur && n.status === 'GRAY';
+    return `<div class="seg h-2 flex-1 rounded-full ${f ? 'focus' : ''}" style="${n.status !== 'GRAY' ? `background:${n.color_code};box-shadow:0 0 8px ${n.color_code}66` : f ? '' : 'background:#E2E8F0'}"></div>`;
   }).join('');
-  const m = S.nodes.filter(n => n.status === 'MASTERED').length;
+  const m = S.nodes.filter(n => n.status === 'GREEN').length;
   $('progText').textContent = `Đã hoàn thành: ${m}/${S.nodes.length} Node`;
   $('progNow').textContent = S.done ? 'Hoàn tất' : `Node ${S.cur + 1}/${S.nodes.length}`;
 
@@ -831,27 +1035,31 @@ function renderStage(){
     $('reviewBar').classList.remove('hidden');
     $('reviewBar').classList.add('flex');
     
-    const { advance, willComplete, verdict, isSkip, retryCount } = S.pendingAction;
+    const { advance, willComplete, verdict, isSkip, retryCount, isEarlyTermination } = S.pendingAction;
     const btn = $('btnProceed');
     const btnTxt = $('btnProceedText');
     const msg = $('reviewMsg');
     
     btn.className = 'h-10 px-6 text-xs font-bold rounded-xl text-white shadow-2xs active:translate-y-0.5 transition-all flex items-center gap-1.5 shrink-0';
     
-    if(isSkip){
-      msg.innerHTML = `<span class="flex items-center gap-1.5 text-xs font-semibold text-amber-800"><span class="text-amber-500">🏳️</span><span>Đã ghi nhận điểm mù ôn tập sau và chuyển bài học.</span></span>`;
+    if(isEarlyTermination){
+      msg.innerHTML = `<span class="flex items-center gap-1.5 text-xs font-bold text-rose-700"><span class="text-rose-500">🚨</span><span>Root Node bị ĐỎ: Kích hoạt Dừng khẩn cấp (Early Termination) để bảo toàn đồ thị.</span></span>`;
+      btnTxt.textContent = 'Xem báo cáo Dừng khẩn cấp';
+      btn.classList.add('bg-rose-700', 'hover:bg-rose-800');
+    } else if(isSkip){
+      msg.innerHTML = `<span class="flex items-center gap-1.5 text-xs font-semibold text-amber-800"><span class="text-amber-500">🏳️</span><span>Đã ghi nhận điểm mù ôn tập sau và chuyển sang mắt xích tiếp theo.</span></span>`;
       btnTxt.textContent = willComplete ? 'Xem báo cáo tổng kết' : 'Qua mắt xích tiếp theo';
       btn.classList.add('bg-[#18181B]', 'hover:bg-stone-800');
-    } else if(verdict === 'MASTERED'){
+    } else if(verdict === 'GREEN'){
       msg.innerHTML = `<span class="flex items-center gap-1.5 text-xs font-bold text-emerald-700"><span class="text-emerald-500">✨</span><span>Bé Minh đã thấu suốt mắt xích này!</span></span>`;
       btnTxt.textContent = willComplete ? 'Xem báo cáo tổng kết' : 'Qua mắt xích tiếp theo';
       btn.classList.add('bg-[#059669]', 'hover:bg-[#047857]');
-    } else if(retryCount < 2){
-      msg.innerHTML = `<span class="flex items-center gap-1.5 text-xs font-semibold text-amber-800"><span class="text-amber-500">💡</span><span>Hãy đọc nhận xét của Bé Minh và thử diễn đạt lại nhé (Còn 1 lượt).</span></span>`;
+    } else if(retryCount < 3){
+      msg.innerHTML = `<span class="flex items-center gap-1.5 text-xs font-semibold text-amber-800"><span class="text-amber-500">💡</span><span>Hãy đọc nhận xét của Bé Minh và thử diễn đạt lại nhé (Còn ${3 - retryCount} lượt).</span></span>`;
       btnTxt.textContent = 'Giải thích lại cho Bé Minh';
       btn.classList.add('bg-[#18181B]', 'hover:bg-stone-800');
     } else {
-      msg.innerHTML = `<span class="flex items-center gap-1.5 text-xs font-semibold text-rose-800"><span class="text-rose-500">📌</span><span>Đã ghi nhận điểm mù vào sổ tay báo cáo để ôn tập sau.</span></span>`;
+      msg.innerHTML = `<span class="flex items-center gap-1.5 text-xs font-semibold text-rose-800"><span class="text-rose-500">📌</span><span>Hết 3 lượt thử: Đã ghi nhận điểm mù (RED) vào sổ tay báo cáo.</span></span>`;
       btnTxt.textContent = willComplete ? 'Xem báo cáo tổng kết' : 'Tạm gác & Qua bài tiếp theo';
       btn.classList.add('bg-[#18181B]', 'hover:bg-stone-800');
     }
@@ -867,24 +1075,20 @@ function renderLastTurnSlot(){
   const slot = $('lastTurnSlot');
   if(!slot) return;
 
-  // Khi đang suy nghĩ (S.phase === 'think')
   if(S.phase === 'think' && S.lastUser && S.lastUser.a){
     slot.classList.remove('hidden');
     slot.innerHTML = `
-      <!-- Dòng trên: Lời giảng vừa gửi -->
       <div class="text-[13px] text-slate-800 italic leading-relaxed break-words font-medium">
         "${highlightKeywords(S.lastUser.a)}"
       </div>
-      <!-- Dòng dưới: Trạng thái đang phân tích ngữ nghĩa -->
       <div class="mt-2 pt-2 border-t border-[#E2E8F0] flex items-center gap-2 text-xs text-slate-500 font-medium">
         <span class="inline-block animate-spin text-[#10B981] text-xs">⏳</span>
-        <span>Hệ thống đang phân tích ngữ nghĩa & 3 tiêu chí Rubric...</span>
+        <span>Hệ thống đang phân tích ngữ nghĩa & 3 tiêu chí Rubric (75/70/65)...</span>
       </div>
     `;
     return;
   }
 
-  // Khi ở pha review (đã có kết quả)
   if(S.phase === 'review'){
     const curTurns = S.history.filter(h => h.nodeId === S.nodes[S.cur].id);
     const lastTurn = curTurns.length > 0 ? curTurns[curTurns.length - 1] : null;
@@ -896,24 +1100,22 @@ function renderLastTurnSlot(){
     }
 
     const V_BADGE = {
-      MASTERED: 'bg-emerald-50 text-emerald-800 border-emerald-300',
-      JARGON_HEAVY: 'bg-amber-50 text-amber-800 border-amber-300',
-      FAILED: 'bg-rose-50 text-rose-800 border-rose-300'
+      GREEN: 'bg-emerald-50 text-emerald-800 border-emerald-300',
+      YELLOW: 'bg-amber-50 text-amber-800 border-amber-300',
+      RED: 'bg-rose-50 text-rose-800 border-rose-300'
     };
     const V_TITLE = {
-      MASTERED: '🟢 Đạt bản chất',
-      JARGON_HEAVY: '🟡 Dính thuật ngữ',
-      FAILED: '🔴 Sai bản chất'
+      GREEN: '🟢 Đạt bản chất',
+      YELLOW: '🟡 Dính thuật ngữ',
+      RED: '🔴 Sai bản chất'
     };
 
     slot.classList.remove('hidden');
     slot.innerHTML = `
-      <!-- Dòng trên: Lời giảng vừa gửi -->
       <div class="text-[13px] text-slate-800 italic leading-relaxed break-words font-medium">
         ${lastTurn.isSkip ? '<span class="text-amber-800/80 font-mono">🏳️ Bạn đã tạm bỏ qua mắt xích này để ôn lại sau.</span>' : `"${highlightKeywords(lastTurn.userAnswer)}"`}
       </div>
 
-      <!-- Dòng dưới: Badge kết quả + Lý do + Rubric 3 chỉ số -->
       <div class="mt-2.5 pt-2 border-t border-[#E2E8F0] flex flex-wrap items-center justify-between gap-2 text-xs">
         <div class="flex items-center gap-1.5">
           <span class="px-2 py-0.5 rounded-md border text-[11px] font-mono font-bold ${lastTurn.isSkip ? 'bg-slate-100 text-slate-700 border-slate-300' : V_BADGE[lastTurn.verdict]}">
@@ -924,11 +1126,11 @@ function renderLastTurnSlot(){
 
         ${!lastTurn.isSkip && lastTurn.rubric ? `
           <div class="font-mono text-[11px] font-bold text-slate-500 flex items-center gap-2 bg-white px-2.5 py-0.5 rounded-lg border border-[#E2E8F0]">
-            <span>Đúng: <b class="${lastTurn.rubric.acc >= 85 ? 'text-emerald-600' : 'text-slate-700'}">${lastTurn.rubric.acc}%</b></span>
+            <span>Đúng: <b class="${lastTurn.rubric.core_accuracy >= 75 ? 'text-emerald-600' : 'text-rose-600'}">${lastTurn.rubric.core_accuracy}%</b></span>
             <span class="text-slate-300">·</span>
-            <span>Bình dị: <b class="${lastTurn.rubric.sim >= 80 ? 'text-emerald-600' : 'text-amber-600'}">${lastTurn.rubric.sim}%</b></span>
+            <span>Bình dị: <b class="${lastTurn.rubric.simplicity >= 70 ? 'text-emerald-600' : 'text-amber-600'}">${lastTurn.rubric.simplicity}%</b></span>
             <span class="text-slate-300">·</span>
-            <span>Thực tế: <b class="${lastTurn.rubric.ana >= 80 ? 'text-emerald-600' : 'text-amber-600'}">${lastTurn.rubric.ana}%</b></span>
+            <span>Thực tế: <b class="${lastTurn.rubric.analogy_grounding >= 65 ? 'text-emerald-600' : 'text-amber-600'}">${lastTurn.rubric.analogy_grounding}%</b></span>
           </div>
         ` : ''}
       </div>
@@ -936,7 +1138,6 @@ function renderLastTurnSlot(){
     return;
   }
 
-  // Các trường hợp khác
   slot.classList.add('hidden');
   slot.innerHTML = '';
 }
@@ -953,14 +1154,14 @@ function renderHistoryList(){
   }
 
   const V_BADGE = {
-    MASTERED: 'bg-emerald-50 text-emerald-800 border-emerald-300',
-    JARGON_HEAVY: 'bg-amber-50 text-amber-800 border-amber-300',
-    FAILED: 'bg-rose-50 text-rose-800 border-rose-300'
+    GREEN: 'bg-emerald-50 text-emerald-800 border-emerald-300',
+    YELLOW: 'bg-amber-50 text-amber-800 border-amber-300',
+    RED: 'bg-rose-50 text-rose-800 border-rose-300'
   };
   const V_TITLE = {
-    MASTERED: '🟢 Đạt bản chất',
-    JARGON_HEAVY: '🟡 Dính thuật ngữ',
-    FAILED: '🔴 Sai bản chất'
+    GREEN: '🟢 Đạt bản chất',
+    YELLOW: '🟡 Dính thuật ngữ',
+    RED: '🔴 Sai bản chất'
   };
 
   list.innerHTML = S.history.map((h, idx) => `
@@ -986,7 +1187,7 @@ function renderHistoryList(){
             ${h.isSkip ? '🏳️ Tạm bỏ qua' : V_TITLE[h.verdict]}
           </span>
           ${!h.isSkip && h.rubric ? `
-            <span class="font-mono text-[10px] text-slate-500 font-bold">Đúng: ${h.rubric.acc}% · Bình dị: ${h.rubric.sim}% · Thực tế: ${h.rubric.ana}%</span>
+            <span class="font-mono text-[10px] text-slate-500 font-bold">Đúng: ${h.rubric.core_accuracy}% · Bình dị: ${h.rubric.simplicity}% · Thực tế: ${h.rubric.analogy_grounding}%</span>
           ` : ''}
         </div>
         <div class="text-[11.5px] text-slate-600 pt-0.5 leading-snug">
@@ -1033,8 +1234,15 @@ function updateInput(){
 /* ===================== LOGIC THẨM ĐỊNH RUBRIC ===================== */
 function heuristic(t){
   const s = t.toLowerCase();
-  if(/giống|như|ví dụ|tưởng tượng|chẳng hạn|kho|số nhà|bàn học/.test(s)) return 'MASTERED';
-  return /hexadecimal|offset|lvalue|dereference|indirection|allocator|malloc|dynamic|cấp phát|operator|pointer|object|lifo|memory|allocation|leak|dangling/.test(s) ? 'JARGON_HEAVY' : 'FAILED';
+  if(currentTopicKey === 'SUPPLY_DEMAND'){
+    if(/mua kem|bác bảo vệ|tự sinh|miễn phí|đứng yên cả ngày|thích bán đắt/.test(s)) return 'RED';
+    if(/co dãn|elastic|inelastic|pareto|equilibrium|deadweight|shortage|arbitrage|premium/.test(s)) return 'YELLOW';
+    return 'GREEN';
+  } else {
+    if(/phép nhân|cộng|hệ điều hành tự dọn|hai tên gọi/.test(s)) return 'RED';
+    if(/hexadecimal|offset|lvalue|dereference|indirection|allocator|malloc|dynamic|cấp phát|operator|pointer|object|lifo|memory|allocation|leak|dangling/.test(s)) return 'YELLOW';
+    return 'GREEN';
+  }
 }
 
 function popPromptCard(){
@@ -1049,26 +1257,27 @@ function proceedNextStep(){
   if(S.phase !== 'review' || !S.pendingAction) return;
   AudioFX.play('pop');
   
-  const { advance, willComplete, nextQ } = S.pendingAction;
+  const { advance, willComplete, nextQ, nextIndex, isEarlyTermination } = S.pendingAction;
   
-  if(willComplete){
+  if(isEarlyTermination || willComplete){
     S.done = true;
+    S.isEarlyTermination = !!isEarlyTermination;
     S.phase = '';
     S.pendingAction = null;
     showReport();
     return;
   }
   
-  if(advance){
-    S.cur++;
+  if(advance && nextIndex !== undefined && nextIndex !== -1){
+    S.cur = nextIndex;
     S.phase = '';
     S.emotion = 'CURIOUS';
     S.question = nextQ;
     S.pendingAction = null;
-    S.lastUser = null; // Xóa câu trả lời cũ để thẻ mới sạch sẽ
+    S.lastUser = null;
     triggerCardTransition();
   } else {
-    // Retry ở node hiện tại
+    // Thử lại ở node hiện tại
     S.phase = '';
     S.emotion = 'CURIOUS';
     S.question = nextQ;
@@ -1079,7 +1288,6 @@ function proceedNextStep(){
   renderStage();
   popPromptCard();
   
-  // Trở lại thanh nhập liệu và focus
   $('reviewBar').classList.add('hidden');
   $('reviewBar').classList.remove('flex');
   $('inputBar').classList.remove('hidden');
@@ -1111,14 +1319,12 @@ function submit(text, forced){
   $('input').disabled = true;
   updateInput();
   
-  // Nhịp 1 (0ms): Khởi tạo câu ngẫm nghĩ ban đầu
   if($('thinkingText')){
     $('thinkingText').style.opacity = '1';
-    $('thinkingText').textContent = 'Ưm... Để em ngẫm kỹ lại lời Thầy/Cô vừa giảng xem sao...';
+    $('thinkingText').textContent = 'Ưm... Để em ngẫm kỹ lại lời anh vừa giảng xem sao...';
   }
   renderStage();
 
-  // Nhịp 2 (950ms): Bé Minh ngập ngừng chuyển sang câu suy nghĩ thứ 2
   hesitateTimer = setTimeout(() => {
     if(S.phase === 'think' && $('thinkingText')){
       $('thinkingText').style.opacity = '0.3';
@@ -1134,56 +1340,58 @@ function submit(text, forced){
   /* Nhịp 3 (2000ms): Kết thúc pha suy ngẫm, chuyển sang Review */
   thinkTimer = setTimeout(() => {
     const verdict = forced || heuristic(text), n = currNode;
-    n.diagnostic_reason = n.why[{MASTERED: 'ok', JARGON_HEAVY: 'jargon', FAILED: 'fail'}[verdict]];
+    n.diagnostic_reason = n.why[{ GREEN: 'ok', YELLOW: 'jargon', RED: 'fail' }[verdict]];
     
-    // Tính toán điểm Rubric
-    if(verdict === 'MASTERED'){
+    // Tính toán điểm Rubric chuẩn: 75/70/65
+    if(verdict === 'GREEN'){
       S.rubric = {
-        acc: Math.floor(92 + Math.random() * 7),
-        sim: Math.floor(88 + Math.random() * 8),
-        ana: Math.floor(90 + Math.random() * 8)
+        core_accuracy: Math.floor(78 + Math.random() * 18),
+        simplicity: Math.floor(74 + Math.random() * 20),
+        analogy_grounding: Math.floor(70 + Math.random() * 24)
       };
       AudioFX.play('chime');
       const met = extractMetaphor(text);
       if(met) S.anchorMetaphor = met;
-    } else if(verdict === 'JARGON_HEAVY'){
+    } else if(verdict === 'YELLOW'){
       S.rubric = {
-        acc: Math.floor(82 + Math.random() * 6),
-        sim: Math.floor(25 + Math.random() * 12),
-        ana: Math.floor(20 + Math.random() * 15)
+        core_accuracy: Math.floor(75 + Math.random() * 12),
+        simplicity: Math.floor(30 + Math.random() * 25),
+        analogy_grounding: Math.floor(25 + Math.random() * 25)
       };
     } else {
       S.rubric = {
-        acc: Math.floor(18 + Math.random() * 10),
-        sim: Math.floor(60 + Math.random() * 10),
-        ana: Math.floor(10 + Math.random() * 10)
+        core_accuracy: Math.floor(20 + Math.random() * 25),
+        simplicity: Math.floor(55 + Math.random() * 15),
+        analogy_grounding: Math.floor(15 + Math.random() * 20)
       };
     }
 
-    let advance = verdict === 'MASTERED';
-    if(advance){
-      n.status = 'MASTERED';
-      n.color_code = COLORS.MASTERED;
+    let advance = false;
+    if(verdict === 'GREEN'){
+      n.status = 'GREEN';
+      n.color_code = COLORS.GREEN;
+      advance = true;
     } else {
       n.retry_count++;
-      if(n.retry_count >= 2){
-        // Hết lượt thử: Chuyển hẳn sang ĐỎ
-        n.status = 'FAILED';
-        n.color_code = COLORS.FAILED;
-        n.diagnostic_reason += ' (Đã hỏi vặn 2 lượt vẫn chưa đạt, hệ thống chuyển sang mắt xích kế tiếp.)';
+      n.scaffold_level = Math.min(3, (n.scaffold_level || 1) + 1);
+      if(n.retry_count >= 3){
+        // Chạm trần 3 lần: Chốt RED
+        n.status = 'RED';
+        n.color_code = COLORS.RED;
+        n.diagnostic_reason += ' (Đã thử 3 lượt vẫn chưa đạt bản chất, chốt ĐỎ để ghi nhận điểm mù.)';
         advance = true;
       } else {
-        // Lượt 1 chưa đạt (còn 1 lượt gỡ): Giữ màu vàng hổ phách
-        n.status = 'JARGON_HEAVY';
-        n.color_code = COLORS.JARGON_HEAVY;
+        // Còn lượt gỡ: giữ YELLOW
+        n.status = 'YELLOW';
+        n.color_code = COLORS.YELLOW;
+        advance = false;
       }
     }
 
     S.lastUser.v = verdict;
     
-    // Lấy lời phản hồi chi tiết từ từ điển reply của từng node
-    const key = {MASTERED: 'ok', JARGON_HEAVY: 'jargon', FAILED: 'fail'}[verdict];
-    const detailedReply = (n.reply && n.reply[key]) ? n.reply[key] : (verdict === 'MASTERED' ? 'Ồ, em hiểu rồi!' : 'Em chưa hiểu lắm ạ.');
+    const key = { GREEN: 'ok', YELLOW: 'jargon', RED: 'fail' }[verdict];
+    const detailedReply = (n.reply && n.reply[key]) ? n.reply[key] : (verdict === 'GREEN' ? 'Ồ, em hiểu rồi!' : 'Em chưa hiểu lắm ạ.');
     
     S.history.push({
       nodeId: n.id,
@@ -1197,19 +1405,27 @@ function submit(text, forced){
       time: new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})
     });
 
-    // Xác định câu hỏi tiếp theo
+    // Xác định chuyển đổi DAG tiếp theo theo thuật toán chuẩn
     let willComplete = false;
+    let isEarlyTermination = false;
+    let nextIndex = S.cur;
     let nextQ = n.retryQ;
+
     if(advance){
-      if(S.cur < S.nodes.length - 1){
-        nextQ = S.nodes[S.cur + 1].q;
-      } else {
+      const traversal = findNextNodeIndex(S.cur, S.nodes);
+      if(traversal.isEarlyTermination){
+        willComplete = true;
+        isEarlyTermination = true;
+        nextQ = '';
+      } else if(traversal.nextIndex === -1){
         willComplete = true;
         nextQ = '';
+      } else {
+        nextIndex = traversal.nextIndex;
+        nextQ = S.nodes[nextIndex].q;
       }
     }
 
-    /* Pha 2: DỪNG LẠI Ở TRẠNG THÁI REVIEW (CHỜ NGƯỜI DÙNG BẤM TIẾP TỤC) */
     S.phase = 'review';
     S.busy = false;
     S.emotion = VERDICT_EMO[verdict];
@@ -1217,6 +1433,8 @@ function submit(text, forced){
     S.pendingAction = {
       advance: advance,
       willComplete: willComplete,
+      isEarlyTermination: isEarlyTermination,
+      nextIndex: nextIndex,
       nextQ: nextQ,
       verdict: verdict,
       retryCount: n.retry_count,
@@ -1229,7 +1447,7 @@ function submit(text, forced){
   }, 2000);
 }
 
-/* ===================== SKIP NODE (TẠM BỎ QUA THEO FSM SƯ PHẠM) ===================== */
+/* ===================== SKIP NODE (TẠM BỎ QUA / ĐẦU HÀNG) ===================== */
 function skipNode(){
   if(S.busy || S.done || S.phase === 'review') return;
   if(thinkTimer) clearTimeout(thinkTimer);
@@ -1237,23 +1455,40 @@ function skipNode(){
   AudioFX.play('pop');
   
   const n = S.nodes[S.cur];
-  n.status = 'FAILED';
-  n.color_code = COLORS.FAILED;
-  n.diagnostic_reason = 'Người học chủ động tạm bỏ qua mắt xích này để ôn sau.';
-  n.retry_count = 2;
+  n.status = 'RED';
+  n.color_code = COLORS.RED;
+  n.diagnostic_reason = 'Người học chủ động đầu hàng / tạm bỏ qua mắt xích này để ôn sau.';
+  n.retry_count = 3;
 
-  S.rubric = { acc: 0, sim: null, ana: null };
-  const reaction = 'Không sao đâu Thầy/Cô! Khái niệm này hơi khó, mình tạm đánh dấu ôn lại sau và sang phần tiếp theo nhé.';
+  S.rubric = { core_accuracy: 0, simplicity: null, analogy_grounding: null };
+  
+  // Duyệt đồ thị tiếp theo
+  const traversal = findNextNodeIndex(S.cur, S.nodes);
+  let willComplete = false;
+  let isEarlyTermination = false;
+  let nextIndex = S.cur;
+  let nextQ = '';
+  let reaction = '';
 
-  const willComplete = S.cur >= S.nodes.length - 1;
-  const nextQ = willComplete ? '' : S.nodes[S.cur + 1].q;
+  if(traversal.isEarlyTermination){
+    willComplete = true;
+    isEarlyTermination = true;
+    reaction = '🚨 Mắt xích này là nền tảng (Root Node)! Khi bỏ qua, hệ thống buộc phải kích hoạt Dừng khẩn cấp (Early Termination) để bạn củng cố lại trước khi đi tiếp.';
+  } else if(traversal.nextIndex === -1){
+    willComplete = true;
+    reaction = 'Không sao đâu anh! Khái niệm này hơi khó, mình tạm đánh dấu ôn lại sau và hoàn tất phiên học nhé.';
+  } else {
+    nextIndex = traversal.nextIndex;
+    nextQ = S.nodes[nextIndex].q;
+    reaction = 'Không sao đâu anh! Khái niệm này hơi khó, mình tạm đánh dấu ôn lại sau và sang mắt xích tiếp theo nhé.';
+  }
 
   S.history.push({
     nodeId: n.id,
     nodeLabel: n.label,
     question: S.question,
     userAnswer: '🏳️ [Tạm bỏ qua / Đánh dấu ôn sau]',
-    verdict: 'FAILED',
+    verdict: 'RED',
     reason: n.diagnostic_reason,
     reaction: reaction,
     isSkip: true,
@@ -1261,16 +1496,18 @@ function skipNode(){
     time: new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})
   });
 
-  S.lastUser = { a: '🏳️ [Tạm bỏ qua / Đánh dấu ôn sau]', v: 'FAILED', isSkip: true };
+  S.lastUser = { a: '🏳️ [Tạm bỏ qua / Đánh dấu ôn sau]', v: 'RED', isSkip: true };
   S.phase = 'review';
   S.emotion = 'CONFUSED';
   S.question = reaction;
   S.pendingAction = {
     advance: true,
     willComplete: willComplete,
+    isEarlyTermination: isEarlyTermination,
+    nextIndex: nextIndex,
     nextQ: nextQ,
-    verdict: 'FAILED',
-    retryCount: 2,
+    verdict: 'RED',
+    retryCount: 3,
     isSkip: true
   };
 
@@ -1282,16 +1519,23 @@ function skipNode(){
 /* ===================== BÁO CÁO CHẨN ĐOÁN ===================== */
 function showReport(){
   const N = S.nodes.length, cnt = k => S.nodes.filter(n => n.status === k).length;
-  const good = S.nodes.filter(n => n.status === 'MASTERED'), bad = S.nodes.filter(n => n.status === 'JARGON_HEAVY' || n.status === 'FAILED');
-  const score = Math.round((cnt('MASTERED') * 100 + cnt('JARGON_HEAVY') * 40) / N);
+  const good = S.nodes.filter(n => n.status === 'GREEN');
+  const bad = S.nodes.filter(n => n.status === 'YELLOW' || n.status === 'RED');
+  const score = Math.round((cnt('GREEN') * 100 + cnt('YELLOW') * 40) / N);
   
   $('rPct').textContent = Math.round(good.length / N * 100) + '%';
   $('rScore').textContent = score;
   $('rBar').innerHTML = S.nodes.map(n => `<div class="flex-1" style="background:${n.color_code}"></div>`).join('');
-  $('rLegend').innerHTML = `<span class="text-[#10B981] font-bold">${cnt('MASTERED')} vững</span><span class="text-amber-500 font-bold">${cnt('JARGON_HEAVY')} gỡ</span><span class="text-rose-500 font-bold">${cnt('FAILED')} hổng</span><span class="text-slate-400">${cnt('UNVISITED')} chưa duyệt</span>`;
+  $('rLegend').innerHTML = `<span class="text-[#10B981] font-bold">${cnt('GREEN')} vững (GREEN)</span><span class="text-amber-500 font-bold">${cnt('YELLOW')} gỡ (YELLOW)</span><span class="text-rose-500 font-bold">${cnt('RED')} hổng (RED)</span><span class="text-slate-400">${cnt('GRAY')} chưa duyệt (GRAY)</span>`;
   
-  $('rGood').innerHTML = good.length ? good.map(n => `<li class="rounded-xl border border-emerald-200 bg-emerald-50/70 p-2.5 font-semibold text-emerald-900">${n.label}</li>`).join('') : '<li class="text-slate-400">Chưa có mắt xích nào.</li>';
-  $('rBad').innerHTML = bad.length ? bad.map(n => `<li class="rounded-xl border p-2.5 ${n.status === 'FAILED' ? 'border-rose-200 bg-rose-50/70 text-rose-950' : 'border-amber-200 bg-amber-50/70 text-amber-950'}"><div class="font-bold">${n.label}</div><div class="text-slate-500 mt-0.5 text-[11px]">${n.diagnostic_reason}</div></li>`).join('') : '<li class="text-slate-400">Không có điểm mù. Tuyệt vời!</li>';
+  if(S.isEarlyTermination){
+    $('earlyTerminationBanner').classList.remove('hidden');
+  } else {
+    $('earlyTerminationBanner').classList.add('hidden');
+  }
+
+  $('rGood').innerHTML = good.length ? good.map(n => `<li class="rounded-xl border border-emerald-200 bg-emerald-50/70 p-2.5 font-semibold text-emerald-900">${n.label}</li>`).join('') : '<li class="text-slate-400">Chưa có mắt xích nào đạt chuẩn.</li>';
+  $('rBad').innerHTML = bad.length ? bad.map(n => `<li class="rounded-xl border p-2.5 ${n.status === 'RED' ? 'border-rose-200 bg-rose-50/70 text-rose-950' : 'border-amber-200 bg-amber-50/70 text-amber-950'}"><div class="font-bold">${n.label} ${n.has_unstable_foundation ? '<span class="text-[10px] text-amber-700 font-mono">(Bypass)</span>' : ''}</div><div class="text-slate-500 mt-0.5 text-[11px]">${n.diagnostic_reason}</div></li>`).join('') : '<li class="text-slate-400">Không có điểm mù. Tuyệt vời!</li>';
   
   $('reportModal').classList.replace('hidden', 'flex');
   $('ring').style.strokeDashoffset = 314;
@@ -1355,7 +1599,6 @@ $('input').addEventListener('keydown', e => {
   }
 });
 
-// Phím tắt Enter khi đang ở Review State -> Tự động chuyển tiếp
 document.addEventListener('keydown', e => {
   if(e.key === 'Enter' && S.phase === 'review'){
     e.preventDefault();
@@ -1375,7 +1618,7 @@ document.querySelectorAll('.demo').forEach(b => b.addEventListener('click', () =
     proceedNextStep();
     return;
   }
-  const k = b.dataset.demo, text = S.nodes[S.cur].demo[k], forced = { ok: 'MASTERED', jargon: 'JARGON_HEAVY', fail: 'FAILED' }[k];
+  const k = b.dataset.demo, text = S.nodes[S.cur].demo[k], forced = { ok: 'GREEN', jargon: 'YELLOW', fail: 'RED' }[k];
   $('input').value = text;
   updateInput();
   setTimeout(() => submit(text, forced), 200);

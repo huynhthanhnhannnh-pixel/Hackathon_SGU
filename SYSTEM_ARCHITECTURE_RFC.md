@@ -215,7 +215,8 @@ Backend đọc JSON và chạy bộ luật FSM tất định:
      + AI tiếp tục lắng nghe ở lượt kế tiếp.
 
 2. ĐÁNH GIÁ ĐẠT CHUẨN XANH (GREEN - LIÊN KẾT BỀN VỮNG):
-   - ĐIỀU KIỆN: (scores.core_accuracy >= 80) && (scores.simplicity >= 75) 
+   - ĐIỀU KIỆN: (scores.core_accuracy >= 75) && (scores.simplicity >= 70) 
+               && (scores.analogy_grounding >= 65)
                && (!is_node_misconception) && (detected_jargons.length === 0) 
                && (is_valid === true)
    - HÀNH ĐỘNG:
@@ -273,59 +274,88 @@ function findColdStartNode(nodes: ConceptNode[], edges: Edge[]): ConceptNode {
 }
 ```
 
-### 6.2. Thuật toán Mở khóa Node tiếp theo (Kiểm tra 100% cha XANH & Ưu tiên Out-Degree)
+### 6.2. Thuật toán Mở khóa Node tiếp theo (Kháng Deadlock: Soft-prerequisite Bypass & Root Early Termination)
 ```typescript
 function findNextNodeToActivate(
   completedNodeId: string, 
   nodes: ConceptNode[], 
   edges: Edge[]
 ): ConceptNode | null {
-  // 1. Tìm các trạm nhận thức con trực tiếp của node vừa hoàn thành
+  const completedNode = nodes.find(n => n.id === completedNodeId);
+
+  // 1. Kiểm tra Dừng khẩn cấp (Early Termination): Nếu Root Node (in-degree == 0) bị chốt RED
+  const parentEdgesOfCompleted = edges.filter(e => e.target === completedNodeId);
+  if (parentEdgesOfCompleted.length === 0 && completedNode?.status === "RED") {
+    // Root Node hỏng bản chất -> Kích hoạt Early Termination, khóa toàn bộ buồng lái
+    return null;
+  }
+
+  // 2. Tìm các trạm nhận thức con trực tiếp của node vừa hoàn thành
   const childEdges = edges.filter(e => e.source === completedNodeId);
   const candidateChildNodes = childEdges.map(e => nodes.find(n => n.id === e.target)!);
 
-  // 2. Lọc các node con thỏa mãn:
-  //    - Trạng thái hiện tại là GRAY
-  //    - 100% CÁC TRẠM CHA CỦA NÓ ĐỀU ĐÃ ĐẠT TRẠNG THÁI GREEN (không có cha nào Vàng/Đỏ/Xám)
-  const readyChildNodes = candidateChildNodes.filter(childNode => {
+  // 3. Ưu tiên 1 (Strict Path): Tìm node con có 100% cha đạt GREEN
+  const strictChildNodes = candidateChildNodes.filter(childNode => {
+    if (childNode.status !== "GRAY") return false;
     const parentEdges = edges.filter(e => e.target === childNode.id);
-    const allParentsGreen = parentEdges.every(e => {
-      const parent = nodes.find(n => n.id === e.source);
-      return parent && parent.status === "GREEN";
-    });
-    return allParentsGreen && childNode.status === "GRAY";
-  });
-
-  // Nếu có >= 1 node con sẵn sàng: Chọn node có out-degree cao nhất (nền tảng cho nhiều bài phía sau nhất)
-  if (readyChildNodes.length > 0) {
-    readyChildNodes.sort((a, b) => {
-      const outDegreeA = edges.filter(e => e.source === a.id).length;
-      const outDegreeB = edges.filter(e => e.source === b.id).length;
-      return outDegreeB - outDegreeA;
-    });
-    return readyChildNodes[0];
-  }
-
-  // 3. Quét toàn đồ thị tìm bất kỳ node GRAY nào khác đã đủ điều kiện 100% cha XANH (thuộc nhánh song song khác)
-  const allReadyNodes = nodes.filter(node => {
-    if (node.status !== "GRAY") return false;
-    const parentEdges = edges.filter(e => e.target === node.id);
     return parentEdges.every(e => {
       const parent = nodes.find(n => n.id === e.source);
       return parent && parent.status === "GREEN";
     });
   });
 
-  if (allReadyNodes.length > 0) {
-    allReadyNodes.sort((a, b) => {
-      const outDegreeA = edges.filter(e => e.source === a.id).length;
-      const outDegreeB = edges.filter(e => e.source === b.id).length;
-      return outDegreeB - outDegreeA;
+  if (strictChildNodes.length > 0) {
+    strictChildNodes.sort((a, b) => {
+      const outA = edges.filter(e => e.source === a.id).length;
+      const outB = edges.filter(e => e.source === b.id).length;
+      return outB - outA;
     });
-    return allReadyNodes[0];
+    return strictChildNodes[0];
   }
 
-  return null; // null nghĩa là toàn bộ đồ thị đã hoàn tất hoặc các nhánh còn lại bị khóa bởi Node Đỏ!
+  // 4. Ưu tiên 2 (Nhánh song song độc lập): Quét toàn đồ thị tìm node GRAY có 100% cha GREEN
+  const parallelReadyNodes = nodes.filter(node => {
+    if (node.status !== "GRAY") return false;
+    const parentEdges = edges.filter(e => e.target === node.id);
+    return parentEdges.length > 0 && parentEdges.every(e => {
+      const parent = nodes.find(n => n.id === e.source);
+      return parent && parent.status === "GREEN";
+    });
+  });
+
+  if (parallelReadyNodes.length > 0) {
+    parallelReadyNodes.sort((a, b) => {
+      const outA = edges.filter(e => e.source === a.id).length;
+      const outB = edges.filter(e => e.source === b.id).length;
+      return outB - outA;
+    });
+    return parallelReadyNodes[0];
+  }
+
+  // 5. Ưu tiên 3 (Soft-prerequisite Bypass - Kháng Deadlock khi Node nhánh bị ĐỎ):
+  //    Nếu node vừa hoàn thành bị RED, mở khóa node con nếu TẤT CẢ cha của nó thuộc ["GREEN", "RED"]
+  //    Đồng thời đánh dấu cờ `has_unstable_foundation: true` cho node con
+  const bypassChildNodes = candidateChildNodes.filter(childNode => {
+    if (childNode.status !== "GRAY") return false;
+    const parentEdges = edges.filter(e => e.target === childNode.id);
+    return parentEdges.every(e => {
+      const parent = nodes.find(n => n.id === e.source);
+      return parent && (parent.status === "GREEN" || parent.status === "RED");
+    });
+  });
+
+  if (bypassChildNodes.length > 0) {
+    bypassChildNodes.sort((a, b) => {
+      const outA = edges.filter(e => e.source === a.id).length;
+      const outB = edges.filter(e => e.source === b.id).length;
+      return outB - outA;
+    });
+    const selected = bypassChildNodes[0];
+    selected.has_unstable_foundation = true; // Gắn cờ cảnh báo nhận thức
+    return selected;
+  }
+
+  return null; // Đã duyệt hết đồ thị hoặc kích hoạt Dừng khẩn cấp
 }
 ```
 

@@ -34,7 +34,7 @@ stateDiagram-v2
     }
 
     %% CHUYỂN TỪ YELLOW SANG GREEN
-    YELLOW --> GREEN: Đạt bài học!\n(Accuracy >= 70, Simplicity >= 70, Analogy >= 60)
+    YELLOW --> GREEN: Đạt chuẩn bản chất!\n(core_accuracy >= 75, simplicity >= 70, analogy_grounding >= 65\nkèm is_valid=true, detected_jargons=0)
     
     state GREEN {
         [*] --> Thau_Suot: Khái niệm đã được hiểu sâu
@@ -42,12 +42,12 @@ stateDiagram-v2
     }
 
     %% CHUYỂN TỪ YELLOW SANG RED
-    YELLOW --> RED: Bế tắc sau 3 lần thử (retry_count >= 3)\nHOẶC Sai lệch bản chất nghiêm trọng
+    YELLOW --> RED: Bế tắc sau 3 lần thử (retry_count >= 3)\nHOẶC Sai lệch bản chất nghiêm trọng / Đầu hàng
     
     state RED {
         [*] --> Hong_Kien_Thuc: Đánh dấu lỗ hổng nhận thức
-        Hong_Kien_Thuc --> Dung_Som: Nếu là Node Gốc (Root Node)\n-> Dừng phiên học để bảo vệ thời gian
-        Hong_Kien_Thuc --> Cho_Qua: Nếu là Node nhánh con\n-> Ghi vào báo cáo & Chuyển bài tiếp theo
+        Hong_Kien_Thuc --> Dung_Som: Nếu là Node Gốc (Root Node)\n-> Early Termination dừng khẩn cấp
+        Hong_Kien_Thuc --> Cho_Qua: Nếu là Node nhánh con\n-> Ưu tiên nhánh song song HOẶC Soft-prerequisite Bypass
     }
 
     GREEN --> [*]: Kết thúc toàn bộ bài học
@@ -61,10 +61,10 @@ stateDiagram-v2
 | Trạng thái hiện tại | Điều kiện kích hoạt từ kết quả AI | Trạng thái tiếp theo | Hành vi của Hệ thống Backend |
 | :--- | :--- | :--- | :--- |
 | **GRAY (Xám)** | `100% prerequisites == GREEN` | **YELLOW (Vàng)** | Tự động kích hoạt node này làm `active_node_id`, AI cất lời gợi ý đầu tiên. |
-| **YELLOW (Vàng)** | `accuracy >= 70` AND `simplicity >= 70` AND `analogy >= 60` | **GREEN (Xanh lá)** | Node đạt chuẩn thấu suốt! Kích hoạt hiệu ứng chúc mừng, tìm node con tiếp theo để mở khóa. |
-| **YELLOW (Vàng)** | `simplicity < 70` (Chép sách) HOẶC `analogy < 60` (Chưa ví von được) | **YELLOW (Vàng)** | Giữ màu Vàng. Tăng `retry_count += 1`, nâng `scaffold_level += 1`. AI đưa câu hỏi vặn đời thường. |
+| **YELLOW (Vàng)** | `core_accuracy >= 75` AND `simplicity >= 70` AND `analogy_grounding >= 65` (kèm `is_valid: true`, `is_node_misconception: false`, `detected_jargons.length === 0`) | **GREEN (Xanh lá)** | Node đạt chuẩn thấu suốt! Kích hoạt hiệu ứng chúc mừng, duyệt DAG tìm node tiếp theo để mở khóa. |
+| **YELLOW (Vàng)** | `simplicity < 70` (Chép sách/Jargon) HOẶC `analogy_grounding < 65` (Chưa ví von được) | **YELLOW (Vàng)** | Giữ màu Vàng. Tăng `retry_count += 1`, nâng `scaffold_level = Math.min(3, scaffold_level + 1)`. AI đưa câu hỏi vặn đời thường. |
 | **YELLOW (Vàng)** | Phát hiện lỗi kiến thức phụ ngoài lề (`peripheral_misconceptions`) | **YELLOW (Vàng)** | Giữ màu Vàng. Bé Minh hướng người học quay lại chủ đề chính, lưu lỗi phụ vào báo cáo cuối phiên. |
-| **YELLOW (Vàng)** | `retry_count >= 3` HOẶC `misconception_flag == true` | **RED (Đỏ)** | Đánh dấu node bị hổng kiến thức. Nếu là Node Gốc $\to$ kích hoạt Dừng sớm (Early Termination). |
+| **YELLOW (Vàng)** | `retry_count >= 3` HOẶC `is_node_misconception == true` HOẶC `user_surrendered == true` | **RED (Đỏ)** | Đánh dấu điểm mù nhận thức. Nếu là Root Node $\to$ Dừng khẩn cấp (Early Termination). Nếu là Branch Node $\to$ Ưu tiên nhánh song song hoặc Soft-prerequisite Bypass (gắn cờ `has_unstable_foundation`). |
 
 ---
 
