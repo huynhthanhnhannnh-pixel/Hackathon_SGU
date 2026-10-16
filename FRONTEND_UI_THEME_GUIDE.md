@@ -29,7 +29,7 @@ Thay vì sử dụng giao diện nền tối (Dark Mode) truyền thống dễ b
 │ [+] ┌──────────────────┐  [Radar] │ [Lớp học 1 kèm 1 · Bé Minh] [Giơ tay] [Jargon: 12%] [💬 Mess]│
 │ [−] │ 📍 Địa chỉ ô nhớ │  [Mini]  │                                                              │
 │ [⛶] │    Làm chủ (Xanh)│          │                    ┌───────────────────────────────────────┐ │
-│     └────────┬─────────┘          │                    │ Thầy/Cô ơi, "địa chỉ ô nhớ" là gì     │ │
+│     └────────┬─────────┘          │                    │ Anh ơi, "địa chỉ ô nhớ" là gì         │ │
 │        ┌─────┴─────┐              │         ✨ ✋      │ vậy ạ? Sao máy tính cần nó?           │ │
 │        ▼           ▼              │      ( ◕ ◡ ◕ )     └───────────────────────────────────────┘ │
 │ ┌─────────────┐ ┌─────────────┐   │     ╭─────────╮                                              │
@@ -56,17 +56,16 @@ Thay vì sử dụng giao diện nền tối (Dark Mode) truyền thống dễ b
 * **Nền Cột Phải (View 1 - Phòng học 1 kèm 1):** Gradient ấm `bg-gradient-to-b from-indigo-50/50 via-slate-50 to-amber-50/30`, chân tường gỗ `from-amber-100/70 to-amber-100`
 * **Nền Cột Phải (View 2 - Nhật ký Messenger):** Kính mờ `bg-slate-100/95 backdrop-blur-sm`
 
-### 3.2. Bảng Quy đổi Trạng thái Node (Đồng bộ Backend FSM $\leftrightarrow$ Frontend UI)
+### 3.2. Bảng Trạng thái Node Chuẩn (Single Source of Truth: GRAY | YELLOW | GREEN | RED)
 
-Để đảm bảo không xảy ra xung đột tên biến giữa Backend (`TECHNICAL_ENGINES_SPEC.md`) và giao diện Prototype (`Cockpit.html`), Frontend sử dụng bảng ánh xạ chuẩn sau:
+Toàn bộ hệ thống Backend, Tài liệu và Frontend `Cockpit.html` chỉ dùng duy nhất 4 trạng thái:
 
-| Mã Backend FSM | Mã Prototype UI | Nhãn Hiển thị | Màu Viền / Icon | Màu Nền Card | Hiệu ứng Thị giác Đặc biệt |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **`GRAY`** | `UNVISITED` | Chưa duyệt | `#94A3B8` (Slate) | `#FFFFFF` | Icon nền xám `#F1F5F9`, đường nối nét liền `#CBD5E1` |
-| **`YELLOW` (Active)** | `FOCUS` | Đang phỏng vấn | `#3B82F6` (Blue) | `#FFFFFF` | **Viền xanh phát sáng nhịp thở (`ring` animation)** + Đường nối nét đứt chạy động (`.flow`) |
-| **`YELLOW` (Warn)** | `JARGON_HEAVY` | Lạm dụng thuật ngữ | `#F59E0B` (Amber) | `#FFFBEB` | Hiển thị bộ đếm `thử lại 1/3`, icon vàng `#FEF3C7` |
-| **`GREEN`** | `MASTERED` | Làm chủ | `#10B981` (Emerald)| `#F0FDF4` | Icon xanh ngọc `#D1FAE5`, chữ `#059669` |
-| **`RED`** | `FAILED` | Sai bản chất | `#EF4444` (Rose) | `#FEF2F2` | Icon đỏ `#FEE2E2`, khóa cảnh báo điểm mù |
+| Enum Trạng thái | Nhãn Hiển thị | Màu Viền / Icon | Màu Nền Card | Hiệu ứng Thị giác & Hành vi |
+| :--- | :--- | :--- | :--- | :--- |
+| **`GRAY`** | Chưa duyệt | `#94A3B8` (Slate) | `#FFFFFF` | Node chưa đủ điều kiện tiên quyết hoặc chưa đến lượt học. Icon nền `#F1F5F9`. |
+| **`YELLOW`** | Đang phỏng vấn / Dính thuật ngữ | `#F59E0B` (Amber) | `#FFFBEB` | Đang phỏng vấn hoặc giải thích chưa đạt, hiển thị bộ đếm `thử lại 1/3` (hoặc `2/3`). Viền phát sáng amber. |
+| **`GREEN`** | Làm chủ bản chất | `#10B981` (Emerald)| `#F0FDF4` | Vượt qua 3 tiêu chuẩn Rubric (75/70/65). Icon xanh ngọc `#D1FAE5`, mở khóa mắt xích tiếp theo. |
+| **`RED`** | Sai bản chất / Điểm mù | `#EF4444` (Rose) | `#FEF2F2` | Hết 3 lượt thử hoặc đầu hàng / sai bản chất cốt lõi. Root Node $\to$ Early Termination; Branch Node $\to$ Soft-prerequisite Bypass. |
 
 ### 3.3. Bảng màu Tô sáng Ngữ nghĩa (Semantic Highlighting trong Bubble)
 Khi người học gửi câu giải thích, hệ thống tự động quét và bọc thẻ `<span>` tô sáng trực tiếp các từ khóa bên trong bong bóng màu Indigo (`bg-indigo-600`):

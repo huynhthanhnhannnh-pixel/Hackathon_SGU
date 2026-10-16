@@ -56,21 +56,22 @@ sequenceDiagram
     end
 
     BE->>AI: Gửi gói tin tinh gọn (Single-Pass Prompting)
-    AI-->>BE: Phản hồi JSON: { accuracy, simplicity, analogy_grounding, misconception_flag, persona_speech, emotion }
+    AI-->>BE: Phản hồi JSON: AIEvaluationResponse { scores: { core_accuracy, simplicity, analogy_grounding }, intent, is_node_misconception, detected_jargons, extracted_metaphor, ai_chat_response }
 
     rect rgb(245, 255, 245)
     Note over BE: BỘ LUẬT THUẬT TOÁN FSM TẠI BACKEND
-    BE->>BE: Phân tích 3 điểm số Rubric & Kiểm tra cờ lỗi
-    alt Người học giải thích thấu suốt bản chất (Rubric Đạt)
+    BE->>BE: Phân tích 3 điểm số Rubric (75/70/65) & Kiểm tra cờ lỗi
+    alt Người học đạt chuẩn bản chất (core_accuracy >= 75, simplicity >= 70, analogy_grounding >= 65)
         BE->>BE: Cập nhật màu Node hiện tại: YELLOW -> GREEN
-        BE->>BE: Duyệt thuật toán Topo để tìm Node con tiếp theo
-        BE->>BE: Chuyển Node con: GRAY -> YELLOW
-    else Người học học vẹt / Dùng từ chuyên môn / Chưa đạt
-        BE->>BE: Giữ màu Node là YELLOW & Tăng biến đếm retry_count
+        BE->>BE: Chạy thuật toán findNextNodeToActivate tìm Node tiếp theo
+        BE->>BE: Kích hoạt Node tiếp theo: GRAY -> YELLOW
+    else Người học dính từ chuyên môn / Chưa đạt Rubric
+        BE->>BE: Giữ màu Node là YELLOW & Tăng biến đếm retry_count += 1
         BE->>BE: Nâng bậc thang giàn giáo scaffold_level (1 -> 2 -> 3)
-    else Sai lệch bản chất cốt lõi hoặc retry_count >= 3
+    else Sai lệch bản chất cốt lõi HOẶC retry_count >= 3 HOẶC Bỏ qua
         BE->>BE: Đánh dấu Node hiện tại thành màu RED
-        BE->>BE: Ghi nhận lỗ hổng vào Báo cáo chẩn đoán
+        BE->>BE: Nếu Root Node -> Early Termination; Nếu Branch Node -> Soft-prerequisite Bypass
+        BE->>BE: Ghi nhận điểm mù vào Báo cáo chẩn đoán
     end
     end
 

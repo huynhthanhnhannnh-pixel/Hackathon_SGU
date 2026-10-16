@@ -27,28 +27,28 @@ flowchart TD
     %% VÒNG LẶP HỌC TẬP TỪNG NODE
     Select_Node --> User_Explain["🗣️ Người học nhập câu giải thích<br/>(Đóng vai người dạy, ví von đời thường)"]:::userNode
     
-    User_Explain --> AI_Eval["🤖 AI chấm điểm 3 tiêu chí Rubric<br/>(Độ đúng, Độ bình dị, Độ liên hệ thực tế)"]:::aiNode
+    User_Explain --> AI_Eval["🤖 AI chấm điểm 3 tiêu chí Rubric chuẩn<br/>(Đúng >= 75, Bình dị >= 70, Thực tế >= 65)"]:::aiNode
     
     AI_Eval --> Check_Result{"🎯 Backend thẩm định kết quả"}:::decisionNode
     
     %% KẾT QUẢ ĐẠT
-    Check_Result -- "ĐẠT BẢN CHẤT<br/>(Điểm cao, không copy sách)" --> Node_Green["🟢 NODE ĐỔI MÀU XANH LÁ<br/>Bé Minh hiểu bài & reo vui"]:::successNode
+    Check_Result -- "ĐẠT BẢN CHẤT<br/>(core_accuracy >= 75, simplicity >= 70, analogy >= 65)" --> Node_Green["🟢 NODE ĐỔI MÀU XANH LÁ<br/>Bé Minh hiểu bài & reo vui"]:::successNode
     
     Node_Green --> Check_Remaining{"❓ Còn Node nào<br/>chưa học không?"}:::decisionNode
     
-    Check_Remaining -- "Còn Node tiếp theo" --> Unlock_Next["🔓 Mở khóa Node con tiếp theo<br/>(Kiểm tra 100% Node cha đã XANH)"]:::actionNode
+    Check_Remaining -- "Còn Node tiếp theo" --> Unlock_Next["🔓 Mở khóa Node tiếp theo<br/>(100% cha GREEN hoặc Soft-prerequisite Bypass)"]:::actionNode
     Unlock_Next --> Select_Node
     
     %% KẾT QUẢ CHƯA ĐẠT / CẦN GIÀN GIÁO
-    Check_Result -- "CHƯA ĐẠT / HỌC VẸT<br/>(Copy sách hoặc còn mơ hồ)" --> Handle_Scaffold["🟡 GIỮ MÀU VÀNG & TĂNG GIÀN GIÁO<br/>AI đặt câu hỏi vặn / Tình huống đời thường"]:::warningNode
+    Check_Result -- "CHƯA ĐẠT / HỌC VẸT<br/>(Chưa đủ điểm hoặc dính từ khó)" --> Handle_Scaffold["🟡 GIỮ MÀU VÀNG & TĂNG GIÀN GIÁO<br/>scaffold_level + 1, Bé Minh tung câu hỏi mồi"]:::warningNode
     Handle_Scaffold --> Check_Retry{"Số lần thử tại Node này<br/>(retry_count < 3)?"}:::decisionNode
     
     Check_Retry -- "Còn lượt (< 3)" --> User_Explain
-    Check_Retry -- "Hết lượt (>= 3) hoặc Sai bản chất cốt lõi" --> Node_Red["🔴 NODE ĐỔI MÀU ĐỎ<br/>Đánh dấu lỗ hổng nhận thức"]:::dangerNode
+    Check_Retry -- "Hết 3 lượt hoặc Bỏ qua / Sai bản chất" --> Node_Red["🔴 NODE ĐỔI MÀU ĐỎ<br/>Đánh dấu điểm mù nhận thức"]:::dangerNode
     
     Node_Red --> Check_Root{"Node bị đỏ có phải<br/>Root Node gốc không?"}:::decisionNode
-    Check_Root -- "Phải (Hổng nền tảng gốc)" --> Early_Stop["⚠️ DỪNG PHIÊN HỌC SỚM<br/>Khuyên người học đọc lại tài liệu cơ bản"]:::dangerNode
-    Check_Root -- "Không (Node nhánh)" --> Log_Gap["📝 Ghi nhận lỗ hổng vào báo cáo<br/>và cho qua để học node tiếp"]:::actionNode
+    Check_Root -- "Phải (Hổng nền tảng gốc)" --> Early_Stop["🚨 DỪNG PHIÊN HỌC KHẨN CẤP (Early Termination)<br/>Khóa buồng lái, ngăn rỗng kiến thức dây chuyền"]:::dangerNode
+    Check_Root -- "Không (Node nhánh)" --> Log_Gap["📝 Ghi nhận điểm mù vào báo cáo<br/>Kích hoạt Soft-prerequisite Bypass để học tiếp"]:::actionNode
     Log_Gap --> Check_Remaining
     
     %% KẾT THÚC PHIÊN HỌC

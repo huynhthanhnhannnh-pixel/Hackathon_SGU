@@ -65,10 +65,12 @@ function generateColdStartGreeting(activeNode: ConceptNode): string {
 - **Định vị Micro-session:** Một phiên học chỉ giới hạn từ **5 đến 7 khái niệm cốt lõi** trên một chuyên đề hẹp (10-15 phút tập trung). Không nạp cả cuốn giáo trình vào 1 phiên để tránh quá tải nhận thức và tránh làm vỡ giao diện trực quan của ReactFlow.
 - **Cơ chế tích lũy nhiều câu chat (Multi-turn Check):** Người dùng có thể giải thích trong 2–3 tin nhắn ngắn. Nhờ Rolling Window ($N=2$), AI đối chiếu tích lũy: khi nào chạm đủ các ý trong `core_facts` và vượt qua thử thách thì Backend mới chốt đổi màu XANH.
 
-#### 2. Thuật toán Duyệt Node Kế tiếp (Kiểm tra Toàn bộ Node Cha đã XANH)
-Khi một node đổi sang XANH, Backend phải tìm node tiếp theo để kích hoạt thỏa mãn 2 điều kiện:
-1. Là node con liền kề hoặc node tiếp theo trên cây DAG.
-2. **Bắt buộc toàn bộ node cha (prerequisites) của node đó đều đã mang màu XANH.**
+#### 2. Thuật toán Duyệt Node Kế tiếp (Kháng Deadlock: Soft-prerequisite Bypass & Root Early Termination)
+Khi một node hoàn thành đánh giá, Backend tìm node tiếp theo để kích hoạt theo thứ tự ưu tiên:
+1. **Kiểm tra Dừng khẩn cấp (Early Termination):** Nếu Root Node (`in-degree == 0`) bị chốt RED -> Khóa toàn bộ đồ thị.
+2. **Ưu tiên 1 (Strict Path):** Kích hoạt node con có 100% cha đạt màu GREEN.
+3. **Ưu tiên 2 (Nhánh song song độc lập):** Kích hoạt node GRAY bất kỳ trên đồ thị có 100% cha đạt GREEN.
+4. **Ưu tiên 3 (Soft-prerequisite Bypass):** Nếu node cha bị RED, mở khóa node con có tất cả cha thuộc `["GREEN", "RED"]` và gắn cờ `has_unstable_foundation: true` để không bao giờ bị Deadlock đồ thị!
 
 ```typescript
 function findNextNodeToActivate(
@@ -76,41 +78,81 @@ function findNextNodeToActivate(
   nodes: ConceptNode[], 
   edges: Edge[]
 ): ConceptNode | null {
-  // Bước 1: Tìm danh sách các node con trực tiếp của node vừa hoàn thành
+  const completedNode = nodes.find(n => n.id === completedNodeId);
+
+  // 1. Kiểm tra Dừng khẩn cấp: Nếu Root Node (in-degree == 0) bị chốt RED -> Dừng toàn bộ phiên
+  const parentEdgesOfCompleted = edges.filter(e => e.target === completedNodeId);
+  if (parentEdgesOfCompleted.length === 0 && completedNode?.status === "RED") {
+    // Early Termination: Root Node hỏng -> Không mở bất kỳ node nào
+    return null;
+  }
+
+  // 2. Tìm danh sách các node con trực tiếp của node vừa hoàn thành
   const childEdges = edges.filter(e => e.source === completedNodeId);
   const candidateChildNodes = childEdges.map(e => nodes.find(n => n.id === e.target)!);
 
-  // Bước 2: Lọc các node con đã thỏa mãn TOÀN BỘ điều kiện tiên quyết (tất cả cha đều XANH)
-  const readyNodes = candidateChildNodes.filter(childNode => {
+  // 3. Ưu tiên 1 (Strict Path): Lọc các node con có 100% cha đạt GREEN
+  const strictChildNodes = candidateChildNodes.filter(childNode => {
+    if (childNode.status !== "GRAY") return false;
     const parentEdges = edges.filter(e => e.target === childNode.id);
-    const parentNodeIds = parentEdges.map(e => e.source);
-
-    // Kiểm tra tất cả node cha đã đạt status == "GREEN" chưa
-    const allParentsGreen = parentNodeIds.every(parentId => {
-      const parent = nodes.find(n => n.id === parentId);
-      return parent && parent.status === "GREEN";
-    });
-
-    return allParentsGreen && childNode.status === "GRAY";
-  });
-
-  // Bước 3: Nếu có node con sẵn sàng -> Kích hoạt ngay node đầu tiên
-  if (readyNodes.length > 0) {
-    return readyNodes[0];
-  }
-
-  // Bước 4: Fallback - Nếu nhánh con chưa đủ điều kiện (còn nhánh cha song song khác),
-  // quét toàn bộ đồ thị tìm bất kỳ node GRAY nào đã thỏa mãn 100% điều kiện tiên quyết
-  const anyReadyNode = nodes.find(node => {
-    if (node.status !== "GRAY") return false;
-    const parentEdges = edges.filter(e => e.target === node.id);
     return parentEdges.every(e => {
       const parent = nodes.find(n => n.id === e.source);
       return parent && parent.status === "GREEN";
     });
   });
 
-  return anyReadyNode || null; // null nghĩa là toàn bộ đồ thị đã XANH -> Hoàn thành phiên!
+  if (strictChildNodes.length > 0) {
+    strictChildNodes.sort((a, b) => {
+      const outA = edges.filter(e => e.source === a.id).length;
+      const outB = edges.filter(e => e.source === b.id).length;
+      return outB - outA;
+    });
+    return strictChildNodes[0];
+  }
+
+  // 4. Ưu tiên 2 (Nhánh song song độc lập): Quét toàn đồ thị tìm node GRAY có 100% cha GREEN
+  const parallelReadyNodes = nodes.filter(node => {
+    if (node.status !== "GRAY") return false;
+    const parentEdges = edges.filter(e => e.target === node.id);
+    return parentEdges.length > 0 && parentEdges.every(e => {
+      const parent = nodes.find(n => n.id === e.source);
+      return parent && parent.status === "GREEN";
+    });
+  });
+
+  if (parallelReadyNodes.length > 0) {
+    parallelReadyNodes.sort((a, b) => {
+      const outA = edges.filter(e => e.source === a.id).length;
+      const outB = edges.filter(e => e.source === b.id).length;
+      return outB - outA;
+    });
+    return parallelReadyNodes[0];
+  }
+
+  // 5. Ưu tiên 3 (Soft-prerequisite Bypass - Kháng Deadlock khi Node nhánh bị ĐỎ):
+  //    Nếu node vừa hoàn thành bị RED, mở khóa node con nếu TẤT CẢ cha của nó thuộc ["GREEN", "RED"]
+  //    Đồng thời đánh dấu cờ `has_unstable_foundation: true` cho node con
+  const bypassChildNodes = candidateChildNodes.filter(childNode => {
+    if (childNode.status !== "GRAY") return false;
+    const parentEdges = edges.filter(e => e.target === childNode.id);
+    return parentEdges.every(e => {
+      const parent = nodes.find(n => n.id === e.source);
+      return parent && (parent.status === "GREEN" || parent.status === "RED");
+    });
+  });
+
+  if (bypassChildNodes.length > 0) {
+    bypassChildNodes.sort((a, b) => {
+      const outA = edges.filter(e => e.source === a.id).length;
+      const outB = edges.filter(e => e.source === b.id).length;
+      return outB - outA;
+    });
+    const selected = bypassChildNodes[0];
+    selected.has_unstable_foundation = true; // Gắn cờ cảnh báo nhận thức
+    return selected;
+  }
+
+  return null; // Đã duyệt hết đồ thị hoặc kích hoạt Dừng khẩn cấp
 }
 ```
 
@@ -191,7 +233,7 @@ NGƯỢC LẠI NẾU core_accuracy >= 70 VÀ analogy_grounding < 60:
     --> Gán màu VÀNG (Bẫy Học vẹt Sách giáo khoa: Đúng lý thuyết nhưng chưa liên hệ thực tế)
     --> Giữ nguyên trạng thái để Đứa trẻ đặt câu hỏi ngoại suy tình huống cụ thể (Application Probe)
 
-NGƯỢC LẠI NẾU core_accuracy >= 75 VÀ simplicity >= 70 VÀ analogy_grounding >= 70:
+NGƯỢC LẠI NẾU core_accuracy >= 75 VÀ simplicity >= 70 VÀ analogy_grounding >= 65:
     --> Chuyển màu XANH (Thấu suốt thực sự: Đúng bản chất + Dễ hiểu + Có liên hệ)
     --> Reset retry_count = 0
     --> Kích hoạt Duyệt Topo để mở khóa Node kế tiếp
@@ -451,13 +493,14 @@ Backend quản lý biến `scaffold_level` (khởi tạo = 1) và biến `retry_
 2. **Kiểm tra đầu hàng hoặc quá số lần thử:**
    - Nếu `user_surrendered == true` (nói "Chịu rồi" hoặc bấm nút "Tạm bỏ qua") HOẶC `retry_count == 3` $\to$ Chốt Node màu **ĐỎ**. Bé Minh tháo ngòi nổ tâm lý nhẹ nhàng (*"Phần này hơi lắt léo, em ghi sổ tay rồi lát anh em mình xem lại sau nha"*). Kích hoạt kiểm tra **Dừng khẩn cấp** (Xem Mục 5).
 3. **Nếu chưa đạt (`is_valid == false` khi trả lời câu hỏi thử thách):**
-   - Giữ nguyên `scaffold_level`.
+   - Giữ trạng thái Node là **YELLOW** (Dính thuật ngữ / Cần gỡ).
    - Tăng `retry_count += 1`.
-   - Tiêm lệnh Bắt bẻ tương ứng (Kịch bản Jargon hoặc Kịch bản Sai logic từ Câu 6).
-4. **Nếu đạt chuẩn (`is_valid == true` - Vượt qua ải):**
-   - Nếu đang ở **Bậc 1** $\to$ Đẩy lên Bậc 2 (`scaffold_level = 2`), đổi trạng thái Node thành **XÁM SÁNG** (đang khám phá).
-   - Nếu đang ở **Bậc 2** $\to$ Đẩy lên Bậc 3 (`scaffold_level = 3`), đổi màu Node thành **VÀNG** (hiểu trực giác).
-   - Nếu đang ở **Bậc 3** $\to$ Hoàn thành Node, đổi màu Node thành **XANH LÁ**, reset `retry_count = 0`, kích hoạt thuật toán duyệt Topo tìm Node tiếp theo.
+   - Nâng `scaffold_level = Math.min(3, scaffold_level + 1)` để Bé Minh tung câu hỏi vặn / tình huống mồi sâu sát hơn theo mô hình Thích ứng (Adaptive Scaffolding).
+   - Tiêm lệnh Bắt bẻ tương ứng (Kịch bản Jargon hoặc Kịch bản Sai logic).
+4. **Nếu đạt chuẩn (`is_valid == true` VÀ đạt cả 3 điểm Rubric 75/70/65):**
+   - Chuyển thẳng trạng thái Node sang **GREEN** (Làm chủ bản chất) ở bất kỳ bậc thang giàn giáo nào!
+   - Reset `retry_count = 0`.
+   - Trích xuất `extracted_metaphor`, kích hoạt thuật toán duyệt DAG `findNextNodeToActivate` để mở khóa mắt xích tiếp theo.
 
 ---
 

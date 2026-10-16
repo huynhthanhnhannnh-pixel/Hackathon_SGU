@@ -3,49 +3,49 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SimpliFey – Feynman Cognitive Workbench</title>
+<title>SimpliFey – Brilliant Studio Cognitive Workbench</title>
 <!-- Chặn cảnh báo console của Tailwind CDN -->
 <script>(function(){var w=console.warn;console.warn=function(){var m=String(arguments[0]||'');if(m.indexOf('cdn.tailwindcss.com')>-1||m.indexOf('Tailwind CSS')>-1)return;w.apply(console,arguments);};})();</script>
 <script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-  /* ===== WARM ACADEMIC ATELIER TOKENS ===== */
+  /* ===== BRILLIANT STUDIO LIGHT 2026 DESIGN TOKENS ===== */
   :root {
-    --act: #0F766E;
-    --paper: #FAF7F2;
-    --border-warm: #E6E0D4;
-    --espresso: #1C1917;
-    --terracotta: #D95D39;
-    --teal: #0F766E;
+    --primary: #18181B;
+    --primary-hover: #27272A;
+    --jade: #10B981;
+    --jade-dark: #059669;
+    --bg-surface: #F4F5F7;
+    --card-border: #E2E8F0;
+    --text-main: #18181B;
   }
   html, body {
     height: 100%;
     overflow: hidden;
-    font-family: Inter, system-ui, sans-serif;
-    background-color: #FAF7F2;
-    color: #1C1917;
+    font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
+    background-color: #F4F5F7;
+    color: #18181B;
   }
-  .font-serif { font-family: 'Fraunces', Georgia, serif; }
   .font-mono { font-family: 'JetBrains Mono', monospace, ui-monospace; }
 
-  /* ===== NODE (Tactile Warm Academic Card) ===== */
+  /* ===== DAG NODE (Brilliant Obsidian & Jade Card) ===== */
   .node {
     position: absolute;
     transform: translate(-50%, -50%);
-    width: 164px;
+    width: 176px;
     padding: 9px 12px;
     border-radius: 14px;
     cursor: pointer;
     background: #FFFFFF;
-    border: 1.5px solid #E6E0D4;
-    box-shadow: 0 2px 0 #E6E0D4, 0 8px 20px rgba(28, 25, 23, 0.05);
+    border: 1.5px solid #E2E8F0;
+    box-shadow: 0 2px 0 #E2E8F0, 0 8px 20px rgba(15, 23, 42, 0.04);
     transition: all .25s cubic-bezier(.16, 1, .3, 1);
     display: flex;
-    gap: 10px;
+    gap: 9px;
     align-items: center;
   }
   .node:hover {
-    box-shadow: 0 4px 0 #D6CFC2, 0 12px 24px rgba(28, 25, 23, 0.08);
+    box-shadow: 0 4px 0 #CBD5E1, 0 12px 24px rgba(15, 23, 42, 0.08);
     transform: translate(-50%, -53%);
   }
   .node .ico {
@@ -55,30 +55,48 @@
     display: grid;
     place-items: center;
     flex: none;
-    background: #FAF7F2;
-    color: #78716C;
+    background: #F1F5F9;
+    color: #64748B;
     transition: all .25s;
   }
-  .node[data-s=MASTERED] { border-color: #059669; background: #F0FDF4; }
-  .node[data-s=MASTERED] .ico { background: #D1FAE5; color: #047857; }
-  .node[data-s=JARGON_HEAVY] { border-color: #D97706; background: #FFFBEB; }
-  .node[data-s=JARGON_HEAVY] .ico { background: #FEF3C7; color: #B45309; }
-  .node[data-s=FAILED] { border-color: #DC2626; background: #FEF2F2; }
-  .node[data-s=FAILED] .ico { background: #FEE2E2; color: #B91C1C; }
+  .node[data-s=GREEN] { border-color: #10B981; background: #F0FDF9; }
+  .node[data-s=GREEN] .ico { background: #D1FAE5; color: #10B981; }
+  .node[data-s=YELLOW] { border-color: #F59E0B; background: #FFFBEB; }
+  .node[data-s=YELLOW] .ico { background: #FEF3C7; color: #D97706; }
+  .node[data-s=RED] { border-color: #EF4444; background: #FEF2F2; }
+  .node[data-s=RED] .ico { background: #FEE2E2; color: #DC2626; }
+  .node[data-s=GRAY] { border-color: #CBD5E1; background: #FFFFFF; }
+  .node[data-s=GRAY] .ico { background: #F1F5F9; color: #94A3B8; }
   
-  /* Node active focus (Deep Botanical Teal) */
+  /* Node active interview focus (Obsidian & Jade) */
   .node.focus {
-    border-color: #0F766E;
-    box-shadow: 0 2px 0 #0F766E, 0 0 0 4px #CCFBF1, 0 8px 20px rgba(15, 118, 110, 0.22);
-    animation: ring 2.2s ease-in-out infinite;
+    border-color: #10B981;
+    box-shadow: 0 2px 0 #059669, 0 0 0 4px #D1FAE5, 0 8px 20px rgba(16, 185, 129, 0.2);
+    animation: ring-jade 2.2s ease-in-out infinite;
   }
   .node.focus .ico {
-    background: #0F766E;
+    background: #10B981;
     color: #FFFFFF;
   }
-  @keyframes ring {
+  @keyframes ring-jade {
     50% {
-      box-shadow: 0 2px 0 #0F766E, 0 0 0 7px #CCFBF1, 0 8px 22px rgba(15, 118, 110, 0.28);
+      box-shadow: 0 2px 0 #059669, 0 0 0 6px #D1FAE5, 0 8px 22px rgba(16, 185, 129, 0.28);
+    }
+  }
+
+  /* Node retrying focus (Amber) */
+  .node.focus.retrying {
+    border-color: #F59E0B !important;
+    box-shadow: 0 2px 0 #F59E0B, 0 0 0 4px #FEF3C7, 0 8px 20px rgba(245, 158, 11, 0.22) !important;
+    animation: ring-amber 2.2s ease-in-out infinite !important;
+  }
+  .node.focus.retrying .ico {
+    background: #F59E0B !important;
+    color: #FFFFFF !important;
+  }
+  @keyframes ring-amber {
+    50% {
+      box-shadow: 0 2px 0 #F59E0B, 0 0 0 6px #FEF3C7, 0 8px 22px rgba(245, 158, 11, 0.28) !important;
     }
   }
 
@@ -87,31 +105,41 @@
   .blink { transform-origin: center; transform-box: fill-box; animation: blink 4s infinite; }
   @keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.1); } }
   
-  .dots span {
+  .dots i {
     display: inline-block;
-    width: 6px;
-    height: 6px;
-    margin-right: 4px;
-    border-radius: 9px;
-    background: #0F766E;
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: #10B981;
     animation: dt 1s infinite;
   }
-  .dots span:nth-child(2) { animation-delay: .15s; }
-  .dots span:nth-child(3) { animation-delay: .3s; }
+  .dots i:nth-child(2) { animation-delay: .15s; }
+  .dots i:nth-child(3) { animation-delay: .3s; }
   @keyframes dt {
     0%, 80%, 100% { opacity: .3; transform: translateY(0); }
-    40% { opacity: 1; transform: translateY(-4px); }
+    40% { opacity: 1; transform: translateY(-3px); }
   }
 
   .pop { animation: pop .2s ease-out; }
-  @keyframes pop { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+  @keyframes pop { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: scale(1); } }
   
   .seg { transition: all .4s; }
-  .seg.focus { background: var(--act); animation: pulse2 1.4s infinite; }
+  .seg.focus { background: #18181B; animation: pulse2 1.4s infinite; }
   @keyframes pulse2 { 50% { opacity: .45; } }
   
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
-  button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid #0F766E; outline-offset: 2px; }
+  button:focus-visible, textarea:focus-visible { outline: 2px solid #10B981; outline-offset: 2px; }
+
+  /* Input focus chuẩn, loại bỏ viền xanh trình duyệt */
+  #input {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  #input:focus, #input:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+  }
 
   /* ===== BÉ MINH PORTRAIT GESTURES ===== */
   .v { display: none; }
@@ -134,250 +162,287 @@
   .clap { transform-box: view-box; transform-origin: 230px 300px; animation: clap .4s ease-in-out infinite alternate; }
   @keyframes clap { to { transform: scaleX(.9); } }
 
-  /* Scrollbar cho Live Diagnostic Stream */
-  #diagnosticStream::-webkit-scrollbar { width: 6px; }
-  #diagnosticStream::-webkit-scrollbar-track { background: transparent; }
-  #diagnosticStream::-webkit-scrollbar-thumb { background: #D6CFC2; border-radius: 10px; }
-  #diagnosticStream::-webkit-scrollbar-thumb:hover { background: #B8B0A2; }
+  /* Card Morph Flashcard Transition */
+  .card-transition {
+    animation: cardMorph .35s cubic-bezier(.16, 1, .3, 1);
+  }
+  @keyframes cardMorph {
+    0% { opacity: 0.65; transform: scale(.98) translateY(8px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* Scrollbar cho drawer lịch sử & last turn */
+  #historyList::-webkit-scrollbar, #lastTurnSlot::-webkit-scrollbar { width: 5px; }
+  #historyList::-webkit-scrollbar-track, #lastTurnSlot::-webkit-scrollbar-track { background: transparent; }
+  #historyList::-webkit-scrollbar-thumb, #lastTurnSlot::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+  #historyList::-webkit-scrollbar-thumb:hover, #lastTurnSlot::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
 </style>
 </head>
-<body class="bg-[#FAF7F2] text-[#1C1917] antialiased select-none">
+<body class="bg-[#F4F5F7] text-[#18181B] antialiased select-none">
 
-<!-- ===== HEADER (60px) WARM ACADEMIC ATELIER ===== -->
-<header class="h-[60px] px-5 flex items-center gap-5 border-b border-[#E6E0D4] bg-[#FFFFFF] shadow-[0_1px_3px_rgba(28,25,23,0.03)] z-30 relative">
+<!-- ===== HEADER (56px) BRILLIANT OBSIDIAN & JADE BAR ===== -->
+<header class="h-[56px] px-6 flex items-center gap-5 border-b border-[#E2E8F0] bg-[#FFFFFF] shadow-[0_1px_2px_rgba(15,23,42,0.03)] z-30 relative shrink-0">
   <div class="flex items-center gap-2.5">
-    <div class="text-xl font-serif font-black tracking-tight bg-gradient-to-r from-[#1C1917] via-[#7C2D12] to-[#D95D39] bg-clip-text text-transparent">SimpliFey</div>
-    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#FAF7F2] text-[#D95D39] border border-[#E6E0D4]">COGNITIVE WORKBENCH</span>
+    <div class="text-xl font-black tracking-tight text-[#18181B] flex items-center">
+      Simpli<span class="text-[#10B981]">Fey</span>
+    </div>
+    <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">COGNITIVE BENCH</span>
   </div>
-  <div class="text-xs font-semibold px-3 py-1.5 rounded-full bg-[#FAF7F2] border border-[#E6E0D4] text-stone-700 flex items-center gap-1.5">
-    <span class="w-1.5 h-1.5 rounded-full bg-[#0F766E]"></span>
-    <span>Con trỏ trong C++</span>
+  <div class="flex items-center gap-2">
+    <label for="topicSelector" class="text-[11px] font-bold text-slate-400 uppercase tracking-wider hidden lg:inline">Chuyên đề:</label>
+    <select id="topicSelector" onchange="switchTopic(this.value)" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-[#F8FAFC] border border-[#CBD5E1] text-slate-800 focus:outline-none focus:border-[#10B981] focus:ring-2 focus:ring-[#10B981]/20 cursor-pointer shadow-2xs transition">
+      <option value="SUPPLY_DEMAND" selected>Bài 1: Quy luật Cung - Cầu (Áo mưa cổng trường)</option>
+      <option value="POINTER_CPP">Bài 2: Con trỏ trong C++</option>
+    </select>
   </div>
   <div class="flex-1 max-w-md">
-    <div class="flex justify-between text-[11px] font-semibold text-stone-500 mb-1.5">
+    <div class="flex justify-between text-[11px] font-semibold text-slate-500 mb-1">
       <span id="progText">Đã hoàn thành: 0/5 Node</span>
-      <span id="progNow" class="font-mono text-teal-700 font-bold">Node 1/5</span>
+      <span id="progNow" class="font-mono text-[#18181B] font-bold">Node 1/5</span>
     </div>
     <div id="segs" class="flex gap-1.5"></div>
   </div>
-  <button id="btnEnd" class="ml-auto text-xs font-semibold px-3.5 py-2 rounded-xl border border-[#E6E0D4] bg-[#FFFFFF] text-stone-600 hover:bg-[#FAF7F2] hover:text-stone-900 shadow-sm transition">Kết thúc sớm</button>
+  <button id="btnEnd" class="ml-auto text-xs font-semibold px-3.5 py-1.5 rounded-xl border border-[#E2E8F0] bg-[#FFFFFF] text-slate-600 hover:bg-[#F8FAFC] hover:text-slate-900 shadow-2xs transition">Kết thúc sớm</button>
 </header>
 
-<main class="h-[calc(100vh-60px)] flex">
-  <!-- ===== CỘT TRÁI 35%: DAG CANVAS (MÀU GIẤY KEM ẤM & LƯỚI CÁT) ===== -->
-  <section class="w-[35%] relative border-r border-[#E6E0D4] bg-[#FAF7F2] bg-[radial-gradient(#DCD5C7_1.2px,transparent_1.2px)] [background-size:18px_18px] overflow-hidden">
+<main class="h-[calc(100vh-56px)] flex">
+  <!-- ===== CỘT TRÁI 34%: BẢN ĐỒ TRI THỨC DAG ===== -->
+  <section class="w-[34%] relative border-r border-[#E2E8F0] bg-[#F8FAFC] bg-[radial-gradient(#D4D8E2_1.2px,transparent_1.2px)] [background-size:18px_18px] overflow-hidden">
     <!-- Floating Dock Controls -->
     <div class="absolute left-3.5 top-3.5 flex flex-col gap-1.5 z-20">
-      <button id="btnZoomIn" title="Phóng to" class="w-7 h-7 rounded-lg bg-white/90 backdrop-blur border border-[#E6E0D4] shadow-sm flex items-center justify-center text-stone-600 hover:bg-[#FAF7F2] hover:text-stone-900 font-bold text-xs transition active:scale-95">+</button>
-      <button id="btnZoomOut" title="Thu nhỏ" class="w-7 h-7 rounded-lg bg-white/90 backdrop-blur border border-[#E6E0D4] shadow-sm flex items-center justify-center text-stone-600 hover:bg-[#FAF7F2] hover:text-stone-900 font-bold text-xs transition active:scale-95">−</button>
-      <button id="btnFitView" title="Vừa màn hình" class="w-7 h-7 rounded-lg bg-white/90 backdrop-blur border border-[#E6E0D4] shadow-sm flex items-center justify-center text-stone-600 hover:bg-[#FAF7F2] hover:text-stone-900 text-xs transition active:scale-95">⛶</button>
+      <button id="btnZoomIn" title="Phóng to" class="w-7 h-7 rounded-lg bg-white/95 backdrop-blur border border-[#E2E8F0] shadow-2xs flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-bold text-xs transition active:scale-95">+</button>
+      <button id="btnZoomOut" title="Thu nhỏ" class="w-7 h-7 rounded-lg bg-white/95 backdrop-blur border border-[#E2E8F0] shadow-2xs flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-bold text-xs transition active:scale-95">−</button>
+      <button id="btnFitView" title="Vừa màn hình" class="w-7 h-7 rounded-lg bg-white/95 backdrop-blur border border-[#E2E8F0] shadow-2xs flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:text-slate-900 text-xs transition active:scale-95">⛶</button>
     </div>
 
     <!-- Mini Radar Viewport -->
-    <div class="absolute right-3.5 top-3.5 w-20 h-16 rounded-xl bg-white/90 backdrop-blur-md border border-[#E6E0D4] p-1.5 shadow-sm hidden sm:block z-20 pointer-events-none">
-      <div class="text-[8px] font-bold text-stone-400 uppercase tracking-wider mb-0.5">Radar</div>
-      <div class="relative w-full h-[38px] bg-[#FAF7F2] rounded border border-[#E6E0D4] overflow-hidden">
-        <div class="absolute w-1.5 h-1.5 rounded-full bg-teal-600 animate-ping" style="left:50%;top:12%"></div>
-        <div class="absolute w-1.5 h-1.5 rounded-full bg-teal-600" style="left:50%;top:12%"></div>
-        <div class="absolute w-1.5 h-1.5 rounded-full bg-stone-300" style="left:24%;top:32%"></div>
-        <div class="absolute w-1.5 h-1.5 rounded-full bg-stone-300" style="left:76%;top:32%"></div>
-        <div class="absolute w-1.5 h-1.5 rounded-full bg-stone-300" style="left:50%;top:56%"></div>
-        <div class="absolute w-1.5 h-1.5 rounded-full bg-stone-300" style="left:50%;top:82%"></div>
-        <div class="absolute inset-0 border border-teal-500/40 bg-teal-500/5 rounded"></div>
+    <div class="absolute right-3.5 top-3.5 w-20 h-16 rounded-xl bg-white/95 backdrop-blur-md border border-[#E2E8F0] p-1.5 shadow-2xs hidden sm:block z-20 pointer-events-none">
+      <div class="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Radar</div>
+      <div id="miniRadarDots" class="relative w-full h-[38px] bg-slate-50 rounded border border-[#E2E8F0] overflow-hidden">
+        <div class="absolute inset-0 border border-[#10B981]/40 bg-[#10B981]/5 rounded"></div>
       </div>
     </div>
 
     <div id="canvas" class="absolute inset-0 transition-transform duration-300 origin-center">
       <svg id="edges" class="absolute inset-0 w-full h-full pointer-events-none"></svg>
       <div id="nodes"></div>
-      <div id="popover" class="hidden absolute z-30 w-64 pop rounded-2xl border border-[#E6E0D4] bg-[#FFFCF7] p-3.5 shadow-[0_2px_0_#E6E0D4,0_12px_28px_rgba(28,25,23,0.08)]"></div>
+      <div id="popover" class="hidden absolute z-30 w-64 pop rounded-2xl border border-[#E2E8F0] bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.1)]"></div>
     </div>
 
     <!-- Chú giải màu -->
-    <div class="absolute left-3 right-3 bottom-3 flex flex-wrap gap-1.5 text-[10px] font-semibold text-stone-600 z-10">
-      <span class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur border border-[#E6E0D4] shadow-sm"><i class="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#A8A29E]"></i>Chưa duyệt</span>
-      <span class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur border border-[#E6E0D4] shadow-sm"><i class="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#059669]"></i>Làm chủ</span>
-      <span class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur border border-[#E6E0D4] shadow-sm"><i class="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#D97706]"></i>Thuật ngữ</span>
-      <span class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur border border-[#E6E0D4] shadow-sm"><i class="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#DC2626]"></i>Sai bản chất</span>
+    <div class="absolute left-3 right-3 bottom-3 flex flex-wrap gap-1.5 text-[10px] font-semibold text-slate-600 z-10">
+      <span class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur border border-[#E2E8F0] shadow-2xs"><i class="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#94A3B8]"></i>Chưa duyệt (GRAY)</span>
+      <span class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur border border-[#E2E8F0] shadow-2xs"><i class="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#10B981]"></i>Làm chủ (GREEN)</span>
+      <span class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur border border-[#E2E8F0] shadow-2xs"><i class="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#F59E0B]"></i>Dính thuật ngữ (YELLOW)</span>
+      <span class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur border border-[#E2E8F0] shadow-2xs"><i class="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#EF4444]"></i>Sai bản chất (RED)</span>
     </div>
   </section>
 
-  <!-- ===== CỘT PHẢI 65%: FEYNMAN COGNITIVE WORKBENCH ===== -->
-  <section class="w-[65%] flex flex-col h-full min-h-0 p-4 gap-3 bg-[#FAF7F2] overflow-hidden">
+  <!-- ===== CỘT PHẢI 66%: SÂN KHẤU BRILLIANT FLASHCARD TRUNG TÂM ===== -->
+  <section class="w-[66%] relative flex flex-col justify-between items-center px-6 py-4 bg-[#F4F5F7] overflow-hidden h-full min-h-0">
     
-    <!-- KHU VỰC 1: THANH ĐIỀU PHỐI SƯ PHẠM & GIÀN GIÁO 3 BẬC (~64px) -->
-    <div class="bg-white border border-[#E6E0D4] rounded-2xl px-4 py-2.5 shadow-sm flex items-center justify-between gap-3 shrink-0">
-      <!-- Bên trái: Mắt xích đang học + Ẩn dụ đang neo -->
-      <div class="flex items-center gap-2.5 min-w-0">
-        <span id="qLabel" class="text-xs font-bold text-stone-900 truncate max-w-[170px] bg-stone-100 border border-stone-200 px-2.5 py-1 rounded-lg"></span>
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200/90 text-emerald-800 text-[11px] font-semibold whitespace-nowrap shadow-2xs">
-          <span class="text-emerald-600">⚓</span>
-          <span class="text-stone-500 font-normal">Ẩn dụ đang neo:</span>
-          <span id="anchorMetaphor" class="font-bold text-emerald-900">Chưa có</span>
-        </span>
+    <!-- Ambient Backdrop (Subtle Jade/Slate Glow) -->
+    <div class="pointer-events-none absolute -top-10 left-10 w-80 h-80 rounded-full bg-emerald-100/40 blur-3xl opacity-40"></div>
+    <div class="pointer-events-none absolute bottom-10 right-10 w-80 h-80 rounded-full bg-slate-200/50 blur-3xl opacity-40"></div>
+
+    <!-- A. THANH FLOATING MINI-HEADER -->
+    <div class="w-full max-w-[700px] flex items-center justify-between shrink-0 mb-2 z-10">
+      <!-- Bên trái: Điểm neo ẩn dụ -->
+      <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/90 backdrop-blur-md border border-[#E2E8F0] text-xs font-semibold text-slate-600 shadow-2xs">
+        <span class="text-emerald-500 text-sm">⚓</span>
+        <span>Ẩn dụ bắc cầu:</span>
+        <span id="anchorMetaphor" class="font-bold text-[#18181B]">Chưa có</span>
+      </span>
+
+      <!-- Bên phải: Nút bật/tắt ngăn lịch sử -->
+      <button id="btnToggleHistory" class="flex items-center gap-1.5 px-3.5 py-1 rounded-full border border-[#E2E8F0] bg-white/90 backdrop-blur-md hover:bg-white text-slate-700 text-xs font-semibold shadow-2xs hover:-translate-y-0.5 transition active:scale-95">
+        <span>💬</span>
+        <span id="historyBtnText">Nhật ký (<span id="historyCount">0</span>)</span>
+      </button>
+    </div>
+
+    <!-- B. CHIẾC THẺ FLASHCARD TRUNG TÂM (TỶ LỆ VÀNG MAX-W 700PX, VỪA KHÍT 100% MÀN HÌNH) -->
+    <div id="feynmanCard" class="w-full max-w-[700px] my-auto bg-white rounded-3xl border border-[#E2E8F0] shadow-[0_4px_0_#E2E8F0,0_16px_36px_rgba(15,23,42,0.06)] overflow-hidden transition-all duration-300 flex flex-col z-10 shrink min-h-0">
+      
+      <!-- PHẦN 1: CARD TOP BAR (THANG GIÀN GIÁO 3 BẬC) -->
+      <div class="px-6 py-3 bg-[#FAFAFA] border-b border-[#E2E8F0] flex items-center justify-between shrink-0">
+        <span id="qLabel" class="text-xs font-extrabold uppercase tracking-wider text-[#18181B]"></span>
+        
+        <!-- Stepper 3 bậc -->
+        <div class="flex items-center gap-1.5 text-xs font-semibold">
+          <div id="scaffStep1" class="flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all"></div>
+          <span class="text-slate-300 font-mono text-[10px]">──►</span>
+          <div id="scaffStep2" class="flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all"></div>
+          <span class="text-slate-300 font-mono text-[10px]">──►</span>
+          <div id="scaffStep3" class="flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all"></div>
+        </div>
       </div>
 
-      <!-- Ở giữa: Thang Giàn Giáo 3 Bậc (3-Step Scaffolding Stepper) -->
-      <div class="hidden lg:flex items-center gap-1.5 text-xs font-semibold shrink-0">
-        <div id="scaffStep1" class="flex items-center gap-1.5 px-3 py-1 rounded-xl transition-all"></div>
-        <span class="text-stone-300 font-mono text-[11px]">→</span>
-        <div id="scaffStep2" class="flex items-center gap-1.5 px-3 py-1 rounded-xl transition-all"></div>
-        <span class="text-stone-300 font-mono text-[11px]">→</span>
-        <div id="scaffStep3" class="flex items-center gap-1.5 px-3 py-1 rounded-xl transition-all"></div>
+      <!-- PHẦN 2: CARD BODY (AVATAR BÉ MINH W-28 H-32 & CÂU HỎI 19PX) -->
+      <div class="p-5 flex gap-5 items-center shrink-0">
+        <!-- Khung Avatar Bé Minh (112x128px, áo gile than phối xanh ngọc, không bị nhãn đè) -->
+        <div class="w-28 h-32 shrink-0 rounded-2xl bg-[#ECFDF5] border border-[#A7F3D0] relative overflow-hidden flex items-center justify-center shadow-2xs">
+          <div id="avatar" class="w-full h-full"></div>
+        </div>
+
+        <!-- Khung Câu Hỏi & Nhãn Cảm Xúc Nằm Riêng -->
+        <div class="flex-1 min-w-0 pr-1">
+          <!-- Hàng trên: Tiêu đề nhân vật + Badge cảm xúc (Dời ra ngoài khung avatar) -->
+          <div class="flex items-center justify-between gap-3 mb-1.5">
+            <div class="text-[10px] font-bold tracking-wider uppercase text-slate-400 flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>
+              <span>BÉ MINH · BẠN NHỎ 10 TUỔI</span>
+            </div>
+            <!-- Badge cảm xúc đính độc lập ở đây -->
+            <span id="badge" class="text-xs font-bold px-2.5 py-0.5 rounded-full border shadow-2xs bg-white whitespace-nowrap transition-all duration-300"></span>
+          </div>
+
+          <!-- Câu hỏi chính: 19px, sắc nét và vừa vặn -->
+          <div id="question" class="text-[19px] leading-snug font-bold text-[#18181B]"></div>
+          
+          <!-- 3 chấm suy nghĩ & Lời ngập ngừng của Bé Minh -->
+          <div id="thinking" class="hidden py-2">
+            <div class="inline-flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-[#F4F5F7] border border-[#E2E8F0]">
+              <div class="dots flex items-center gap-1.5 shrink-0">
+                <i></i><i></i><i></i>
+              </div>
+              <span id="thinkingText" class="text-[15px] font-semibold text-stone-600 italic transition-opacity duration-200">
+                Ưm... Để em ngẫm kỹ lại lời anh vừa giảng xem sao...
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Bên phải: Cụm 3 Điểm Số Rubric Live (Rubric Mini-Pills) -->
-      <div class="flex items-center gap-2 shrink-0">
-        <div class="flex flex-col items-end px-2.5 py-1 rounded-xl bg-stone-50 border border-stone-200 text-[11px] font-mono leading-tight">
-          <span class="text-[9px] font-sans font-medium text-stone-400 uppercase tracking-tight">Độ đúng</span>
-          <span id="rubricAcc" class="font-bold text-stone-400">--%</span>
+      <!-- PHẦN 3: NGĂN PHẢN HỒI LƯỢT VỪA TRẢ LỜI -->
+      <div id="lastTurnSlot" class="hidden mx-5 mb-3.5 p-3.5 rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] transition-all text-xs shrink-0 max-h-36 overflow-y-auto">
+        <!-- Nội dung được cập nhật động -->
+      </div>
+
+      <!-- PHẦN 4: CARD FOOTER (KHUNG NHẬP LIỆU HOẶC THANH XÁC NHẬN TIẾP TỤC) -->
+      <div class="px-6 py-3.5 bg-[#F8FAFC] border-t border-[#E2E8F0] flex flex-col gap-2 shrink-0">
+        
+        <!-- TRẠNG THÁI 1: KHUNG NHẬP CHỮ BÌNH THƯỜNG -->
+        <div id="inputBar" class="flex flex-col gap-2.5">
+          <div class="relative flex items-center rounded-xl bg-white border-2 border-[#CBD5E1] shadow-2xs focus-within:border-[#10B981] focus-within:ring-4 focus-within:ring-[#10B981]/15 transition-all">
+            <input id="input" type="text" maxlength="250" autocomplete="off" placeholder="Giải thích cho bé Minh bằng ví dụ đời thường... (Enter để gửi)" class="flex-1 h-11 bg-transparent pl-4 pr-14 text-[14px] text-slate-900 placeholder-slate-400 font-medium">
+            <span id="counter" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-mono text-slate-400">0/250</span>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <button id="btnSkipNode" class="text-xs font-semibold text-slate-400 hover:text-rose-600 transition flex items-center gap-1.5 active:scale-95">
+              <span>🏳️ Tạm bỏ qua / Ôn sau</span>
+            </button>
+            
+            <button id="btnSend" disabled class="h-10 px-6 text-xs font-bold rounded-xl bg-[#18181B] hover:bg-stone-800 text-white shadow-2xs active:translate-y-0.5 disabled:opacity-40 disabled:hover:bg-[#18181B] disabled:shadow-none transition-all flex items-center gap-1.5">
+              <span>Gửi lời giảng</span>
+              <span>➔</span>
+            </button>
+          </div>
         </div>
-        <div class="flex flex-col items-end px-2.5 py-1 rounded-xl bg-stone-50 border border-stone-200 text-[11px] font-mono leading-tight">
-          <span class="text-[9px] font-sans font-medium text-stone-400 uppercase tracking-tight">Bình dị</span>
-          <span id="rubricSim" class="font-bold text-stone-400">--%</span>
+
+        <!-- TRẠNG THÁI 2: THANH REVIEW CHỜ BẤM TIẾP TỤC (MANUAL STEP-CONFIRMATION) -->
+        <div id="reviewBar" class="hidden items-center justify-between py-1">
+          <div id="reviewMsg" class="flex items-center gap-2 text-xs font-semibold pr-3"></div>
+          <button id="btnProceed" class="h-10 px-6 text-xs font-bold rounded-xl text-white shadow-2xs active:translate-y-0.5 transition-all flex items-center gap-1.5 shrink-0">
+            <span id="btnProceedText">Tiếp tục</span>
+            <span>➔</span>
+          </button>
         </div>
-        <div class="flex flex-col items-end px-2.5 py-1 rounded-xl bg-stone-50 border border-stone-200 text-[11px] font-mono leading-tight">
-          <span class="text-[9px] font-sans font-medium text-stone-400 uppercase tracking-tight">Thực tế</span>
-          <span id="rubricAna" class="font-bold text-stone-400">--%</span>
-        </div>
+
       </div>
     </div>
 
-    <!-- KHU VỰC 2: THẺ TƯƠNG TÁC TRỌNG TÂM CỦA BÉ MINH (SOCRATIC PROMPT CARD) -->
-    <div class="bg-white border-2 border-[#0F766E]/20 rounded-2xl p-4 shadow-sm flex gap-4 items-center shrink-0 relative overflow-hidden">
-      <!-- Khung Avatar Bé Minh (Bust Portrait Avatar Card) -->
-      <div class="w-28 h-28 shrink-0 rounded-2xl bg-[#F3EFE6] border border-[#E6E0D4] overflow-hidden relative shadow-inner flex items-center justify-center">
-        <div id="avatar" class="w-full h-full"></div>
-        <!-- Badge cảm xúc đính ở góc dưới khung avatar -->
-        <span id="badge" class="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-2xs bg-white/95 backdrop-blur-xs whitespace-nowrap"></span>
+    <!-- VIEW PHỤ: NGĂN NHẬT KÝ ĐẦY ĐỦ (SLIDE-OVER HISTORY DRAWER) -->
+    <div id="historyDrawer" class="hidden w-full max-w-[700px] my-auto bg-white rounded-3xl border border-[#E2E8F0] shadow-[0_16px_36px_rgba(15,23,42,0.08)] p-6 overflow-hidden flex-col max-h-[75vh] z-20">
+      <div class="flex items-center justify-between pb-3 border-b border-[#E2E8F0] shrink-0 mb-3.5">
+        <div class="flex items-center gap-2">
+          <span class="text-base">📜</span>
+          <span class="font-bold text-slate-900 text-xs">Nhật ký phản biện toàn bộ buổi học</span>
+          <span id="historyCountPill" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold border border-slate-200"></span>
+        </div>
+        <button id="btnCloseHistory" class="text-xs font-semibold px-3 py-1 rounded-lg border border-[#E2E8F0] hover:bg-[#F8FAFC] text-slate-600 transition">✕ Đóng lại</button>
       </div>
-
-      <!-- Nội dung Câu Hỏi & Gợi ý Sư phạm -->
-      <div class="flex-1 min-w-0">
-        <div class="flex items-center justify-between gap-2 mb-1">
-          <div class="flex items-center gap-1.5 text-[11px] font-bold text-teal-800 tracking-wide uppercase">
-            <span class="w-2 h-2 rounded-full bg-teal-600 animate-pulse"></span>
-            <span>👶 BÉ MINH (Học sinh lớp 7 - Đóng vai người nghe Feynman)</span>
-          </div>
-          <span id="scaffoldBadge" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-stone-100 text-stone-600 border border-stone-200 uppercase"></span>
-        </div>
-
-        <!-- Câu hỏi chính -->
-        <div id="question" class="text-[17px] font-bold text-[#1C1917] leading-snug"></div>
-        <!-- 3 chấm suy nghĩ khi đang xử lý -->
-        <div id="thinking" class="hidden dots py-1.5">
-          <span></span><span></span><span></span>
-          <span class="text-xs font-semibold text-teal-800 ml-1.5">Bé Minh đang suy ngẫm lời giải thích của bạn...</span>
-        </div>
-
-        <!-- Thanh neo tiêu chuẩn sư phạm bên dưới câu hỏi -->
-        <div class="text-[11px] text-stone-500 mt-2.5 pt-2 border-t border-stone-100 flex flex-wrap items-center gap-x-5 gap-y-1">
-          <div class="flex items-center gap-1.5">
-            <span class="text-emerald-700 font-bold flex items-center gap-1">🎯 Cần làm rõ:</span>
-            <span id="promptTarget" class="font-medium text-stone-800"></span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <span class="text-amber-700 font-bold flex items-center gap-1">🚫 Kỵ từ chuyên môn:</span>
-            <span id="promptTaboo" class="font-mono text-amber-800/90 font-medium"></span>
-          </div>
-        </div>
-      </div>
+      <div id="historyList" class="flex-1 overflow-y-auto min-h-0 space-y-3 pr-1.5"></div>
     </div>
 
-    <!-- KHU VỰC 3: LUỒNG NHẬT KÝ PHẢN BIỆN & CHẤM ĐIỂM (LIVE DIAGNOSTIC STREAM) -->
-    <div id="diagnosticStream" class="flex-1 overflow-y-auto min-h-0 space-y-3 pr-1.5"></div>
-
-    <!-- KHU VỰC 4: BẢNG ĐIỀU KHIỂN & NHẬP LIỆU (FEYNMAN INPUT CONSOLE) -->
-    <div class="flex flex-col gap-2 shrink-0 pt-1 border-t border-stone-200/60">
-      <!-- Dòng trên: Quick Actions & Skip Button -->
-      <div class="flex items-center justify-between gap-2">
-        <div class="flex items-center gap-2 flex-1 overflow-x-auto py-0.5">
-          <span class="text-[11px] font-mono uppercase tracking-wider text-stone-400 font-bold flex items-center gap-1 shrink-0">
-            <svg class="w-3.5 h-3.5 text-[#D95D39]" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/></svg>
-            Kịch bản mẫu:
-          </span>
-          <button data-demo="ok" class="demo px-2.5 py-1.5 rounded-xl text-xs font-semibold border shadow-2xs hover:-translate-y-0.5 transition bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 flex items-center gap-1.5 shrink-0 active:scale-95">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            <span>🟢 Giảng chuẩn</span>
-          </button>
-          <button data-demo="jargon" class="demo px-2.5 py-1.5 rounded-xl text-xs font-semibold border shadow-2xs hover:-translate-y-0.5 transition bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100 flex items-center gap-1.5 shrink-0 active:scale-95">
-            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-            <span>🟡 Bẫy thuật ngữ</span>
-          </button>
-          <button data-demo="fail" class="demo px-2.5 py-1.5 rounded-xl text-xs font-semibold border shadow-2xs hover:-translate-y-0.5 transition bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100 flex items-center gap-1.5 shrink-0 active:scale-95">
-            <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-            <span>🔴 Sai logic</span>
-          </button>
-        </div>
-
-        <!-- Nút Tạm bỏ qua / Ôn sau (Theo FSM Sư phạm) -->
-        <button id="btnSkipNode" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-stone-300 bg-white hover:bg-stone-100 text-stone-700 shadow-2xs hover:-translate-y-0.5 transition active:scale-95 flex items-center gap-1.5 shrink-0">
-          <span>🏳️ Tạm bỏ qua / Ôn sau</span>
-        </button>
-      </div>
-
-      <!-- Dòng dưới: Khung nhập liệu + Bộ đếm ký tự + Nút Gửi -->
-      <div class="flex gap-2.5 items-center">
-        <div class="relative flex-1 flex items-center rounded-2xl bg-white border border-[#D6CFC2] shadow-xs focus-within:border-[#0F766E] focus-within:ring-4 focus-within:ring-teal-500/10 transition-all">
-          <div class="flex flex-col gap-1.5 pl-3.5 pr-2.5">
-            <i class="w-2 h-2 rounded-full bg-[#D4A373]"></i>
-            <i class="w-2 h-2 rounded-full bg-[#D4A373]"></i>
-          </div>
-          <input id="input" type="text" maxlength="250" autocomplete="off" placeholder="Hướng dẫn cho bé Minh bằng ví dụ đời thường... (Enter để gửi)" class="flex-1 h-12 bg-transparent pr-16 text-sm text-stone-800 placeholder-stone-400 font-medium outline-none">
-          <span id="counter" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-mono text-stone-400">0/250</span>
-        </div>
-        <button id="btnSend" disabled class="h-12 px-7 rounded-2xl bg-[#D95D39] hover:bg-[#C2410C] text-white font-bold shadow-[0_2px_0_#9A3412] active:translate-y-0.5 disabled:opacity-40 disabled:hover:bg-[#D95D39] disabled:shadow-none transition-all">Gửi</button>
-      </div>
+    <!-- C. THANH KỊCH BẢN DEMO CHO DIỄN GIẢ (ĐẶT Ở ĐÁY MÀN HÌNH, NGOÀI THẺ) -->
+    <div class="w-full max-w-[700px] flex items-center justify-center gap-2 py-1 opacity-85 hover:opacity-100 transition shrink-0 z-10">
+      <span class="text-[11px] font-mono uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1">
+        <svg class="w-3.5 h-3.5 text-[#10B981]" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/></svg>
+        Demo nhanh:
+      </span>
+      <button data-demo="ok" class="demo px-3 py-1 rounded-xl text-xs font-semibold border shadow-2xs hover:-translate-y-0.5 transition bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 flex items-center gap-1.5 active:scale-95">
+        <span class="w-1.5 h-1.5 rounded-full bg-[#10B981]"></span>
+        <span>🟢 Giảng chuẩn</span>
+      </button>
+      <button data-demo="jargon" class="demo px-3 py-1 rounded-xl text-xs font-semibold border shadow-2xs hover:-translate-y-0.5 transition bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100 flex items-center gap-1.5 active:scale-95">
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+        <span>🟡 Bẫy thuật ngữ</span>
+      </button>
+      <button data-demo="fail" class="demo px-3 py-1 rounded-xl text-xs font-semibold border shadow-2xs hover:-translate-y-0.5 transition bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100 flex items-center gap-1.5 active:scale-95">
+        <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+        <span>🔴 Sai logic</span>
+      </button>
     </div>
   </section>
 </main>
 
 <!-- ===== MODAL XÁC NHẬN KẾT THÚC ===== -->
-<div id="confirmModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-stone-900/40 backdrop-blur-sm p-4">
-  <div class="pop max-w-sm w-full rounded-2xl bg-[#FFFCF7] border border-[#E6E0D4] shadow-[0_2px_0_#E6E0D4,0_16px_36px_rgba(28,25,23,0.12)] p-6">
-    <p class="font-bold text-lg text-stone-800 mb-5">Bạn có muốn dừng phiên học và xem báo cáo ngay bây giờ?</p>
-    <div class="flex gap-3 justify-end">
-      <button id="confirmNo" class="px-4 py-2 rounded-xl border border-[#E6E0D4] text-stone-600 font-semibold hover:bg-[#FAF7F2] transition">Hủy</button>
-      <button id="confirmYes" class="px-4 py-2 rounded-xl bg-[#D95D39] hover:bg-[#C2410C] text-white font-bold shadow-[0_2px_0_#9A3412] active:translate-y-0.5 transition">Xác nhận</button>
+<div id="confirmModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+  <div class="pop max-w-sm w-full rounded-2xl bg-white border border-[#E2E8F0] shadow-[0_20px_40px_rgba(15,23,42,0.15)] p-6">
+    <p class="font-bold text-base text-slate-800 mb-5">Bạn có muốn dừng phiên học và xem báo cáo ngay bây giờ?</p>
+    <div class="flex gap-2.5 justify-end">
+      <button id="confirmNo" class="px-4 py-2 rounded-xl border border-[#E2E8F0] text-slate-600 font-semibold hover:bg-slate-50 transition text-xs">Hủy</button>
+      <button id="confirmYes" class="px-4 py-2 rounded-xl bg-[#18181B] hover:bg-stone-800 text-white font-bold shadow-2xs active:translate-y-0.5 transition text-xs">Xác nhận</button>
     </div>
   </div>
 </div>
 
 <!-- ===== MODAL BÁO CÁO CHẨN ĐOÁN ===== -->
-<div id="reportModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-stone-900/40 backdrop-blur-sm p-4">
-  <div class="pop max-w-3xl w-full max-h-[94vh] overflow-hidden rounded-2xl bg-[#FFFCF7] border border-[#E6E0D4] p-6 shadow-[0_2px_0_#E6E0D4,0_20px_40px_rgba(28,25,23,0.14)]">
-    <div class="flex items-center justify-between mb-4 pb-2 border-b border-[#E6E0D4]">
-      <div class="flex items-center gap-2">
-        <span class="text-xl">🎓</span>
-        <h2 class="text-xl font-serif font-extrabold text-stone-900">Diagnostic Summary Report</h2>
+<div id="reportModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+  <div class="pop max-w-3xl w-full max-h-[94vh] overflow-hidden rounded-[24px] bg-white border border-[#E2E8F0] p-7 shadow-[0_24px_50px_rgba(15,23,42,0.15)]">
+    <div class="flex items-center justify-between mb-5 pb-3 border-b border-[#E2E8F0]">
+      <div class="flex items-center gap-2.5">
+        <span class="text-2xl">🎓</span>
+        <h2 class="text-xl font-bold text-slate-900">Diagnostic Summary Report</h2>
       </div>
-      <span class="text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-stone-100 text-stone-600 border border-stone-200">FEYNMAN AUDIT</span>
+      <span class="text-xs font-mono font-semibold px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">FEYNMAN AUDIT</span>
     </div>
     
-    <div class="flex gap-5 items-center mb-5 bg-[#FAF7F2] p-4 rounded-xl border border-[#E6E0D4]">
+    <!-- Early Termination Alert Banner -->
+    <div id="earlyTerminationBanner" class="hidden mb-4 p-3.5 rounded-2xl bg-rose-50 border border-rose-300 text-rose-900 text-xs font-semibold flex items-center gap-3">
+      <span class="text-2xl shrink-0">🚨</span>
+      <div>
+        <div class="font-bold text-rose-950 uppercase tracking-wide">Dừng Khẩn Cấp (Early Termination)</div>
+        <div class="text-[11.5px] text-rose-800 font-normal mt-0.5">Mắt xích nền tảng (Root Node) bị hổng bản chất (RED). Buồng lái đã tự động khóa toàn bộ nhánh phụ thuộc để ngăn ngừa rỗng kiến thức dây chuyền.</div>
+      </div>
+    </div>
+    
+    <div class="flex gap-6 items-center mb-6 bg-[#F8FAFC] p-5 rounded-2xl border border-[#E2E8F0]">
       <svg viewBox="0 0 120 120" class="w-32 h-32 shrink-0">
-        <circle cx="60" cy="60" r="50" fill="none" stroke="#E6E0D4" stroke-width="12"/>
-        <circle id="ring" cx="60" cy="60" r="50" fill="none" stroke="#0F766E" stroke-width="12" stroke-linecap="round" stroke-dasharray="314" stroke-dashoffset="314" transform="rotate(-90 60 60)" style="transition:stroke-dashoffset 1s"/>
-        <text id="rScore" x="60" y="62" text-anchor="middle" fill="#1C1917" font-size="30" font-weight="800" font-family="'JetBrains Mono',monospace">0</text>
-        <text x="60" y="80" text-anchor="middle" fill="#78716C" font-size="9" font-weight="600">Feynman Score</text>
+        <circle cx="60" cy="60" r="50" fill="none" stroke="#E2E8F0" stroke-width="12"/>
+        <circle id="ring" cx="60" cy="60" r="50" fill="none" stroke="#10B981" stroke-width="12" stroke-linecap="round" stroke-dasharray="314" stroke-dashoffset="314" transform="rotate(-90 60 60)" style="transition:stroke-dashoffset 1s"/>
+        <text id="rScore" x="60" y="62" text-anchor="middle" fill="#18181B" font-size="30" font-weight="800" font-family="'JetBrains Mono',monospace">0</text>
+        <text x="60" y="80" text-anchor="middle" fill="#64748B" font-size="9" font-weight="600">Feynman Score</text>
       </svg>
       <div class="flex-1">
-        <div class="text-xs font-semibold text-stone-600 mb-1.5">Hoàn thành đồ thị: <span id="rPct" class="font-mono text-stone-900 font-bold"></span></div>
-        <div id="rBar" class="flex h-3 rounded-full overflow-hidden bg-stone-200 gap-0.5 border border-stone-300/40"></div>
-        <div class="flex flex-wrap gap-3 text-[11px] font-semibold mt-2.5 font-mono" id="rLegend"></div>
+        <div class="text-xs font-semibold text-slate-600 mb-2">Hoàn thành đồ thị: <span id="rPct" class="font-mono text-slate-900 font-bold"></span></div>
+        <div id="rBar" class="flex h-3 rounded-full overflow-hidden bg-slate-200 gap-0.5 border border-slate-300/40"></div>
+        <div class="flex flex-wrap gap-3 text-[11px] font-semibold mt-3 font-mono" id="rLegend"></div>
       </div>
     </div>
     
     <div class="grid grid-cols-2 gap-4">
-      <div class="bg-emerald-50/50 rounded-xl p-3.5 border border-emerald-200/80">
-        <h3 class="font-bold text-emerald-800 mb-2 text-sm flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+      <div class="bg-emerald-50/60 rounded-2xl p-4 border border-emerald-200">
+        <h3 class="font-bold text-emerald-800 mb-2.5 text-sm flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-[#10B981]"></span>
           Mắt xích vững chắc
         </h3>
         <ul id="rGood" class="space-y-2 text-xs"></ul>
       </div>
-      <div class="bg-rose-50/50 rounded-xl p-3.5 border border-rose-200/80">
-        <h3 class="font-bold text-rose-800 mb-2 text-sm flex items-center gap-1.5">
+      <div class="bg-rose-50/60 rounded-2xl p-4 border border-rose-200">
+        <h3 class="font-bold text-rose-800 mb-2.5 text-sm flex items-center gap-1.5">
           <span class="w-2 h-2 rounded-full bg-rose-500"></span>
           Điểm mù nhận thức
         </h3>
@@ -385,8 +450,8 @@
       </div>
     </div>
     
-    <div class="flex justify-end gap-3 mt-5 pt-3 border-t border-[#E6E0D4]">
-      <button id="btnRetry" class="px-5 py-2.5 rounded-xl bg-[#0F766E] hover:bg-[#115E59] text-white font-bold shadow-[0_2px_0_#0D5B55] active:translate-y-0.5 transition">Luyện tập lại</button>
+    <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-[#E2E8F0]">
+      <button id="btnRetry" class="px-6 py-2.5 rounded-xl bg-[#18181B] hover:bg-stone-800 text-white font-bold shadow-2xs active:translate-y-0.5 transition text-xs">Luyện tập lại</button>
     </div>
   </div>
 </div>
@@ -422,94 +487,241 @@ const AudioFX = {
   }
 };
 
-/* ===================== DỮ LIỆU BÀI HỌC VÀ TIÊU CHUẨN SƯ PHẠM ===================== */
-const COLORS = { UNVISITED: '#A8A29E', MASTERED: '#059669', JARGON_HEAVY: '#D97706', FAILED: '#DC2626' };
-const STATUS_VI = { UNVISITED: 'Chưa duyệt', MASTERED: 'Làm chủ', JARGON_HEAVY: 'Lạm dụng thuật ngữ', FAILED: 'Sai bản chất' };
-const STATUS_TXT = { UNVISITED: 'text-stone-500', MASTERED: 'text-emerald-700', JARGON_HEAVY: 'text-amber-700', FAILED: 'text-rose-700' };
+/* ===================== DỮ LIỆU BÀI HỌC VÀ PHẢN HỒI BÉ MINH ===================== */
+const COLORS = { GRAY: '#94A3B8', GREEN: '#10B981', YELLOW: '#F59E0B', RED: '#EF4444' };
+const STATUS_VI = { GRAY: 'Chưa duyệt', GREEN: 'Làm chủ', YELLOW: 'Dính thuật ngữ', RED: 'Sai bản chất' };
+const STATUS_TXT = { GRAY: 'text-slate-400', GREEN: 'text-emerald-600', YELLOW: 'text-amber-600', RED: 'text-rose-600' };
 
 const svgI = p => `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const ICONS = [
- svgI('<path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>'),
- svgI('<path d="M17 9c0-3-2-5-4.5-5S8 6 8 8.5c0 5 9 5.500 9 10 0 2-1.500 3-3.500 3S9 19.500 9 17M7 12h10"/>'),
- svgI('<path d="M12 4v16M5 8l14 8M19 8L5 16"/>'),
- svgI('<path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 17.500l9 5 9-5"/>'),
- svgI('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>')
+  svgI('<path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>'),
+  svgI('<path d="M17 9c0-3-2-5-4.5-5S8 6 8 8.5c0 5 9 5.500 9 10 0 2-1.500 3-3.500 3S9 19.500 9 17M7 12h10"/>'),
+  svgI('<path d="M12 4v16M5 8l14 8M19 8L5 16"/>'),
+  svgI('<path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 17.500l9 5 9-5"/>'),
+  svgI('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>')
 ];
 
-const LESSON = [
- {id:'n1',label:'Địa chỉ ô nhớ',fx:.5,fy:.1,pre:[],
-  tier: 1, tierLabel: 'BẬC 1: TRỰC GIÁC',
-  target: 'Vị trí lưu trữ dữ liệu trong bộ nhớ RAM',
-  taboo: 'hexadecimal, allocation, byte offset...',
-  q:'Thầy/Cô ơi, "địa chỉ ô nhớ" là gì vậy ạ? Sao máy tính cần nó?',
-  retryQ:'Em vẫn chưa rõ. Nếu RAM là một dãy phố thì địa chỉ ô nhớ là gì ạ?',
-  demo:{ok:'Ví như số nhà của bạn: máy tính cần số nhà để biết món đồ được cất ở ô nào trong dãy phố RAM.',
-        jargon:'Là địa chỉ hexadecimal của vùng nhớ sau khi memory allocation ạ.',
-        fail:'Là tên của biến, biến tên gì thì địa chỉ là tên đó.'},
-  why:{ok:'Dùng ẩn dụ số nhà, đúng bản chất: địa chỉ là vị trí, không phải nội dung.',
-       jargon:'Dồn thuật ngữ (hexadecimal, memory allocation) mà không có ví dụ đời thường.',
-       fail:'Nhầm địa chỉ với tên biến; địa chỉ là vị trí trong bộ nhớ.'}},
- {id:'n2',label:'Toán tử tham chiếu (&)',fx:.24,fy:.32,pre:['n1'],
-  tier: 2, tierLabel: 'BẬC 2: KHỚP NỐI',
-  target: 'Ý nghĩa toán tử & (hỏi số nhà thay vì món đồ bên trong)',
-  taboo: 'address-of operator, lvalue reference, pointer type...',
-  q:'Thầy/Cô ơi, em thấy dấu & trước tên biến lạ lắm. Nó dùng để làm gì ạ?',
-  retryQ:'Hmm, em chưa hiểu. Dấu & hỏi "đồ trong nhà" hay hỏi "số nhà" ạ?',
-  demo:{ok:'Giống hỏi "nhà bạn số mấy?": & cho ta số nhà của biến, chứ không phải đồ bên trong.',
-        jargon:'& là address-of operator trả về lvalue reference tới địa chỉ của object.',
-        fail:'& là phép cộng hai biến lại với nhau để ra kết quả mới.'},
-  why:{ok:'Phân biệt đúng "số nhà" và "đồ trong nhà" bằng ví dụ gần gũi.',
-       jargon:'Dùng "address-of operator", "lvalue reference" mà không giải thích.',
-       fail:'Nhầm & (lấy địa chỉ) với phép cộng/AND.'}},
- {id:'n3',label:'Toán tử giải tham chiếu (*)',fx:.76,fy:.32,pre:['n1'],
-  tier: 2, tierLabel: 'BẬC 2: KHỚP NỐI',
-  target: 'Ý nghĩa toán tử * (tìm đến địa chỉ để mở cửa lấy đồ)',
-  taboo: 'dereference operator, indirection, pointer...',
-  q:'Có số nhà rồi, vậy dấu * dùng để làm gì ạ?',
-  retryQ:'Em chưa rõ. Cầm tờ giấy ghi số nhà rồi làm gì tiếp ạ?',
-  demo:{ok:'Giống cầm tờ giấy ghi số nhà rồi đi tới đúng nhà, mở cửa lấy món đồ bên trong ra.',
-        jargon:'* là dereference operator truy cập giá trị của pointer thông qua indirection.',
-        fail:'* là nhân hai số với nhau, con trỏ chỉ là phép nhân thôi.'},
-  why:{ok:'Mô tả đúng: đi theo địa chỉ để lấy giá trị bên trong.',
-       jargon:'Lặp lại "dereference", "indirection" nhưng chưa nói được hành động thực tế.',
-       fail:'Nhầm * giải tham chiếu với phép nhân.'}},
- {id:'n4',label:'Bộ nhớ Stack vs Heap',fx:.5,fy:.56,pre:['n2','n3'],
-  tier: 3, tierLabel: 'BẬC 3: BẢN CHẤT',
-  target: 'Khác biệt vòng đời & dọn dẹp giữa Stack và Heap',
-  taboo: 'cấp phát tĩnh, LIFO, allocator, new...',
-  q:'Stack với Heap khác nhau chỗ nào ạ? Sao cần hai loại vậy?',
-  retryQ:'Em còn rối. Cái nào tự dọn, cái nào mình phải tự dọn ạ?',
-  demo:{ok:'Stack ví như bàn học: gọn, xong bài là tự dọn. Heap như cái kho: rộng, nhưng bạn phải tự dọn.',
-        jargon:'Stack cấp phát tĩnh theo LIFO, heap cấp phát dynamic bởi allocator qua new.',
-        fail:'Stack và Heap giống nhau, chỉ là hai tên gọi khác của RAM.'},
-  why:{ok:'So sánh bàn học/kho thể hiện đúng khác biệt về vòng đời và quyền quản lý.',
-       jargon:'Dùng "cấp phát tĩnh", "LIFO", "allocator" mà không có hình ảnh.',
-       fail:'Cho rằng Stack và Heap là một; bỏ sót khác biệt về quản lý vòng đời.'}},
- {id:'n5',label:'Giải phóng bộ nhớ (Delete)',fx:.5,fy:.82,pre:['n4'],
-  tier: 3, tierLabel: 'BẬC 3: BẢN CHẤT',
-  target: 'Hậu quả rò rỉ bộ nhớ (leak) nếu quên delete con trỏ',
-  taboo: 'memory leak, dangling allocation, garbage...',
-  q:'Tại sao phải delete con trỏ ạ? Không xóa thì sao?',
-  retryQ:'Em chưa hiểu. Nếu mượn đồ trong kho mà không trả thì chuyện gì xảy ra ạ?',
-  demo:{ok:'Mượn đồ trong kho thì phải trả; không trả thì kho đầy dần và hết chỗ cho người khác.',
-        jargon:'Không delete sẽ gây memory leak do dangling allocation trên heap.',
-        fail:'Không cần xóa con trỏ vì hệ điều hành tự dọn sạch ngay.'},
-  why:{ok:'Ví dụ mượn/trả đồ nêu đúng hậu quả rò rỉ bộ nhớ.',
-       jargon:'"memory leak", "dangling allocation" chưa kèm ví dụ trực quan.',
-       fail:'Sai: HĐH chỉ thu hồi khi chương trình kết thúc, không phải ngay lập tức.'}}
-];
+/* ===================== KHO CHUYÊN ĐỀ (TOPICS) ===================== */
+const TOPICS = {
+  SUPPLY_DEMAND: {
+    id: 'SUPPLY_DEMAND',
+    name: 'Quy luật Cung - Cầu',
+    subtitle: 'Áo mưa cổng trường',
+    nodes: [
+      {
+        id: 'n1', label: 'Quy luật Cung - Cầu', fx: 0.5, fy: 0.12, pre: [], tier: 1,
+        q: 'Anh ơi, trời mưa thì sao giá áo mưa cổng trường lại đắt gấp đôi ngày thường vậy ạ?',
+        retryQ: 'Em vẫn chưa hiểu lắm... Nếu nhiều bạn cần mua mà áo mưa lại ít thì sao người bán tăng giá được ạ?',
+        reply: {
+          ok: "À ha, em hiểu rồi! Giống như 10 bạn ùa ra mà bác bán chỉ còn đúng 2 chiếc áo mưa, ai cũng muốn mua ngay nên sẵn sàng trả giá cao hơn. Cung ít mà Cầu nhiều thì giá tăng vọt, anh ví von dễ hiểu quá!",
+          jargon: "Ái chà... Anh dùng từ 'độ co dãn cầu' với 'cân bằng Pareto' nghe vĩ mô quá, đầu em quay mòng mòng luôn! Anh ví von lại bằng chuyện cổng trường thực tế giúp em với?",
+          fail: "Ủa khoan đã... Anh nói trời mưa người ta bán đắt vì người bán thích gom tiền mua kem ăn hả? Đâu phải tự nhiên thích tăng là được đâu, phải do khan hiếm chứ anh!"
+        },
+        demo: {
+          ok: 'Trời mưa 10 bạn cần mà chỉ có 2 cái áo (Cầu > Cung), ai cũng muốn mua ngay nên giá áo tăng gấp đôi.',
+          jargon: 'Do độ co dãn của cầu theo giá là inelastic trong ngắn hạn dẫn tới điểm cân bằng Pareto dịch chuyển.',
+          fail: 'Vì người bán thích bán đắt để kiếm nhiều tiền đi mua kem, không liên quan gì đến cung cầu cả.'
+        },
+        why: {
+          ok: 'Ẩn dụ 10 người mua 2 áo mưa: nêu đúng bản chất Cầu vượt Cung làm giá tăng.',
+          jargon: 'Lạm dụng thuật ngữ kinh tế học (inelastic, Pareto) mà không giải thích bằng hiện tượng.',
+          fail: 'Lạc đề / ngụy biện: quy cho ý thích chủ quan của người bán, sai bản chất kinh tế học.'
+        }
+      },
+      {
+        id: 'n2', label: 'Điểm Cân bằng Thị trường', fx: 0.28, fy: 0.45, pre: ['n1'], tier: 2,
+        q: 'Vậy khi nào thì giá áo mưa quay trở về mức bình thường 10k một chiếc hả anh?',
+        retryQ: 'Nếu trời tạnh mưa hoặc có thêm 5 bác bán áo mưa nữa chạy tới thì sao ạ?',
+        reply: {
+          ok: "Ồ quá rõ luôn! Khi trời tạnh ráo hoặc có thêm nhiều người cùng mang áo ra bán, số người mua bằng số áo sẵn có thì giá tự dừng ở 10k. Đó là điểm cân bằng!",
+          jargon: "Lại là 'giao điểm đường cung đường cầu' với 'equilibrium price'... Anh nói bằng chuyện người mua kẻ bán ngoài cổng trường được không?",
+          fail: "Ủa, anh bảo giá áo mưa do bác bảo vệ trường ra lệnh quy định bằng luật hả? Bác bảo vệ đâu có quyền định giá áo mưa ngoài đường đâu anh!"
+        },
+        demo: {
+          ok: 'Khi trời tạnh hoặc có thêm người bán, số người cần vừa bằng số áo sẵn có (Cung = Cầu) thì giá giữ nguyên 10k.',
+          jargon: 'Giá đạt Equilibrium khi đường Supply giao với Demand tại điểm tối ưu xã hội.',
+          fail: 'Giá do bác bảo vệ trường ra lệnh bắt buộc phải bán 10k không được tăng.'
+        },
+        why: {
+          ok: 'Nắm đúng: Cung bằng Cầu thì giá ổn định tại điểm cân bằng.',
+          jargon: 'Dùng từ equilibrium, đồ thị cung cầu nhưng thiếu trực quan.',
+          fail: 'Sai bản chất cơ chế thị trường tự do, nhầm với quyết định hành chính.'
+        }
+      },
+      {
+        id: 'n3', label: 'Giá trần (Price Ceiling)', fx: 0.72, fy: 0.45, pre: ['n1'], tier: 2,
+        q: 'Nếu phường bắt buộc ai bán áo mưa cổng trường cũng chỉ được lấy 10k thì sao ạ?',
+        retryQ: 'Nếu bị cấm bán đắt lúc mưa to, bác bán hàng có muốn dầm mưa mang thêm áo đến không ạ?',
+        reply: {
+          ok: "Chuẩn luôn! Bị khống chế giá 10k (Giá trần), bác bán hàng thấy không bõ công dầm mưa nên nghỉ bán luôn, kết quả là học sinh ướt sũng vì không còn ai bán áo mưa nữa!",
+          jargon: "Anh lại nói 'price ceiling gây ra deadweight loss và shortage' rồi... Khó hiểu quá!",
+          fail: "Quy định giá trần thì ai cũng có áo mưa miễn phí mặc thoải mái chứ sao anh?"
+        },
+        demo: {
+          ok: 'Bị ép giá tối đa 10k lúc mưa gió, người bán thấy lỗ công nên cất hàng không bán nữa, học sinh càng khan hiếm áo mưa.',
+          jargon: 'Price ceiling dưới giá cân bằng tạo ra shortage và deadweight loss cho nền kinh tế.',
+          fail: 'Quy định giá trần thì lập tức áo mưa tự sinh ra đầy đường cho mọi người mặc.'
+        },
+        why: {
+          ok: 'Nhận diện đúng: Giá trần triệt tiêu động lực cung, gây khan hiếm thực tế.',
+          jargon: 'Lặp lại shortage, deadweight loss thiếu liên hệ thực tế.',
+          fail: 'Ảo tưởng kinh tế: nhầm giá trần với nguồn cung vô tận.'
+        }
+      },
+      {
+        id: 'n4', label: 'Thị trường Chợ đen', fx: 0.5, fy: 0.8, pre: ['n2', 'n3'], tier: 3,
+        q: 'Khi áo mưa bị cấm bán đắt mà ai cũng cần gấp, họ sẽ làm thế nào để có áo ạ?',
+        retryQ: 'Có ai lén lút bán đằng sau ngõ với giá 50k không anh?',
+        reply: {
+          ok: "Chính xác tuyệt đối! Người ta sẽ lén lút bán trong ngõ hẻm với giá 50k cho ai thực sự cần — đó chính là thị trường chợ đen sinh ra từ giá trần!",
+          jargon: "Thị trường ngầm phát sinh do arbitrage và black market premium... Nghe nhức đầu quá anh ơi!",
+          fail: "Người ta sẽ nhịn mặc áo mưa và đứng yên dưới mưa cả ngày chờ trời nắng."
+        },
+        demo: {
+          ok: 'Vì quá cần mà ngoài cổng bị cấm bán đắt, người ta sẽ lén ra góc ngõ mua áo mưa chui với giá 50k (Chợ đen).',
+          jargon: 'Black market xuất hiện tận dụng chênh lệch giá (arbitrage) để phân phối lại tài nguyên.',
+          fail: 'Mọi người đều chấp nhận ướt mưa đứng yên chờ đến tối chứ không ai tìm cách mua cả.'
+        },
+        why: {
+          ok: 'Giải thích đúng sự xuất hiện tất yếu của chợ đen khi có giá trần và nhu cầu cấp bách.',
+          jargon: 'Thuật ngữ arbitrage, premium không có ví dụ.',
+          fail: 'Bác bỏ hành vi kinh tế tự nhiên của con người.'
+        }
+      }
+    ]
+  },
+  POINTER_CPP: {
+    id: 'POINTER_CPP',
+    name: 'Con trỏ trong C++',
+    subtitle: 'Quản lý bộ nhớ máy tính',
+    nodes: [
+      {
+        id: 'n1', label: 'Địa chỉ ô nhớ', fx: 0.5, fy: 0.1, pre: [], tier: 1,
+        q: 'Anh ơi, "địa chỉ ô nhớ" là gì vậy ạ? Sao máy tính cần nó?',
+        retryQ: 'Em vẫn chưa rõ. Nếu RAM là một dãy phố thì địa chỉ ô nhớ là gì ạ?',
+        reply: {
+          ok: "À ha, em hiểu rồi! Giống như số nhà trên dãy phố RAM, nhờ có địa chỉ ô nhớ mà máy tính mới biết chính xác món đồ cất ở ngăn nào để tìm tới lấy. Anh ví von dễ hiểu quá!",
+          jargon: "Ái chà... Anh dùng từ 'hexadecimal' với 'memory allocation' nghe giống sách đại học quá, đầu em quay mòng mòng luôn! Anh ví von lại bằng ngôi nhà hay đồ vật ngoài đời giúp em với?",
+          fail: "Ủa khoan đã... Nếu địa chỉ ô nhớ chỉ là tên biến như anh nói, vậy lỡ hai người trùng tên nhau thì máy tính biết tìm ở đâu ạ? Em nghĩ địa chỉ phải là vị trí cụ thể chứ chưa đúng lắm!"
+        },
+        demo: {
+          ok: 'Ví như số nhà của bạn: máy tính cần số nhà để biết món đồ được cất ở ô nào trong dãy phố RAM.',
+          jargon: 'Là địa chỉ hexadecimal của vùng nhớ sau khi memory allocation ạ.',
+          fail: 'Là tên của biến, biến tên gì thì địa chỉ là tên đó.'
+        },
+        why: {
+          ok: 'Dùng ẩn dụ số nhà, đúng bản chất: địa chỉ là vị trí, không phải nội dung.',
+          jargon: 'Dồn thuật ngữ (hexadecimal, memory allocation) mà không có ví dụ đời thường.',
+          fail: 'Nhầm địa chỉ với tên biến; địa chỉ là vị trí trong bộ nhớ.'
+        }
+      },
+      {
+        id: 'n2', label: 'Toán tử tham chiếu (&)', fx: 0.24, fy: 0.32, pre: ['n1'], tier: 2,
+        q: 'Anh ơi, em thấy dấu & trước tên biến lạ lắm. Nó dùng để làm gì ạ?',
+        retryQ: 'Hmm, em chưa hiểu. Dấu & hỏi "đồ trong nhà" hay hỏi "số nhà" ạ?',
+        reply: {
+          ok: "Ồ quá rõ luôn ạ! Vậy là dấu & chỉ đứng ngoài cửa hỏi 'nhà bạn số mấy' để lấy địa chỉ thôi, chứ không chạm vào món đồ cất bên trong. Em nắm chắc phần này rồi!",
+          jargon: "Em lại bị vướng từ 'address-of operator' với 'lvalue reference' rồi anh ơi... Nghe trừu tượng quá, nếu so với chuyện số nhà lúc nãy thì dấu & làm nhiệm vụ gì ạ?",
+          fail: "Hmm, em thấy sai sai rồi ạ! Phép cộng hai số là dấu + mà, sao dấu & đứng trước một biến lại là phép cộng được nhỉ? Hình như nó dùng để hỏi vị trí ô nhớ mới đúng chứ ạ!"
+        },
+        demo: {
+          ok: 'Giống hỏi "nhà bạn số mấy?": & cho ta số nhà của biến, chứ không phải đồ bên trong.',
+          jargon: '& là address-of operator trả về lvalue reference tới địa chỉ của object.',
+          fail: '& là phép cộng hai biến lại với nhau để ra kết quả mới.'
+        },
+        why: {
+          ok: 'Phân biệt đúng "số nhà" và "đồ trong nhà" bằng ví dụ gần gũi.',
+          jargon: 'Dùng "address-of operator", "lvalue reference" mà không giải thích.',
+          fail: 'Nhầm & (lấy địa chỉ) với phép cộng/AND.'
+        }
+      },
+      {
+        id: 'n3', label: 'Toán tử giải tham chiếu (*)', fx: 0.76, fy: 0.32, pre: ['n1'], tier: 2,
+        q: 'Có số nhà rồi, vậy dấu * dùng để làm gì ạ?',
+        retryQ: 'Em chưa rõ. Cầm tờ giấy ghi số nhà rồi làm gì tiếp ạ?',
+        reply: {
+          ok: "Tuyệt vời! Cầm tờ giấy ghi số nhà trên tay, đi tới đúng căn nhà đó rồi mở cửa lấy món đồ bên trong ra — đó chính là việc của dấu *. Giờ em không bao giờ nhầm dấu & với dấu * nữa!",
+          jargon: "Anh ơi, từ 'dereference' với 'indirection' làm em xoắn não quá! Cầm tờ giấy ghi số nhà rồi mình làm hành động gì tiếp theo để thấy món đồ bên trong ạ?",
+          fail: "Ơ kìa, khi đứng giữa hai số thì * mới là phép nhân, còn đây là dấu * đặt ngay trước con trỏ mà anh! Nếu chỉ nhân số thì làm sao mở cửa lấy đồ trong ô nhớ được ạ?"
+        },
+        demo: {
+          ok: 'Giống cầm tờ giấy ghi số nhà rồi đi tới đúng nhà, mở cửa lấy món đồ bên trong ra.',
+          jargon: '* là dereference operator truy cập giá trị của pointer thông qua indirection.',
+          fail: '* là nhân hai số với nhau, con trỏ chỉ là phép nhân thôi.'
+        },
+        why: {
+          ok: 'Mô tả đúng: đi theo địa chỉ để lấy giá trị bên trong.',
+          jargon: 'Lặp lại "dereference", "indirection" nhưng chưa nói được hành động thực tế.',
+          fail: 'Nhầm * giải tham chiếu với phép nhân.'
+        }
+      },
+      {
+        id: 'n4', label: 'Bộ nhớ Stack vs Heap', fx: 0.5, fy: 0.56, pre: ['n2', 'n3'], tier: 3,
+        q: 'Stack với Heap khác nhau chỗ nào ạ? Sao cần hai loại vậy?',
+        retryQ: 'Em còn rối. Cái nào tự dọn, cái nào mình phải tự dọn ạ?',
+        reply: {
+          ok: "Ví dụ cái bàn học tự gọn gàng (Stack) với cái nhà kho rộng phải tự dọn (Heap) đỉnh quá anh ơi! Em hiểu ngay tại sao dùng Heap thì rộng rãi nhưng phải có trách nhiệm quản lý rồi ạ!",
+          jargon: "Lại nhiều thuật ngữ quá: 'cấp phát tĩnh', 'LIFO', 'dynamic allocator'... Em mới 10 tuổi chưa hình dung được, cái nào giống bàn học tự dọn, cái nào giống nhà kho phải tự dọn ạ?",
+          fail: "Nếu Stack và Heap giống hệt nhau thì người ta chia làm hai tên gọi làm chi cho mệt hả anh? Chắc chắn phải có một bên tự động dọn và một bên mình phải tự quản lý chứ ạ!"
+        },
+        demo: {
+          ok: 'Stack ví như bàn học: gọn, xong bài là tự dọn. Heap như cái kho: rộng, nhưng bạn phải tự dọn.',
+          jargon: 'Stack cấp phát tĩnh theo LIFO, heap cấp phát dynamic bởi allocator qua new.',
+          fail: 'Stack và Heap giống nhau, chỉ là hai tên gọi khác của RAM.'
+        },
+        why: {
+          ok: 'So sánh bàn học/kho thể hiện đúng khác biệt về vòng đời và quyền quản lý.',
+          jargon: 'Dùng "cấp phát tĩnh", "LIFO", "allocator" mà không có hình ảnh.',
+          fail: 'Cho rằng Stack và Heap là một; bỏ sót khác biệt về quản lý vòng đời.'
+        }
+      },
+      {
+        id: 'n5', label: 'Giải phóng bộ nhớ (Delete)', fx: 0.5, fy: 0.82, pre: ['n4'], tier: 3,
+        q: 'Tại sao phải delete con trỏ ạ? Không xóa thì sao?',
+        retryQ: 'Em chưa hiểu. Nếu mượn đồ trong kho mà không trả thì chuyện gì xảy ra ạ?',
+        reply: {
+          ok: "Chuẩn luôn ạ! Mượn kho cất đồ xong mà không dùng 'delete' để trả lại chìa khóa thì kho sẽ chật cứng (rò rỉ bộ nhớ), người khác hết chỗ dùng luôn. Em thuộc làu toàn bộ bài Con trỏ rồi!",
+          jargon: "Cụm từ 'memory leak' với 'dangling allocation' nghe chuyên ngành quá ạ! Nếu nói theo kiểu mượn đồ trong kho mà quên trả thì hậu quả sẽ ra sao hả anh?",
+          fail: "Nguy hiểm quá anh ơi! Lúc chương trình đang chạy mà mình cứ mượn kho mãi không trả, hệ điều hành đâu có tự lấy lại ngay được, máy sẽ bị đầy RAM và treo đơ mất!"
+        },
+        demo: {
+          ok: 'Mượn đồ trong kho thì phải trả; không trả thì kho đầy dần và hết chỗ cho người khác.',
+          jargon: 'Không delete sẽ gây memory leak do dangling allocation trên heap.',
+          fail: 'Không cần xóa con trỏ vì hệ điều hành tự dọn sạch ngay.'
+        },
+        why: {
+          ok: 'Ví dụ mượn/trả đồ nêu đúng hậu quả rò rỉ bộ nhớ.',
+          jargon: '"memory leak", "dangling allocation" chưa kèm ví dụ trực quan.',
+          fail: 'Sai: HĐH chỉ thu hồi khi chương trình kết thúc, không phải ngay lập tức.'
+        }
+      }
+    ]
+  }
+};
 
-const EMO = { CURIOUS: ['Giơ tay hỏi', '#0F766E'], CONFUSED: ['Ngơ ngác', '#D97706'], SKEPTICAL: ['Nghi ngờ', '#DC2626'], HAPPY: ['Thấu suốt', '#059669'] };
-const VERDICT_EMO = { MASTERED: 'HAPPY', JARGON_HEAVY: 'CONFUSED', FAILED: 'SKEPTICAL' };
+let currentTopicKey = 'SUPPLY_DEMAND';
+
+const EMO = { CURIOUS: ['Giơ tay hỏi', '#18181B'], CONFUSED: ['Ngơ ngác', '#D97706'], SKEPTICAL: ['Nghi ngờ', '#DC2626'], HAPPY: ['Thấu suốt', '#10B981'] };
+const VERDICT_EMO = { GREEN: 'HAPPY', YELLOW: 'CONFUSED', RED: 'SKEPTICAL' };
 const K = { CURIOUS: 'C', CONFUSED: 'J', SKEPTICAL: 'S', HAPPY: 'H', THINKING: 'T' };
 const $ = id => document.getElementById(id);
 
 /* ===================== TRẠNG THÁI PHIÊN ===================== */
 let S;
 let zoomLevel = 1;
+
 function initState(){
+  const topic = TOPICS[currentTopicKey];
   S = {
-    nodes: LESSON.map(n => ({...n, status: 'UNVISITED', color_code: COLORS.UNVISITED, diagnostic_reason: null, retry_count: 0})),
+    nodes: topic.nodes.map(n => ({
+      ...n,
+      status: 'GRAY',
+      color_code: COLORS.GRAY,
+      diagnostic_reason: null,
+      retry_count: 0,
+      scaffold_level: 1,
+      has_unstable_foundation: false
+    })),
     cur: 0,
     history: [],
     lastUser: null,
@@ -517,17 +729,71 @@ function initState(){
     phase: '',
     busy: false,
     emotion: 'CURIOUS',
-    question: LESSON[0].q,
+    question: topic.nodes[0].q,
     done: false,
+    isEarlyTermination: false,
+    showHistory: false,
     anchorMetaphor: 'Chưa có',
-    rubric: { acc: null, sim: null, ana: null }
+    rubric: { core_accuracy: null, simplicity: null, analogy_grounding: null },
+    pendingAction: null
   };
+}
+
+function switchTopic(newTopicKey){
+  if(!TOPICS[newTopicKey]) return;
+  currentTopicKey = newTopicKey;
+  reset();
+}
+
+/* ===================== THUẬT TOÁN DUYỆT ĐỒ THỊ KHÁNG DEADLOCK ===================== */
+function findNextNodeIndex(currentNodeIndex, nodes){
+  const currentNode = nodes[currentNodeIndex];
+  
+  // 1. Kiểm tra Early Termination nếu Root Node (in-degree == 0) bị chốt RED
+  if(currentNode.pre.length === 0 && currentNode.status === 'RED'){
+    return { nextIndex: -1, isEarlyTermination: true, reason: 'Root Node bị chốt ĐỎ. Kích hoạt Early Termination dừng khẩn cấp.' };
+  }
+  
+  // 2. Lấy danh sách các node còn ở trạng thái GRAY
+  const grayNodes = nodes.map((n, idx) => ({ node: n, index: idx })).filter(item => item.node.status === 'GRAY');
+  if(grayNodes.length === 0){
+    return { nextIndex: -1, isEarlyTermination: false, reason: 'Tất cả node đã được đánh giá.' };
+  }
+  
+  // 3. Ưu tiên 1 (Strict Path): Tìm node nhánh có 100% cha là GREEN
+  const strictCandidate = grayNodes.find(item => 
+    item.node.pre.length > 0 && item.node.pre.every(pId => nodes.find(n => n.id === pId)?.status === 'GREEN')
+  );
+  if(strictCandidate){
+    return { nextIndex: strictCandidate.index, isEarlyTermination: false, reason: 'Tìm thấy node nhánh song song có 100% cha đạt GREEN.' };
+  }
+  
+  // 4. Ưu tiên 2 (Soft-prerequisite Bypass): Kích hoạt node con có tất cả cha thuộc [GREEN, RED]
+  const bypassCandidate = grayNodes.find(item => 
+    item.node.pre.length > 0 && item.node.pre.every(pId => {
+      const p = nodes.find(n => n.id === pId);
+      return p?.status === 'GREEN' || p?.status === 'RED';
+    })
+  );
+  if(bypassCandidate){
+    bypassCandidate.node.has_unstable_foundation = true;
+    return { nextIndex: bypassCandidate.index, isEarlyTermination: false, reason: 'Kích hoạt Soft-prerequisite Bypass (bỏ qua cha bị RED).' };
+  }
+  
+  // Fallback nếu đồ thị còn node GRAY tiếp theo
+  const nextSequential = grayNodes[0];
+  return { nextIndex: nextSequential ? nextSequential.index : -1, isEarlyTermination: false, reason: 'Chuyển sang node kế tiếp trong danh sách.' };
 }
 
 /* ===================== METAPHOR RETENTION & HIGHLIGHTING ===================== */
 function extractMetaphor(text){
   if(!text) return null;
   const s = text.toLowerCase();
+  // Kinh tế học Cung - Cầu
+  if(s.includes('áo mưa') || s.includes('cổng trường')) return 'Áo mưa cổng trường (Cung - Cầu)';
+  if(s.includes('chợ đen') || s.includes('ngõ')) return 'Góc ngõ bán chui (Chợ đen)';
+  if(s.includes('tạnh') || s.includes('bằng')) return 'Trời tạnh ráo (Điểm cân bằng)';
+  // Con trỏ C++
   if(s.includes('số nhà') || s.includes('dãy phố')) return 'Số nhà (RAM)';
   if(s.includes('bàn học')) return 'Bàn học (Stack)';
   if(s.includes('kho') || s.includes('mượn đồ') || s.includes('trả đồ')) return 'Kho đồ (Heap)';
@@ -538,63 +804,58 @@ function extractMetaphor(text){
 
 function highlightKeywords(text){
   if(!text) return '';
-  const metaphors = ['số nhà', 'dãy phố', 'bàn học', 'mượn đồ', 'trả đồ', 'kho', 'đồ trong nhà', 'đồ bên trong', 'vị trí', 'tờ giấy ghi', 'hết chỗ'];
-  const jargons = ['hexadecimal', 'memory allocation', 'lvalue reference', 'address-of operator', 'dereference operator', 'indirection', 'allocator', 'dynamic', 'cấp phát tĩnh', 'cấp phát dynamic', 'lifo', 'memory leak', 'dangling allocation'];
+  const metaphors = ['áo mưa', 'cổng trường', '10 bạn', '10 người', '2 cái áo', '2 chiếc', 'khan hiếm', 'chợ đen', 'ngõ', 'tạnh ráo', 'số nhà', 'dãy phố', 'bàn học', 'mượn đồ', 'trả đồ', 'kho', 'đồ trong nhà', 'đồ bên trong', 'vị trí', 'tờ giấy ghi', 'hết chỗ'];
+  const jargons = ['co dãn', 'inelastic', 'elastic', 'pareto', 'equilibrium', 'price ceiling', 'deadweight loss', 'shortage', 'arbitrage', 'black market premium', 'hexadecimal', 'memory allocation', 'lvalue reference', 'address-of operator', 'dereference operator', 'indirection', 'allocator', 'dynamic', 'cấp phát tĩnh', 'cấp phát dynamic', 'lifo', 'memory leak', 'dangling allocation'];
   let res = text;
   [...jargons].sort((a,b)=>b.length-a.length).forEach(w => {
     const re = new RegExp(`(${w})`, 'gi');
-    res = res.replace(re, '<span class="bg-amber-400/25 text-amber-200 font-bold px-1 rounded underline decoration-wavy decoration-amber-400">$1</span>');
+    res = res.replace(re, '<span class="bg-amber-100 text-amber-900 font-bold px-1.5 py-0.5 rounded underline decoration-wavy decoration-amber-400">$1</span>');
   });
   [...metaphors].sort((a,b)=>b.length-a.length).forEach(w => {
     const re = new RegExp(`(${w})`, 'gi');
-    res = res.replace(re, '<span class="bg-emerald-400/25 text-emerald-200 font-bold px-1 rounded underline decoration-emerald-400">$1</span>');
+    res = res.replace(re, '<span class="bg-emerald-100 text-emerald-900 font-bold px-1.5 py-0.5 rounded underline decoration-emerald-400">$1</span>');
   });
   return res;
 }
 
-/* ===================== AVATAR BÉ MINH SVG (BUST PORTRAIT - VIEWBOX CHUẨN) ===================== */
+/* ===================== AVATAR BÉ MINH SVG (CHARCOAL SLATE VEST & JADE TIE) ===================== */
 function avatarSVG(){
   const skin = '#FFD9B8';
-  const sl = d => `<path d="${d}" stroke="#0A4B46" stroke-width="24" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" stroke="#0F766E" stroke-width="18" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const sl = d => `<path d="${d}" stroke="#1E293B" stroke-width="24" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" stroke="#334155" stroke-width="18" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
   const hand = (x,y) => `<circle cx="${x}" cy="${y}" r="10.5" fill="${skin}"/>`;
   
   return `<svg viewBox="145 75 230 265" class="w-full h-full" preserveAspectRatio="xMidYMid meet" data-e="C">
   <defs>
     <linearGradient id="gVest" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0F766E"/>
-      <stop offset="100%" stop-color="#115E59"/>
+      <stop offset="0%" stop-color="#334155"/>
+      <stop offset="100%" stop-color="#1E293B"/>
     </linearGradient>
   </defs>
   <g id="char">
-   <!-- Sơ mi trắng học sinh bên trong gile -->
-   <rect x="166" y="236" width="128" height="122" rx="28" fill="#F8FAFC"/>
-   <!-- Áo gile học sinh màu Xanh Rêu Học Thuật -->
+   <rect x="166" y="236" width="128" height="122" rx="28" fill="#FFFFFF"/>
    <path d="M158 342C158 296 180 266 230 266C280 266 302 296 302 342Z" fill="url(#gVest)"/>
-   <path d="M230 266C280 266 302 296 302 342H276C278 302 262 276 230 270Z" fill="#042F2E" opacity=".25"/>
+   <path d="M230 266C280 266 302 296 302 342H276C278 302 262 276 230 270Z" fill="#0F172A" opacity=".25"/>
    <rect x="216" y="234" width="28" height="40" rx="12" fill="#F5C9A3"/>
-   <!-- Cổ áo sơ mi trắng lịch sự -->
-   <path d="M204 267l26 26 26-26-10-6h-32z" fill="#FFFFFF" stroke="#E6E0D4" stroke-width="1.5"/>
-   <!-- Cà vạt / Nơ Cam Terracotta điểm nhấn thương hiệu -->
-   <path d="M226 288l4 30 8-30-6-3z" fill="#EA580C"/>
-   <circle cx="230" cy="288" r="4.5" fill="#D95D39"/>
-   <!-- Huy hiệu trường học thêu trên ngực áo -->
-   <circle cx="266" cy="304" r="5" fill="#EA580C"/>
-   <circle cx="266" cy="304" r="2.5" fill="#FED7AA"/>
+   <path d="M204 267l26 26 26-26-10-6h-32z" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+   <path d="M226 288l4 30 8-30-6-3z" fill="#10B981"/>
+   <circle cx="230" cy="288" r="4.5" fill="#059669"/>
+   <circle cx="266" cy="304" r="5" fill="#10B981"/>
+   <circle cx="266" cy="304" r="2.5" fill="#A7F3D0"/>
 
    <g id="head">
     <circle cx="187" cy="194" r="8" fill="#F5C9A3"/><circle cx="273" cy="194" r="8" fill="#F5C9A3"/>
     <ellipse cx="230" cy="190" rx="43" ry="45" fill="${skin}"/>
-    <path d="M184 192C176 140 204 128 230 128C258 128 284 140 276 192C270 168 258 158 244 156C222 168 200 166 194 160C188 168 186 180 184 192Z" fill="#4A3428"/><path d="M222 130q8-16 24-8-10 0-12 10z" fill="#4A3428"/>
+    <path d="M184 192C176 140 204 128 230 128C258 128 284 140 276 192C270 168 258 158 244 156C222 168 200 166 194 160C188 168 186 180 184 192Z" fill="#332A22"/><path d="M222 130q8-16 24-8-10 0-12 10z" fill="#332A22"/>
     <circle cx="198" cy="208" r="8" fill="#FDA4AF" opacity=".45"/><circle cx="262" cy="208" r="8" fill="#FDA4AF" opacity=".45"/>
-    <g stroke="#4A3428" stroke-width="3.200" fill="none" stroke-linecap="round">
+    <g stroke="#332A22" stroke-width="3.200" fill="none" stroke-linecap="round">
      <path class="v C T" d="M202 177q10-7 20-1M238 176q10-6 20 1"/><path class="v J" d="M202 180l20-6M238 174l20 6"/>
      <path class="v S" stroke-width="3.800" d="M202 172l22 9M236 181l22-9"/><path class="v H" d="M204 178q8-7 16 0M240 178q8-7 16 0"/>
     </g>
-    <g class="v C"><g class="blink"><circle cx="212" cy="192" r="8.500" fill="#fff"/><circle cx="248" cy="192" r="8.500" fill="#fff"/><circle cx="214" cy="191" r="5.800" fill="#3B2A20"/><circle cx="250" cy="191" r="5.800" fill="#3B2A20"/><circle cx="216" cy="188.500" r="2" fill="#fff"/><circle cx="252" cy="188.500" r="2" fill="#fff"/><circle cx="212" cy="194" r="1" fill="#fff"/><circle cx="248" cy="194" r="1" fill="#fff"/></g></g>
-    <g class="v T"><circle cx="212" cy="192" r="8.500" fill="#fff"/><circle cx="248" cy="192" r="8.500" fill="#fff"/><circle cx="209" cy="188" r="5.500" fill="#3B2A20"/><circle cx="245" cy="188" r="5.500" fill="#3B2A20"/><circle cx="211" cy="185.500" r="1.800" fill="#fff"/><circle cx="247" cy="185.500" r="1.800" fill="#fff"/></g>
-    <g class="v J"><circle cx="212" cy="192" r="9" fill="#fff"/><circle cx="248" cy="192" r="9" fill="#fff"/><circle class="spin" cx="212" cy="192" r="5" fill="none" stroke="#3B2A20" stroke-width="2.400" stroke-dasharray="8 5"/><circle class="spin" cx="248" cy="192" r="5" fill="none" stroke="#3B2A20" stroke-width="2.400" stroke-dasharray="8 5"/></g>
-    <g class="v S"><path d="M200 190h24M236 190h24" stroke="#3B2A20" stroke-width="5" stroke-linecap="round"/><circle cx="212" cy="196" r="3" fill="#3B2A20"/><circle cx="248" cy="196" r="3" fill="#3B2A20"/></g>
-    <path class="v H" d="M203 196q9-13 18 0M239 196q9-13 18 0" stroke="#3B2A20" stroke-width="4.500" fill="none" stroke-linecap="round"/>
+    <g class="v C"><g class="blink"><circle cx="212" cy="192" r="8.500" fill="#fff"/><circle cx="248" cy="192" r="8.500" fill="#fff"/><circle cx="214" cy="191" r="5.800" fill="#1E293B"/><circle cx="250" cy="191" r="5.800" fill="#1E293B"/><circle cx="216" cy="188.500" r="2" fill="#fff"/><circle cx="252" cy="188.500" r="2" fill="#fff"/><circle cx="212" cy="194" r="1" fill="#fff"/><circle cx="248" cy="194" r="1" fill="#fff"/></g></g>
+    <g class="v T"><circle cx="212" cy="192" r="8.500" fill="#fff"/><circle cx="248" cy="192" r="8.500" fill="#fff"/><circle cx="209" cy="188" r="5.500" fill="#1E293B"/><circle cx="245" cy="188" r="5.500" fill="#1E293B"/><circle cx="211" cy="185.500" r="1.800" fill="#fff"/><circle cx="247" cy="185.500" r="1.800" fill="#fff"/></g>
+    <g class="v J"><circle cx="212" cy="192" r="9" fill="#fff"/><circle cx="248" cy="192" r="9" fill="#fff"/><circle class="spin" cx="212" cy="192" r="5" fill="none" stroke="#1E293B" stroke-width="2.400" stroke-dasharray="8 5"/><circle class="spin" cx="248" cy="192" r="5" fill="none" stroke="#1E293B" stroke-width="2.400" stroke-dasharray="8 5"/></g>
+    <g class="v S"><path d="M200 190h24M236 190h24" stroke="#1E293B" stroke-width="5" stroke-linecap="round"/><circle cx="212" cy="196" r="3" fill="#1E293B"/><circle cx="248" cy="196" r="3" fill="#1E293B"/></g>
+    <path class="v H" d="M203 196q9-13 18 0M239 196q9-13 18 0" stroke="#1E293B" stroke-width="4.500" fill="none" stroke-linecap="round"/>
     <path class="v C" d="M218 207q12 17 24 0z" fill="#B91C1C"/><path class="v C" d="M224 213q6 4 12 0" stroke="#FCA5A5" stroke-width="2.500" fill="none"/>
     <path class="v T" d="M222 214h16" stroke="#B45309" stroke-width="3.200" stroke-linecap="round"/>
     <path class="v J" d="M216 215q7-6 14 0t14 0" stroke="#B45309" stroke-width="3.200" fill="none" stroke-linecap="round"/>
@@ -602,7 +863,6 @@ function avatarSVG(){
     <path class="v H" d="M213 205q17 24 34 0z" fill="#B91C1C"/><path class="v H" d="M221 215q9 6 18 0" stroke="#FCA5A5" stroke-width="2.500" fill="none"/>
    </g>
 
-   <!-- Cử chỉ tay động của Bé Minh -->
    <g class="v C T J">${sl('M172 288L158 322L204 326')}${hand(214,327)}</g>
    <g class="v C">${sl('M288 288L328 252L334 162')}<g class="wave"><circle cx="336" cy="146" r="12.500" fill="${skin}"/><path d="M328 140v-17M334 137v-21M340 137v-21M346 140v-17M325 149l-11-8" stroke="${skin}" stroke-width="6.500" stroke-linecap="round"/></g></g>
    <g class="v T">${sl('M288 288L306 326L258 242')}${hand(252,232)}</g>
@@ -610,7 +870,6 @@ function avatarSVG(){
    <g class="v S">${sl('M172 288L176 322')}${sl('M288 288L284 322')}${sl('M176 322L272 302')}${hand(281,300)}${sl('M284 322L190 304')}${hand(181,302)}</g>
    <g class="v H"><g class="clap">${sl('M172 288L170 320L222 286')}${sl('M288 288L290 320L238 286')}${hand(226,282)}${hand(234,282)}</g></g>
    
-   <!-- Hiệu ứng cảm xúc -->
    <path class="v C twinkle" d="M366 118l4-9 4 9 9 4-9 4-4 9-4-9-9-4z" fill="#F59E0B"/>
    <g class="v T"><circle class="twinkle" cx="312" cy="176" r="4" fill="#94A3B8"/><circle class="twinkle" style="animation-delay:.2s" cx="326" cy="154" r="6" fill="#94A3B8"/><circle class="twinkle" style="animation-delay:.4s" cx="346" cy="122" r="10" fill="#94A3B8"/></g>
    <g class="v J"><circle cx="330" cy="104" r="26" fill="#fff" stroke="#CBD5E1" stroke-width="2.500"/><circle cx="302" cy="140" r="5.500" fill="#fff" stroke="#CBD5E1" stroke-width="2"/><circle cx="292" cy="152" r="3.500" fill="#fff" stroke="#CBD5E1" stroke-width="2"/><path class="spin" d="M330 104a3 3 0 1 1 3 3a7 7 0 1 1-7-7a11 11 0 1 1 11 11" fill="none" stroke="#D97706" stroke-width="2.800" stroke-linecap="round"/></g>
@@ -619,42 +878,84 @@ function avatarSVG(){
   </g></svg>`;
 }
 
-/* ===================== RENDER DAG CANVAS ===================== */
+/* ===================== RENDER DAG CANVAS (CỘT TRÁI 34%) ===================== */
+function renderRadar(){
+  const radar = $('miniRadarDots');
+  if(!radar) return;
+  const dotsHtml = S.nodes.map((n, i) => {
+    const isCur = !S.done && i === S.cur;
+    const bg = n.status === 'GREEN' ? '#10B981' : n.status === 'YELLOW' ? '#F59E0B' : n.status === 'RED' ? '#EF4444' : '#CBD5E1';
+    return `
+      ${isCur ? `<div class="absolute w-1.5 h-1.5 rounded-full bg-[#10B981] animate-ping" style="left:${n.fx*100}%;top:${n.fy*100}%;transform:translate(-50%,-50%)"></div>` : ''}
+      <div class="absolute w-1.5 h-1.5 rounded-full" style="left:${n.fx*100}%;top:${n.fy*100}%;background:${bg};transform:translate(-50%,-50%)"></div>
+    `;
+  }).join('');
+  radar.innerHTML = dotsHtml + '<div class="absolute inset-0 border border-[#10B981]/40 bg-[#10B981]/5 rounded pointer-events-none"></div>';
+}
+
 function renderDag(){
-  $('nodes').innerHTML = S.nodes.map((n, i) => `<div class="node ${!S.done && i === S.cur ? 'focus' : ''}" data-i="${i}" data-s="${n.status}" style="left:${n.fx*100}%;top:${n.fy*100}%">
-    <div class="ico">${ICONS[i]}</div>
-    <div class="min-w-0">
-      <div class="text-[12px] font-bold text-stone-900 leading-tight">${n.label}</div>
-      <div class="text-[10px] font-semibold mt-0.5 ${STATUS_TXT[n.status]}">${!S.done && i === S.cur && n.status === 'UNVISITED' ? '<span class="text-teal-700 font-bold">Đang phỏng vấn</span>' : STATUS_VI[n.status]}${n.retry_count && n.status !== 'MASTERED' && !(n.retry_count >= 2) ? ' · thử lại ' + n.retry_count + '/2' : ''}</div>
-    </div>
-  </div>`).join('');
+  $('nodes').innerHTML = S.nodes.map((n, i) => {
+    const isCur = !S.done && i === S.cur;
+    const isRetrying = isCur && n.retry_count > 0 && n.status !== 'GREEN';
+    
+    let statusText = '';
+    if(isRetrying){
+      statusText = `<span class="text-amber-600 font-bold">Đang gỡ · thử lại ${n.retry_count}/3</span>`;
+    } else if(isCur && n.status === 'GRAY'){
+      statusText = '<span class="text-[#10B981] font-bold">Đang phỏng vấn</span>';
+    } else {
+      statusText = STATUS_VI[n.status];
+      if(n.retry_count && n.status !== 'GREEN' && n.retry_count < 3){
+        statusText += ` · thử lại ${n.retry_count}/3`;
+      }
+    }
+
+    if(n.has_unstable_foundation && n.status !== 'GRAY'){
+      statusText += ' <span class="text-[9px] font-mono px-1 py-0.2 bg-amber-100 text-amber-800 rounded">Bypass</span>';
+    }
+
+    return `<div class="node ${isCur ? 'focus' : ''} ${isRetrying ? 'retrying' : ''}" data-i="${i}" data-s="${n.status}" style="left:${n.fx*100}%;top:${n.fy*100}%">
+      <div class="ico">${ICONS[i % ICONS.length]}</div>
+      <div class="min-w-0">
+        <div class="text-[12.5px] font-bold text-slate-900 leading-tight">${n.label}</div>
+        <div class="text-[10px] font-semibold mt-0.5 ${isRetrying ? 'text-amber-600' : STATUS_TXT[n.status]}">${statusText}</div>
+      </div>
+    </div>`;
+  }).join('');
   drawEdges();
+  renderRadar();
 }
 
 function drawEdges(){
   const svg = $('edges'), W = svg.clientWidth, H = svg.clientHeight, els = [...document.querySelectorAll('.node')];
+  if(!els.length) return;
   svg.innerHTML = `<defs>
-    <marker id="a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#A8A29E"/></marker>
-    <marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#0F766E"/></marker>
+    <marker id="a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#94A3B8"/></marker>
+    <marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#10B981"/></marker>
+    <marker id="a3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#EF4444"/></marker>
   </defs>`;
   S.nodes.forEach((n, i) => n.pre.forEach(pid => {
     const pi = S.nodes.findIndex(x => x.id === pid), p = S.nodes[pi];
+    if(!p || !els[pi] || !els[i]) return;
     const x1 = p.fx * W, y1 = p.fy * H + els[pi].offsetHeight / 2, x2 = n.fx * W, y2 = n.fy * H - els[i].offsetHeight / 2 - 4, dy = (y2 - y1) / 2;
     const active = !S.done && i === S.cur;
+    const isRedParent = p.status === 'RED';
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', `M${x1} ${y1} C${x1} ${y1 + dy}, ${x2} ${y2 - dy}, ${x2} ${y2}`);
     path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', active ? '#0F766E' : '#D6CFC2');
+    path.setAttribute('stroke', isRedParent ? '#EF4444' : active ? '#10B981' : '#CBD5E1');
     path.setAttribute('stroke-width', active ? '2.5' : '2');
-    path.setAttribute('marker-end', active ? 'url(#a2)' : 'url(#a1)');
+    if(isRedParent) path.setAttribute('stroke-dasharray', '4 4');
+    path.setAttribute('marker-end', isRedParent ? 'url(#a3)' : active ? 'url(#a2)' : 'url(#a1)');
     if(active) path.setAttribute('class', 'flow');
     svg.appendChild(path);
   }));
 }
 
-/* ===================== RENDER WORKBENCH (CỘT PHẢI 65%) ===================== */
+/* ===================== RENDER FLASHCARD WORKBENCH (CỘT PHẢI 66%) ===================== */
 function updateScaffolding(){
-  const curTier = S.nodes[S.cur] ? S.nodes[S.cur].tier : 1;
+  const node = S.nodes[S.cur];
+  const level = node ? (node.scaffold_level || 1) : 1;
   const isDone = S.done;
 
   const s1 = $('scaffStep1');
@@ -663,26 +964,26 @@ function updateScaffolding(){
 
   function renderStep(el, num, label, status){
     if(status === 'done'){
-      el.className = 'flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 shadow-2xs font-bold text-xs transition-all';
-      el.innerHTML = `<span class="w-4 h-4 rounded-full bg-[#059669] text-white text-[10px] grid place-items-center">✓</span><span>${label}</span>`;
+      el.className = 'flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 shadow-2xs font-bold text-xs transition-all';
+      el.innerHTML = `<span class="w-3.5 h-3.5 rounded-full bg-[#10B981] text-white text-[9px] grid place-items-center">✓</span><span>${label}</span>`;
     } else if(status === 'active'){
-      el.className = 'flex items-center gap-1.5 px-3 py-1 rounded-xl bg-teal-50 border border-[#0F766E]/40 text-[#0F766E] shadow-2xs font-extrabold text-xs ring-2 ring-teal-500/10 transition-all';
-      el.innerHTML = `<span class="w-4 h-4 rounded-full bg-[#0F766E] text-white text-[10px] font-mono grid place-items-center">${num}</span><span>${label}</span>`;
+      el.className = 'flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#18181B] border border-slate-800 text-white shadow-2xs font-bold text-xs transition-all';
+      el.innerHTML = `<span class="w-3.5 h-3.5 rounded-full bg-[#10B981] text-white text-[9px] font-mono grid place-items-center">${num}</span><span>${label}</span>`;
     } else {
-      el.className = 'flex items-center gap-1.5 px-3 py-1 rounded-xl text-stone-400 font-medium text-xs transition-all';
-      el.innerHTML = `<span class="w-4 h-4 rounded-full bg-stone-200 text-stone-500 text-[10px] font-mono grid place-items-center">${num}</span><span>${label}</span>`;
+      el.className = 'flex items-center gap-1 px-2 py-0.5 rounded-lg text-slate-400 font-medium text-xs transition-all';
+      el.innerHTML = `<span class="w-3.5 h-3.5 rounded-full bg-slate-200 text-slate-500 text-[9px] font-mono grid place-items-center">${num}</span><span>${label}</span>`;
     }
   }
 
-  if(isDone){
+  if(isDone || (node && node.status === 'GREEN')){
     renderStep(s1, 1, 'Trực giác', 'done');
     renderStep(s2, 2, 'Khớp nối', 'done');
     renderStep(s3, 3, 'Bản chất', 'done');
-  } else if(curTier === 1){
+  } else if(level === 1){
     renderStep(s1, 1, 'Trực giác', 'active');
     renderStep(s2, 2, 'Khớp nối', 'pending');
     renderStep(s3, 3, 'Bản chất', 'pending');
-  } else if(curTier === 2){
+  } else if(level === 2){
     renderStep(s1, 1, 'Trực giác', 'done');
     renderStep(s2, 2, 'Khớp nối', 'active');
     renderStep(s3, 3, 'Bản chất', 'pending');
@@ -693,189 +994,235 @@ function updateScaffolding(){
   }
 }
 
-function updateRubricPills(){
-  const accEl = $('rubricAcc');
-  const simEl = $('rubricSim');
-  const anaEl = $('rubricAna');
-
-  if(!S.rubric || S.rubric.acc === null){
-    accEl.textContent = '--%';
-    simEl.textContent = '--%';
-    anaEl.textContent = '--%';
-    accEl.className = 'font-bold text-stone-400';
-    simEl.className = 'font-bold text-stone-400';
-    anaEl.className = 'font-bold text-stone-400';
-    return;
-  }
-
-  accEl.textContent = S.rubric.acc + '%';
-  simEl.textContent = S.rubric.sim !== null ? S.rubric.sim + '%' : '--%';
-  anaEl.textContent = S.rubric.ana !== null ? S.rubric.ana + '%' : '--%';
-
-  accEl.className = 'font-bold ' + (S.rubric.acc >= 85 ? 'text-emerald-700' : S.rubric.acc >= 50 ? 'text-amber-700' : 'text-rose-700');
-  simEl.className = 'font-bold ' + (S.rubric.sim >= 80 ? 'text-emerald-700' : S.rubric.sim >= 50 ? 'text-amber-700' : 'text-rose-700');
-  anaEl.className = 'font-bold ' + (S.rubric.ana >= 80 ? 'text-emerald-700' : S.rubric.ana >= 50 ? 'text-amber-700' : 'text-rose-700');
-}
-
 function renderStage(){
   const av = $('avatar');
   if(!av.firstChild) av.innerHTML = avatarSVG();
   const think = S.phase === 'think';
   av.firstChild.setAttribute('data-e', K[think ? 'THINKING' : S.emotion]);
   
-  const [lbl, col] = EMO[S.emotion], b = $('badge'), c = think ? '#78716C' : col;
-  b.textContent = think ? 'Đang suy nghĩ...' : lbl;
+  const [lbl, col] = EMO[S.emotion], b = $('badge'), c = think ? '#0D9488' : col;
+  b.textContent = think ? 'Đang ngẫm nghĩ...' : lbl;
   b.style.color = c;
   b.style.borderColor = c + '40';
   b.style.background = '#FFFFFF';
   
   $('qLabel').textContent = S.done ? 'Hoàn thành bài giảng' : S.nodes[S.cur].label;
   $('anchorMetaphor').textContent = S.anchorMetaphor;
-  
-  // Scaffolding & Rubric
   updateScaffolding();
-  updateRubricPills();
 
-  // Prompt card
-  const currNode = S.nodes[S.cur] || S.nodes[S.nodes.length - 1];
-  $('scaffoldBadge').textContent = currNode.tierLabel;
   $('question').textContent = S.question;
   $('question').classList.toggle('hidden', think);
   $('thinking').classList.toggle('hidden', !think);
-  $('promptTarget').textContent = currNode.target;
-  $('promptTaboo').textContent = currNode.taboo;
+
+  $('historyCount').textContent = S.history.length;
+  $('historyBtnText').innerHTML = S.showHistory ? '✕ Đóng lại' : `Nhật ký (<span id="historyCount">${S.history.length}</span>)`;
 
   // Thanh tiến độ header
   $('segs').innerHTML = S.nodes.map((n, i) => {
-    const f = !S.done && i === S.cur && n.status === 'UNVISITED';
-    return `<div class="seg h-2 flex-1 rounded-full ${f ? 'focus' : ''}" style="${n.status !== 'UNVISITED' ? `background:${n.color_code};box-shadow:0 0 10px ${n.color_code}88` : f ? '' : 'background:#E6E0D4'}"></div>`;
+    const f = !S.done && i === S.cur && n.status === 'GRAY';
+    return `<div class="seg h-2 flex-1 rounded-full ${f ? 'focus' : ''}" style="${n.status !== 'GRAY' ? `background:${n.color_code};box-shadow:0 0 8px ${n.color_code}66` : f ? '' : 'background:#E2E8F0'}"></div>`;
   }).join('');
-  const m = S.nodes.filter(n => n.status === 'MASTERED').length;
+  const m = S.nodes.filter(n => n.status === 'GREEN').length;
   $('progText').textContent = `Đã hoàn thành: ${m}/${S.nodes.length} Node`;
   $('progNow').textContent = S.done ? 'Hoàn tất' : `Node ${S.cur + 1}/${S.nodes.length}`;
 
-  renderDiagnosticStream();
+  renderLastTurnSlot();
+  if(S.showHistory) renderHistoryList();
+  
+  // Cập nhật Card Footer (Khung gõ vs Thanh Review Dừng Chờ)
+  if(S.phase === 'review' && S.pendingAction){
+    $('inputBar').classList.add('hidden');
+    $('reviewBar').classList.remove('hidden');
+    $('reviewBar').classList.add('flex');
+    
+    const { advance, willComplete, verdict, isSkip, retryCount, isEarlyTermination } = S.pendingAction;
+    const btn = $('btnProceed');
+    const btnTxt = $('btnProceedText');
+    const msg = $('reviewMsg');
+    
+    btn.className = 'h-10 px-6 text-xs font-bold rounded-xl text-white shadow-2xs active:translate-y-0.5 transition-all flex items-center gap-1.5 shrink-0';
+    
+    if(isEarlyTermination){
+      msg.innerHTML = `<span class="flex items-center gap-1.5 text-xs font-bold text-rose-700"><span class="text-rose-500">🚨</span><span>Root Node bị ĐỎ: Kích hoạt Dừng khẩn cấp (Early Termination) để bảo toàn đồ thị.</span></span>`;
+      btnTxt.textContent = 'Xem báo cáo Dừng khẩn cấp';
+      btn.classList.add('bg-rose-700', 'hover:bg-rose-800');
+    } else if(isSkip){
+      msg.innerHTML = `<span class="flex items-center gap-1.5 text-xs font-semibold text-amber-800"><span class="text-amber-500">🏳️</span><span>Đã ghi nhận điểm mù ôn tập sau và chuyển sang mắt xích tiếp theo.</span></span>`;
+      btnTxt.textContent = willComplete ? 'Xem báo cáo tổng kết' : 'Qua mắt xích tiếp theo';
+      btn.classList.add('bg-[#18181B]', 'hover:bg-stone-800');
+    } else if(verdict === 'GREEN'){
+      msg.innerHTML = `<span class="flex items-center gap-1.5 text-xs font-bold text-emerald-700"><span class="text-emerald-500">✨</span><span>Bé Minh đã thấu suốt mắt xích này!</span></span>`;
+      btnTxt.textContent = willComplete ? 'Xem báo cáo tổng kết' : 'Qua mắt xích tiếp theo';
+      btn.classList.add('bg-[#059669]', 'hover:bg-[#047857]');
+    } else if(retryCount < 3){
+      msg.innerHTML = `<span class="flex items-center gap-1.5 text-xs font-semibold text-amber-800"><span class="text-amber-500">💡</span><span>Hãy đọc nhận xét của Bé Minh và thử diễn đạt lại nhé (Còn ${3 - retryCount} lượt).</span></span>`;
+      btnTxt.textContent = 'Giải thích lại cho Bé Minh';
+      btn.classList.add('bg-[#18181B]', 'hover:bg-stone-800');
+    } else {
+      msg.innerHTML = `<span class="flex items-center gap-1.5 text-xs font-semibold text-rose-800"><span class="text-rose-500">📌</span><span>Hết 3 lượt thử: Đã ghi nhận điểm mù (RED) vào sổ tay báo cáo.</span></span>`;
+      btnTxt.textContent = willComplete ? 'Xem báo cáo tổng kết' : 'Tạm gác & Qua bài tiếp theo';
+      btn.classList.add('bg-[#18181B]', 'hover:bg-stone-800');
+    }
+  } else if(!S.phase || S.phase === 'think'){
+    $('reviewBar').classList.add('hidden');
+    $('reviewBar').classList.remove('flex');
+    $('inputBar').classList.remove('hidden');
+  }
 }
 
-/* ===================== RENDER DIAGNOSTIC STREAM (KHU VỰC 3) ===================== */
-function renderDiagnosticStream(){
-  const stream = $('diagnosticStream');
-  if(!stream) return;
+/* ===================== PHẦN 3: NGĂN PHẢN HỒI LƯỢT VỪA TRẢ LỜI ===================== */
+function renderLastTurnSlot(){
+  const slot = $('lastTurnSlot');
+  if(!slot) return;
 
-  if(S.history.length === 0){
-    stream.innerHTML = `
-      <div class="h-full flex flex-col items-center justify-center p-6 text-center rounded-2xl bg-white/70 border border-dashed border-[#E6E0D4]">
-        <div class="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200/80 text-teal-700 flex items-center justify-center text-xl mb-3 shadow-2xs">
-          🧭
-        </div>
-        <h3 class="text-sm font-bold text-stone-900 mb-1">Luồng Chẩn đoán Nhận thức (Cognitive Diagnostic Stream)</h3>
-        <p class="text-xs text-stone-500 max-w-md leading-relaxed mb-4">
-          Hãy đóng vai người hướng dẫn và giải thích câu hỏi trên bằng một ví dụ đời thường ngắn gọn. Hệ thống Single-Pass AI sẽ phân tích và chấm điểm theo 3 tiêu chí Rubric ngay lập tức.
-        </p>
-        <div class="grid grid-cols-3 gap-2.5 max-w-lg w-full text-left">
-          <div class="p-2.5 rounded-xl bg-stone-50 border border-stone-200/70 text-[11px]">
-            <div class="font-bold text-emerald-800 mb-0.5">1. Trực quan hóa</div>
-            <div class="text-stone-500 leading-tight">Dùng ẩn dụ đời sống tương đương (số nhà, kho đồ...)</div>
-          </div>
-          <div class="p-2.5 rounded-xl bg-stone-50 border border-stone-200/70 text-[11px]">
-            <div class="font-bold text-amber-800 mb-0.5">2. Tránh Jargon</div>
-            <div class="text-stone-500 leading-tight">Không dùng chính thuật ngữ kỹ thuật để giải thích</div>
-          </div>
-          <div class="p-2.5 rounded-xl bg-stone-50 border border-stone-200/70 text-[11px]">
-            <div class="font-bold text-teal-800 mb-0.5">3. Đúng bản chất</div>
-            <div class="text-stone-500 leading-tight">Phân biệt rõ địa chỉ, giá trị và cơ chế thu hồi</div>
-          </div>
-        </div>
+  if(S.phase === 'think' && S.lastUser && S.lastUser.a){
+    slot.classList.remove('hidden');
+    slot.innerHTML = `
+      <div class="text-[13px] text-slate-800 italic leading-relaxed break-words font-medium">
+        "${highlightKeywords(S.lastUser.a)}"
+      </div>
+      <div class="mt-2 pt-2 border-t border-[#E2E8F0] flex items-center gap-2 text-xs text-slate-500 font-medium">
+        <span class="inline-block animate-spin text-[#10B981] text-xs">⏳</span>
+        <span>Hệ thống đang phân tích ngữ nghĩa & 3 tiêu chí Rubric (75/70/65)...</span>
       </div>
     `;
     return;
   }
 
-  const V_BADGE = {
-    MASTERED: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-    JARGON_HEAVY: 'bg-amber-100 text-amber-800 border-amber-300',
-    FAILED: 'bg-rose-100 text-rose-800 border-rose-300'
-  };
-  const V_TITLE = {
-    MASTERED: 'ĐẠT BẢN CHẤT',
-    JARGON_HEAVY: 'LẠM DỤNG THUẬT NGỮ',
-    FAILED: 'SAI LOGIC CỐT LÕI'
-  };
+  if(S.phase === 'review'){
+    const curTurns = S.history.filter(h => h.nodeId === S.nodes[S.cur].id);
+    const lastTurn = curTurns.length > 0 ? curTurns[curTurns.length - 1] : null;
 
-  let html = '';
-  S.history.forEach((h, idx) => {
-    const isSkip = !!h.isSkip;
-    html += `
-      <div class="rounded-2xl bg-white border border-[#E6E0D4] shadow-xs p-4 space-y-3.5 transition-all">
-        <!-- Header Turn Card -->
-        <div class="flex items-center justify-between pb-2 border-b border-stone-100">
-          <div class="flex items-center gap-2">
-            <span class="px-2.5 py-0.5 rounded-md bg-[#FAF7F2] text-stone-700 border border-[#E6E0D4] text-[10px] font-mono font-bold uppercase tracking-wider">
-              MẮT XÍCH: ${h.nodeLabel} · LƯỢT ${idx + 1}
-            </span>
-          </div>
-          <span class="text-[10px] font-mono text-stone-400">${h.time}</span>
+    if(!lastTurn){
+      slot.classList.add('hidden');
+      slot.innerHTML = '';
+      return;
+    }
+
+    const V_BADGE = {
+      GREEN: 'bg-emerald-50 text-emerald-800 border-emerald-300',
+      YELLOW: 'bg-amber-50 text-amber-800 border-amber-300',
+      RED: 'bg-rose-50 text-rose-800 border-rose-300'
+    };
+    const V_TITLE = {
+      GREEN: '🟢 Đạt bản chất',
+      YELLOW: '🟡 Dính thuật ngữ',
+      RED: '🔴 Sai bản chất'
+    };
+
+    slot.classList.remove('hidden');
+    slot.innerHTML = `
+      <div class="text-[13px] text-slate-800 italic leading-relaxed break-words font-medium">
+        ${lastTurn.isSkip ? '<span class="text-amber-800/80 font-mono">🏳️ Bạn đã tạm bỏ qua mắt xích này để ôn lại sau.</span>' : `"${highlightKeywords(lastTurn.userAnswer)}"`}
+      </div>
+
+      <div class="mt-2.5 pt-2 border-t border-[#E2E8F0] flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div class="flex items-center gap-1.5">
+          <span class="px-2 py-0.5 rounded-md border text-[11px] font-mono font-bold ${lastTurn.isSkip ? 'bg-slate-100 text-slate-700 border-slate-300' : V_BADGE[lastTurn.verdict]}">
+            ${lastTurn.isSkip ? '🏳️ Tạm bỏ qua' : V_TITLE[lastTurn.verdict]}
+          </span>
+          <span class="text-slate-600 font-medium text-[11px]">${lastTurn.reason}</span>
         </div>
 
-        <!-- Câu hỏi của Bé Minh -->
-        <div class="flex items-start gap-2.5 text-xs text-stone-600 bg-stone-50/80 rounded-xl p-2.5 border border-stone-200/60">
-          <span class="font-bold text-teal-800 shrink-0">👶 Bé Minh hỏi:</span>
-          <span class="font-medium text-stone-800 leading-relaxed italic">"${h.question}"</span>
-        </div>
-
-        <!-- Lời giảng của Bạn (Gia sư) -->
-        <div class="space-y-1">
-          <div class="text-[11px] font-bold text-stone-500">👨‍🏫 Lời giảng của Bạn (Gia sư):</div>
-          <div class="rounded-2xl rounded-tr-xs bg-[#1C2826] text-[#FAF7F2] p-3.5 text-[14.5px] leading-relaxed break-words font-medium shadow-2xs">
-            ${isSkip ? '<span class="text-amber-200 italic font-mono">🏳️ [Đã chủ động tạm bỏ qua mắt xích này để ôn lại sau]</span>' : highlightKeywords(h.userAnswer)}
+        ${!lastTurn.isSkip && lastTurn.rubric ? `
+          <div class="font-mono text-[11px] font-bold text-slate-500 flex items-center gap-2 bg-white px-2.5 py-0.5 rounded-lg border border-[#E2E8F0]">
+            <span>Đúng: <b class="${lastTurn.rubric.core_accuracy >= 75 ? 'text-emerald-600' : 'text-rose-600'}">${lastTurn.rubric.core_accuracy}%</b></span>
+            <span class="text-slate-300">·</span>
+            <span>Bình dị: <b class="${lastTurn.rubric.simplicity >= 70 ? 'text-emerald-600' : 'text-amber-600'}">${lastTurn.rubric.simplicity}%</b></span>
+            <span class="text-slate-300">·</span>
+            <span>Thực tế: <b class="${lastTurn.rubric.analogy_grounding >= 65 ? 'text-emerald-600' : 'text-amber-600'}">${lastTurn.rubric.analogy_grounding}%</b></span>
           </div>
-        </div>
-
-        <!-- Dải Phân Tích Sư Phạm (Rubric Breakdown Strip) -->
-        <div class="rounded-xl p-3 border ${
-          isSkip ? 'bg-stone-50 border-stone-200' :
-          h.verdict === 'MASTERED' ? 'bg-emerald-50/70 border-emerald-200' :
-          h.verdict === 'JARGON_HEAVY' ? 'bg-amber-50/70 border-amber-200' :
-          'bg-rose-50/70 border-rose-200'
-        } space-y-2">
-          <!-- Top Row: Badge + Live Rubric Scores -->
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <span class="px-2.5 py-0.5 rounded-md border text-[10px] font-mono font-black ${isSkip ? 'bg-stone-200 text-stone-700 border-stone-300' : V_BADGE[h.verdict]}">
-              ${isSkip ? 'TẠM BỎ QUA' : V_TITLE[h.verdict]}
-            </span>
-            ${!isSkip && h.rubric ? `
-              <div class="flex items-center gap-3 text-[11px] font-mono font-semibold">
-                <span class="${h.rubric.acc >= 85 ? 'text-emerald-700' : 'text-stone-600'}">Độ đúng: <b>${h.rubric.acc}%</b></span>
-                <span class="text-stone-300">|</span>
-                <span class="${h.rubric.sim >= 80 ? 'text-emerald-700' : 'text-amber-700'}">Bình dị: <b>${h.rubric.sim}%</b></span>
-                <span class="text-stone-300">|</span>
-                <span class="${h.rubric.ana >= 80 ? 'text-emerald-700' : 'text-amber-700'}">Thực tế: <b>${h.rubric.ana}%</b></span>
-              </div>
-            ` : ''}
-          </div>
-
-          <!-- Diagnostic reason -->
-          <div class="text-[12px] text-stone-700 leading-snug">
-            <span class="font-bold text-stone-900">🎯 Chẩn đoán sư phạm:</span> ${h.reason}
-          </div>
-
-          <!-- Phản hồi trực tiếp của Bé Minh -->
-          <div class="text-[13px] font-medium pt-2 border-t border-stone-200/50 flex items-start gap-2 ${
-            isSkip ? 'text-stone-700' :
-            h.verdict === 'MASTERED' ? 'text-emerald-900' :
-            h.verdict === 'JARGON_HEAVY' ? 'text-amber-900' :
-            'text-rose-900'
-          }">
-            <span class="text-sm shrink-0">${isSkip ? '🤝' : h.verdict === 'MASTERED' ? '✨' : h.verdict === 'JARGON_HEAVY' ? '🤔' : '❌'}</span>
-            <span class="italic leading-snug">"<b>Bé Minh:</b> ${h.reaction}"</span>
-          </div>
-        </div>
+        ` : ''}
       </div>
     `;
-  });
+    return;
+  }
 
-  stream.innerHTML = html;
-  stream.scrollTop = stream.scrollHeight;
+  slot.classList.add('hidden');
+  slot.innerHTML = '';
+}
+
+/* ===================== RENDER NGĂN LỊCH SỬ ĐẦY ĐỦ ===================== */
+function renderHistoryList(){
+  const list = $('historyList');
+  if(!list) return;
+  $('historyCountPill').textContent = `${S.history.length} lượt`;
+
+  if(S.history.length === 0){
+    list.innerHTML = `<div class="text-center py-12 text-xs text-slate-400">Chưa có lượt giải thích nào được ghi lại.</div>`;
+    return;
+  }
+
+  const V_BADGE = {
+    GREEN: 'bg-emerald-50 text-emerald-800 border-emerald-300',
+    YELLOW: 'bg-amber-50 text-amber-800 border-amber-300',
+    RED: 'bg-rose-50 text-rose-800 border-rose-300'
+  };
+  const V_TITLE = {
+    GREEN: '🟢 Đạt bản chất',
+    YELLOW: '🟡 Dính thuật ngữ',
+    RED: '🔴 Sai bản chất'
+  };
+
+  list.innerHTML = S.history.map((h, idx) => `
+    <div class="rounded-2xl bg-white border border-[#E2E8F0] shadow-2xs p-3.5 space-y-2">
+      <div class="flex items-center justify-between pb-1.5 border-b border-slate-100 text-xs">
+        <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 font-mono font-bold text-[10px] border border-emerald-200">
+          LƯỢT ${idx + 1} · ${h.nodeLabel}
+        </span>
+        <span class="text-[10px] font-mono text-slate-400">${h.time}</span>
+      </div>
+
+      <div class="text-[11.5px] text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-200/60 leading-relaxed italic">
+        "<b>Bé Minh hỏi:</b> ${h.question}"
+      </div>
+
+      <div class="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] text-[13px] text-slate-800 leading-relaxed font-medium">
+        ${h.isSkip ? '<span class="text-amber-800/80 italic font-mono">🏳️ Tạm bỏ qua mắt xích</span>' : highlightKeywords(h.userAnswer)}
+      </div>
+
+      <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+        <div class="flex items-center justify-between text-xs">
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${h.isSkip ? 'bg-slate-200 text-slate-700 border-slate-300' : V_BADGE[h.verdict]}">
+            ${h.isSkip ? '🏳️ Tạm bỏ qua' : V_TITLE[h.verdict]}
+          </span>
+          ${!h.isSkip && h.rubric ? `
+            <span class="font-mono text-[10px] text-slate-500 font-bold">Đúng: ${h.rubric.core_accuracy}% · Bình dị: ${h.rubric.simplicity}% · Thực tế: ${h.rubric.analogy_grounding}%</span>
+          ` : ''}
+        </div>
+        <div class="text-[11.5px] text-slate-600 pt-0.5 leading-snug">
+          <b>Chẩn đoán:</b> ${h.reason}
+        </div>
+      </div>
+    </div>
+  `).join('');
+  list.scrollTop = list.scrollHeight;
+}
+
+function toggleHistory(forcedState){
+  S.showHistory = forcedState !== undefined ? forcedState : !S.showHistory;
+  const card = $('feynmanCard');
+  const drawer = $('historyDrawer');
+
+  if(S.showHistory){
+    card.classList.add('hidden');
+    drawer.classList.remove('hidden');
+    drawer.classList.add('flex');
+    $('historyBtnText').textContent = '✕ Đóng lại';
+    renderHistoryList();
+  } else {
+    drawer.classList.add('hidden');
+    drawer.classList.remove('flex');
+    card.classList.remove('hidden');
+    $('historyBtnText').innerHTML = `Nhật ký (<span id="historyCount">${S.history.length}</span>)`;
+  }
+}
+
+function triggerCardTransition(){
+  const card = $('feynmanCard');
+  card.classList.remove('card-transition');
+  void card.offsetWidth;
+  card.classList.add('card-transition');
 }
 
 function updateInput(){
@@ -887,8 +1234,15 @@ function updateInput(){
 /* ===================== LOGIC THẨM ĐỊNH RUBRIC ===================== */
 function heuristic(t){
   const s = t.toLowerCase();
-  if(/giống|như|ví dụ|tưởng tượng|chẳng hạn|kho|số nhà|bàn học/.test(s)) return 'MASTERED';
-  return /hexadecimal|offset|lvalue|dereference|indirection|allocator|malloc|dynamic|cấp phát|operator|pointer|object|lifo|memory|allocation|leak|dangling/.test(s) ? 'JARGON_HEAVY' : 'FAILED';
+  if(currentTopicKey === 'SUPPLY_DEMAND'){
+    if(/mua kem|bác bảo vệ|tự sinh|miễn phí|đứng yên cả ngày|thích bán đắt/.test(s)) return 'RED';
+    if(/co dãn|elastic|inelastic|pareto|equilibrium|deadweight|shortage|arbitrage|premium/.test(s)) return 'YELLOW';
+    return 'GREEN';
+  } else {
+    if(/phép nhân|cộng|hệ điều hành tự dọn|hai tên gọi/.test(s)) return 'RED';
+    if(/hexadecimal|offset|lvalue|dereference|indirection|allocator|malloc|dynamic|cấp phát|operator|pointer|object|lifo|memory|allocation|leak|dangling/.test(s)) return 'YELLOW';
+    return 'GREEN';
+  }
 }
 
 function popPromptCard(){
@@ -898,63 +1252,146 @@ function popPromptCard(){
   pc.classList.add('pop');
 }
 
+/* ===================== TIẾP TỤC BƯỚC TIẾP THEO (MANUAL STEP-CONFIRMATION) ===================== */
+function proceedNextStep(){
+  if(S.phase !== 'review' || !S.pendingAction) return;
+  AudioFX.play('pop');
+  
+  const { advance, willComplete, nextQ, nextIndex, isEarlyTermination } = S.pendingAction;
+  
+  if(isEarlyTermination || willComplete){
+    S.done = true;
+    S.isEarlyTermination = !!isEarlyTermination;
+    S.phase = '';
+    S.pendingAction = null;
+    showReport();
+    return;
+  }
+  
+  if(advance && nextIndex !== undefined && nextIndex !== -1){
+    S.cur = nextIndex;
+    S.phase = '';
+    S.emotion = 'CURIOUS';
+    S.question = nextQ;
+    S.pendingAction = null;
+    S.lastUser = null;
+    triggerCardTransition();
+  } else {
+    // Thử lại ở node hiện tại
+    S.phase = '';
+    S.emotion = 'CURIOUS';
+    S.question = nextQ;
+    S.pendingAction = null;
+  }
+  
+  renderDag();
+  renderStage();
+  popPromptCard();
+  
+  $('reviewBar').classList.add('hidden');
+  $('reviewBar').classList.remove('flex');
+  $('inputBar').classList.remove('hidden');
+  
+  $('input').disabled = false;
+  $('input').value = '';
+  updateInput();
+  $('input').focus();
+}
+
+/* ===================== SUBMIT CÂU TRẢ LỜI (2 NHỊP NGẬP NGỪNG 2000MS) ===================== */
+let thinkTimer = null;
+let hesitateTimer = null;
+
 function submit(text, forced){
   text = text.trim();
-  if(S.busy || S.done || text.length < 5) return;
+  if(S.busy || S.done || text.length < 5 || S.phase === 'review') return;
+  if(thinkTimer) clearTimeout(thinkTimer);
+  if(hesitateTimer) clearTimeout(hesitateTimer);
+
   AudioFX.play('pop');
-  S.busy = true; S.phase = 'think'; S.answered = false; S.lastUser = { a: text, v: null };
+  S.busy = true; 
+  S.phase = 'think'; 
+  S.answered = false; 
+  S.lastUser = { a: text, v: null };
   const qAtTurn = S.question;
   const currNode = S.nodes[S.cur];
 
-  $('input').value = '';
   $('input').disabled = true;
   updateInput();
+  
+  if($('thinkingText')){
+    $('thinkingText').style.opacity = '1';
+    $('thinkingText').textContent = 'Ưm... Để em ngẫm kỹ lại lời anh vừa giảng xem sao...';
+  }
   renderStage();
 
-  /* Pha 1 (600ms): Bé Minh suy nghĩ */
-  setTimeout(() => {
+  hesitateTimer = setTimeout(() => {
+    if(S.phase === 'think' && $('thinkingText')){
+      $('thinkingText').style.opacity = '0.3';
+      setTimeout(() => {
+        if(S.phase === 'think' && $('thinkingText')){
+          $('thinkingText').textContent = 'Khoan đã... Nếu hình dung như vậy thì có khớp với bài học không ta...';
+          $('thinkingText').style.opacity = '1';
+        }
+      }, 150);
+    }
+  }, 950);
+
+  /* Nhịp 3 (2000ms): Kết thúc pha suy ngẫm, chuyển sang Review */
+  thinkTimer = setTimeout(() => {
     const verdict = forced || heuristic(text), n = currNode;
-    n.status = verdict;
-    n.color_code = COLORS[verdict];
-    n.diagnostic_reason = n.why[{MASTERED: 'ok', JARGON_HEAVY: 'jargon', FAILED: 'fail'}[verdict]];
+    n.diagnostic_reason = n.why[{ GREEN: 'ok', YELLOW: 'jargon', RED: 'fail' }[verdict]];
     
-    // Tính toán điểm Rubric Live
-    if(verdict === 'MASTERED'){
+    // Tính toán điểm Rubric chuẩn: 75/70/65
+    if(verdict === 'GREEN'){
       S.rubric = {
-        acc: Math.floor(92 + Math.random() * 7),
-        sim: Math.floor(88 + Math.random() * 8),
-        ana: Math.floor(90 + Math.random() * 8)
+        core_accuracy: Math.floor(78 + Math.random() * 18),
+        simplicity: Math.floor(74 + Math.random() * 20),
+        analogy_grounding: Math.floor(70 + Math.random() * 24)
       };
       AudioFX.play('chime');
-      // Metaphor Retention
       const met = extractMetaphor(text);
       if(met) S.anchorMetaphor = met;
-    } else if(verdict === 'JARGON_HEAVY'){
+    } else if(verdict === 'YELLOW'){
       S.rubric = {
-        acc: Math.floor(82 + Math.random() * 6),
-        sim: Math.floor(25 + Math.random() * 12),
-        ana: Math.floor(20 + Math.random() * 15)
+        core_accuracy: Math.floor(75 + Math.random() * 12),
+        simplicity: Math.floor(30 + Math.random() * 25),
+        analogy_grounding: Math.floor(25 + Math.random() * 25)
       };
     } else {
       S.rubric = {
-        acc: Math.floor(18 + Math.random() * 10),
-        sim: Math.floor(60 + Math.random() * 10),
-        ana: Math.floor(10 + Math.random() * 10)
+        core_accuracy: Math.floor(20 + Math.random() * 25),
+        simplicity: Math.floor(55 + Math.random() * 15),
+        analogy_grounding: Math.floor(15 + Math.random() * 20)
       };
     }
 
-    let advance = verdict === 'MASTERED';
-    if(!advance){
+    let advance = false;
+    if(verdict === 'GREEN'){
+      n.status = 'GREEN';
+      n.color_code = COLORS.GREEN;
+      advance = true;
+    } else {
       n.retry_count++;
-      if(n.retry_count >= 2){
-        n.status = 'FAILED';
-        n.color_code = COLORS.FAILED;
-        n.diagnostic_reason += ' (Đã hỏi vặn 2 lượt vẫn chưa đạt, hệ thống chuyển sang mắt xích kế tiếp.)';
+      n.scaffold_level = Math.min(3, (n.scaffold_level || 1) + 1);
+      if(n.retry_count >= 3){
+        // Chạm trần 3 lần: Chốt RED
+        n.status = 'RED';
+        n.color_code = COLORS.RED;
+        n.diagnostic_reason += ' (Đã thử 3 lượt vẫn chưa đạt bản chất, chốt ĐỎ để ghi nhận điểm mù.)';
         advance = true;
+      } else {
+        // Còn lượt gỡ: giữ YELLOW
+        n.status = 'YELLOW';
+        n.color_code = COLORS.YELLOW;
+        advance = false;
       }
     }
+
     S.lastUser.v = verdict;
-    const reaction = verdict === 'MASTERED' ? 'Ồ, em hiểu rồi! Nghe dễ hiểu quá!' : advance ? 'Hơi lạ nhưng mình qua phần tiếp theo nhé.' : verdict === 'JARGON_HEAVY' ? 'Ủa, từ này là gì ta? Em nghe nhức đầu quá...' : 'Hmm... em thấy không hợp lý lắm.';
+    
+    const key = { GREEN: 'ok', YELLOW: 'jargon', RED: 'fail' }[verdict];
+    const detailedReply = (n.reply && n.reply[key]) ? n.reply[key] : (verdict === 'GREEN' ? 'Ồ, em hiểu rồi!' : 'Em chưa hiểu lắm ạ.');
     
     S.history.push({
       nodeId: n.id,
@@ -963,59 +1400,95 @@ function submit(text, forced){
       userAnswer: text,
       verdict: verdict,
       reason: n.diagnostic_reason,
-      reaction: reaction,
+      reaction: detailedReply,
       rubric: S.rubric,
       time: new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})
     });
 
+    // Xác định chuyển đổi DAG tiếp theo theo thuật toán chuẩn
+    let willComplete = false;
+    let isEarlyTermination = false;
+    let nextIndex = S.cur;
     let nextQ = n.retryQ;
+
     if(advance){
-      if(S.cur < S.nodes.length - 1){
-        S.cur++;
-        nextQ = S.nodes[S.cur].q;
+      const traversal = findNextNodeIndex(S.cur, S.nodes);
+      if(traversal.isEarlyTermination){
+        willComplete = true;
+        isEarlyTermination = true;
+        nextQ = '';
+      } else if(traversal.nextIndex === -1){
+        willComplete = true;
+        nextQ = '';
       } else {
-        S.done = true;
+        nextIndex = traversal.nextIndex;
+        nextQ = S.nodes[nextIndex].q;
       }
     }
-    
-    /* Pha 2 (~1s): Phản ứng */
-    S.phase = 'react'; S.answered = true; S.emotion = VERDICT_EMO[n.status]; S.question = reaction;
-    renderDag(); renderStage(); popPromptCard();
 
-    setTimeout(() => {
-      /* Pha 3: Bé Minh hỏi câu tiếp */
-      S.phase = ''; S.busy = false; $('input').disabled = false;
-      if(S.done){
-        S.emotion = 'HAPPY'; S.question = 'Em hiểu hết các phần rồi! Cảm ơn Thầy/Cô đã hướng dẫn em, mình xem bản đồ chẩn đoán nhé.';
-        renderStage(); updateInput(); popPromptCard(); setTimeout(showReport, 1400); return;
-      }
-      S.emotion = 'CURIOUS'; S.question = nextQ;
-      renderStage(); updateInput(); popPromptCard(); $('input').focus();
-    }, 1000);
-  }, 600);
+    S.phase = 'review';
+    S.busy = false;
+    S.emotion = VERDICT_EMO[verdict];
+    S.question = detailedReply;
+    S.pendingAction = {
+      advance: advance,
+      willComplete: willComplete,
+      isEarlyTermination: isEarlyTermination,
+      nextIndex: nextIndex,
+      nextQ: nextQ,
+      verdict: verdict,
+      retryCount: n.retry_count,
+      isSkip: false
+    };
+
+    renderDag();
+    renderStage();
+    popPromptCard();
+  }, 2000);
 }
 
-/* ===================== SKIP NODE (TẠM BỎ QUA THEO FSM SƯ PHẠM) ===================== */
+/* ===================== SKIP NODE (TẠM BỎ QUA / ĐẦU HÀNG) ===================== */
 function skipNode(){
-  if(S.busy || S.done) return;
+  if(S.busy || S.done || S.phase === 'review') return;
+  if(thinkTimer) clearTimeout(thinkTimer);
+  if(hesitateTimer) clearTimeout(hesitateTimer);
   AudioFX.play('pop');
-  S.busy = true; S.phase = 'react'; S.answered = true;
   
   const n = S.nodes[S.cur];
-  n.status = 'FAILED';
-  n.color_code = COLORS.FAILED;
-  n.diagnostic_reason = 'Người học chủ động tạm bỏ qua mắt xích này để ôn sau.';
-  n.retry_count = 2;
+  n.status = 'RED';
+  n.color_code = COLORS.RED;
+  n.diagnostic_reason = 'Người học chủ động đầu hàng / tạm bỏ qua mắt xích này để ôn sau.';
+  n.retry_count = 3;
 
-  S.rubric = { acc: 0, sim: null, ana: null };
-  const reaction = 'Không sao đâu Thầy/Cô! Khái niệm này hơi khó, mình tạm đánh dấu ôn lại sau và sang phần tiếp theo nhé.';
+  S.rubric = { core_accuracy: 0, simplicity: null, analogy_grounding: null };
+  
+  // Duyệt đồ thị tiếp theo
+  const traversal = findNextNodeIndex(S.cur, S.nodes);
+  let willComplete = false;
+  let isEarlyTermination = false;
+  let nextIndex = S.cur;
+  let nextQ = '';
+  let reaction = '';
+
+  if(traversal.isEarlyTermination){
+    willComplete = true;
+    isEarlyTermination = true;
+    reaction = '🚨 Mắt xích này là nền tảng (Root Node)! Khi bỏ qua, hệ thống buộc phải kích hoạt Dừng khẩn cấp (Early Termination) để bạn củng cố lại trước khi đi tiếp.';
+  } else if(traversal.nextIndex === -1){
+    willComplete = true;
+    reaction = 'Không sao đâu anh! Khái niệm này hơi khó, mình tạm đánh dấu ôn lại sau và hoàn tất phiên học nhé.';
+  } else {
+    nextIndex = traversal.nextIndex;
+    nextQ = S.nodes[nextIndex].q;
+    reaction = 'Không sao đâu anh! Khái niệm này hơi khó, mình tạm đánh dấu ôn lại sau và sang mắt xích tiếp theo nhé.';
+  }
 
   S.history.push({
     nodeId: n.id,
     nodeLabel: n.label,
     question: S.question,
     userAnswer: '🏳️ [Tạm bỏ qua / Đánh dấu ôn sau]',
-    verdict: 'FAILED',
+    verdict: 'RED',
     reason: n.diagnostic_reason,
     reaction: reaction,
     isSkip: true,
@@ -1023,58 +1496,46 @@ function skipNode(){
     time: new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})
   });
 
-  let nextQ = '';
-  if(S.cur < S.nodes.length - 1){
-    S.cur++;
-    nextQ = S.nodes[S.cur].q;
-  } else {
-    S.done = true;
-  }
-
+  S.lastUser = { a: '🏳️ [Tạm bỏ qua / Đánh dấu ôn sau]', v: 'RED', isSkip: true };
+  S.phase = 'review';
   S.emotion = 'CONFUSED';
   S.question = reaction;
-  $('input').value = '';
-  $('input').disabled = true;
-  updateInput();
+  S.pendingAction = {
+    advance: true,
+    willComplete: willComplete,
+    isEarlyTermination: isEarlyTermination,
+    nextIndex: nextIndex,
+    nextQ: nextQ,
+    verdict: 'RED',
+    retryCount: 3,
+    isSkip: true
+  };
+
   renderDag();
   renderStage();
   popPromptCard();
-
-  setTimeout(() => {
-    S.phase = '';
-    S.busy = false;
-    $('input').disabled = false;
-    if(S.done){
-      S.emotion = 'HAPPY';
-      S.question = 'Chúng ta đã đi hết các mắt xích của bài giảng rồi! Mời Thầy/Cô cùng xem bản đồ chẩn đoán nhé.';
-      renderStage();
-      updateInput();
-      popPromptCard();
-      setTimeout(showReport, 1400);
-      return;
-    }
-    S.emotion = 'CURIOUS';
-    S.question = nextQ;
-    renderStage();
-    updateInput();
-    popPromptCard();
-    $('input').focus();
-  }, 1200);
 }
 
 /* ===================== BÁO CÁO CHẨN ĐOÁN ===================== */
 function showReport(){
   const N = S.nodes.length, cnt = k => S.nodes.filter(n => n.status === k).length;
-  const good = S.nodes.filter(n => n.status === 'MASTERED'), bad = S.nodes.filter(n => n.status === 'JARGON_HEAVY' || n.status === 'FAILED');
-  const score = Math.round((cnt('MASTERED') * 100 + cnt('JARGON_HEAVY') * 40) / N);
+  const good = S.nodes.filter(n => n.status === 'GREEN');
+  const bad = S.nodes.filter(n => n.status === 'YELLOW' || n.status === 'RED');
+  const score = Math.round((cnt('GREEN') * 100 + cnt('YELLOW') * 40) / N);
   
   $('rPct').textContent = Math.round(good.length / N * 100) + '%';
   $('rScore').textContent = score;
   $('rBar').innerHTML = S.nodes.map(n => `<div class="flex-1" style="background:${n.color_code}"></div>`).join('');
-  $('rLegend').innerHTML = `<span class="text-emerald-700 font-bold">${cnt('MASTERED')} vững</span><span class="text-amber-700 font-bold">${cnt('JARGON_HEAVY')} thuật ngữ</span><span class="text-rose-700 font-bold">${cnt('FAILED')} hổng</span><span class="text-stone-500">${cnt('UNVISITED')} chưa duyệt</span>`;
+  $('rLegend').innerHTML = `<span class="text-[#10B981] font-bold">${cnt('GREEN')} vững (GREEN)</span><span class="text-amber-500 font-bold">${cnt('YELLOW')} gỡ (YELLOW)</span><span class="text-rose-500 font-bold">${cnt('RED')} hổng (RED)</span><span class="text-slate-400">${cnt('GRAY')} chưa duyệt (GRAY)</span>`;
   
-  $('rGood').innerHTML = good.length ? good.map(n => `<li class="rounded-lg border border-emerald-200 bg-emerald-100/60 p-2 font-semibold text-emerald-900">${n.label}</li>`).join('') : '<li class="text-stone-400">Chưa có mắt xích nào.</li>';
-  $('rBad').innerHTML = bad.length ? bad.map(n => `<li class="rounded-lg border p-2 ${n.status === 'FAILED' ? 'border-rose-200 bg-rose-100/60 text-rose-950' : 'border-amber-200 bg-amber-100/60 text-amber-950'}"><div class="font-bold">${n.label}</div><div class="text-stone-600 mt-0.5 text-[11px]">${n.diagnostic_reason}</div></li>`).join('') : '<li class="text-stone-400">Không có điểm mù. Tuyệt vời!</li>';
+  if(S.isEarlyTermination){
+    $('earlyTerminationBanner').classList.remove('hidden');
+  } else {
+    $('earlyTerminationBanner').classList.add('hidden');
+  }
+
+  $('rGood').innerHTML = good.length ? good.map(n => `<li class="rounded-xl border border-emerald-200 bg-emerald-50/70 p-2.5 font-semibold text-emerald-900">${n.label}</li>`).join('') : '<li class="text-slate-400">Chưa có mắt xích nào đạt chuẩn.</li>';
+  $('rBad').innerHTML = bad.length ? bad.map(n => `<li class="rounded-xl border p-2.5 ${n.status === 'RED' ? 'border-rose-200 bg-rose-50/70 text-rose-950' : 'border-amber-200 bg-amber-50/70 text-amber-950'}"><div class="font-bold">${n.label} ${n.has_unstable_foundation ? '<span class="text-[10px] text-amber-700 font-mono">(Bypass)</span>' : ''}</div><div class="text-slate-500 mt-0.5 text-[11px]">${n.diagnostic_reason}</div></li>`).join('') : '<li class="text-slate-400">Không có điểm mù. Tuyệt vời!</li>';
   
   $('reportModal').classList.replace('hidden', 'flex');
   $('ring').style.strokeDashoffset = 314;
@@ -1082,12 +1543,18 @@ function showReport(){
 }
 
 function reset(){
+  if(thinkTimer) clearTimeout(thinkTimer);
+  if(hesitateTimer) clearTimeout(hesitateTimer);
   initState();
+  toggleHistory(false);
   $('reportModal').classList.replace('flex', 'hidden');
   $('input').disabled = false;
   $('input').value = '';
   $('thinking').classList.add('hidden');
   $('question').classList.remove('hidden');
+  $('reviewBar').classList.add('hidden');
+  $('reviewBar').classList.remove('flex');
+  $('inputBar').classList.remove('hidden');
   hidePop();
   renderDag();
   renderStage();
@@ -1101,8 +1568,8 @@ $('nodes').addEventListener('click', e => {
   if(!el) return;
   e.stopPropagation();
   const n = S.nodes[+el.dataset.i], p = $('popover'), cv = $('canvas');
-  p.innerHTML = n.diagnostic_reason ? `<div class="text-xs font-bold mb-1 ${STATUS_TXT[n.status]}">${STATUS_VI[n.status]}</div><div class="text-[13px] text-stone-700 leading-snug">${n.diagnostic_reason}</div>`
-    : '<div class="text-[13px] text-stone-500">Mắt xích này chưa có kết quả chẩn đoán.</div>';
+  p.innerHTML = n.diagnostic_reason ? `<div class="text-xs font-bold mb-1 ${STATUS_TXT[n.status]}">${STATUS_VI[n.status]}</div><div class="text-[12.5px] text-slate-700 leading-snug">${n.diagnostic_reason}</div>`
+    : '<div class="text-[12.5px] text-slate-400">Mắt xích này chưa có kết quả chẩn đoán.</div>';
   p.style.left = Math.min(Math.max(n.fx * cv.clientWidth - 128, 8), cv.clientWidth - 264) + 'px';
   p.style.top = (n.fy * cv.clientHeight + el.offsetHeight / 2 + 10) + 'px';
   p.classList.remove('hidden');
@@ -1123,7 +1590,7 @@ $('btnFitView').addEventListener('click', () => {
   $('canvas').style.transform = 'scale(1)';
 });
 
-/* ===================== SỰ KIỆN GỬI VÀ DEMO ===================== */
+/* ===================== SỰ KIỆN GỬI, TIẾP TỤC & PHÍM TẮT ===================== */
 $('input').addEventListener('input', updateInput);
 $('input').addEventListener('keydown', e => {
   if(e.key === 'Enter' && !e.shiftKey){
@@ -1131,15 +1598,30 @@ $('input').addEventListener('keydown', e => {
     submit($('input').value);
   }
 });
+
+document.addEventListener('keydown', e => {
+  if(e.key === 'Enter' && S.phase === 'review'){
+    e.preventDefault();
+    proceedNextStep();
+  }
+});
+
 $('btnSend').addEventListener('click', () => submit($('input').value));
+$('btnProceed').addEventListener('click', proceedNextStep);
 $('btnSkipNode').addEventListener('click', skipNode);
+$('btnToggleHistory').addEventListener('click', () => toggleHistory());
+$('btnCloseHistory').addEventListener('click', () => toggleHistory(false));
 
 document.querySelectorAll('.demo').forEach(b => b.addEventListener('click', () => {
   if(S.busy || S.done) return;
-  const k = b.dataset.demo, text = S.nodes[S.cur].demo[k], forced = { ok: 'MASTERED', jargon: 'JARGON_HEAVY', fail: 'FAILED' }[k];
+  if(S.phase === 'review'){
+    proceedNextStep();
+    return;
+  }
+  const k = b.dataset.demo, text = S.nodes[S.cur].demo[k], forced = { ok: 'GREEN', jargon: 'YELLOW', fail: 'RED' }[k];
   $('input').value = text;
   updateInput();
-  setTimeout(() => submit(text, forced), 250);
+  setTimeout(() => submit(text, forced), 200);
 }));
 
 $('btnEnd').addEventListener('click', () => $('confirmModal').classList.replace('hidden', 'flex'));
