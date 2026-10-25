@@ -1,6 +1,6 @@
-# ĐẶC TẢ KIẾN TRÚC HỆ THỐNG AI & PIPELINE LLM (COMPOUND AI SYSTEM)
+# [TẦNG 3 & TẦNG 4] ĐẶC TẢ KIẾN TRÚC HỆ THỐNG AI & PIPELINE LLM (COMPOUND AI SYSTEM)
 ## DỰ ÁN: SIMPLIFEY V2 PRO — CODEBASE COGNITIVE TWIN
-### *Tài liệu Kỹ thuật Dành riêng cho Kỹ sư AI / LLM Developer trong Nhóm*
+### *Tài liệu Kỹ thuật Dành riêng cho Kỹ sư AI / LLM Developer (Phụ trách: NGƯỜI 3)*
 
 ---
 

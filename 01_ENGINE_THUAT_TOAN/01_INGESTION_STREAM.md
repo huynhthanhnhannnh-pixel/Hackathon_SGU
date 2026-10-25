@@ -1,6 +1,6 @@
-# ĐẶC TẢ KỸ THUẬT & LUỒNG TRIỂN KHAI THỰC TẾ (HACKATHON 24H)
+# [TẦNG 0] ĐẶC TẢ KỸ THUẬT INGESTION STREAM TRONG RAM (0 TOKEN)
 ## PHÂN HỆ: CODEBASE INGESTION, GRAPH RENDERING & SÁT HẠCH FEYNMAN
-### Dự án: SimpliFey V2 Pro — Codebase Cognitive Twin
+### Dự án: SimpliFey V2 Pro — Codebase Cognitive Twin (Phụ trách: NGƯỜI 2)
 **Định hướng:** Thực tế, tinh gọn, code chạy được ngay trong 24 giờ, không vẽ vời lý thuyết quá đà.
 
 ---
