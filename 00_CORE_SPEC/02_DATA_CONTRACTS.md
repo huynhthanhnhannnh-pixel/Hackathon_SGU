@@ -63,7 +63,9 @@ export interface UncleBobMetrics {
 export interface HybridArchitecturalNode {
   id: string;                    // VD: "slice-order-checkout"
   title: string;                 // VD: "Order Checkout Flow"
+  node_type: "ARCHITECTURAL_DATA_FLOW" | "ALGORITHMIC_CORE"; // Phân loại luồng dữ liệu vs thuật toán
   status: NodeStatus;
+  is_auto_mastered?: boolean;    // true nếu được miễn thi do kỹ năng BKT >= 0.85 (Fast-Track)
   prerequisites: string[];       // Danh sách ID các node cha (để Dagre phân nhánh)
   position: { x: number; y: number }; // Tọa độ (x, y) do Dagre tính toán
   files: string[];               // Các file trong lát cắt (VD: ["order.controller.ts", "order.service.ts"])
@@ -223,5 +225,16 @@ export interface PersonaConfig {
   description: string;
   initial_p_mastery: number;
   simulated_days_idle: number; // Số ngày nghỉ để demo công thức Half-Life Decay
+}
+
+// ==========================================
+// 4. Trạng thái Bộ nhớ Đệm Nạp Ngầm (Pre-fetch Cache Store)
+// ==========================================
+export interface ClientWorkbenchState {
+  active_node_id: string | null;
+  active_tab: "XRAY_WALKTHROUGH" | "FEYNMAN_CHALLENGE";
+  node_cache: Record<string, EnrichedSliceResponse>; // Cache nạp ngầm pre-fetch mở bùng 0ms
+  is_prefetching: boolean;
+  user_profile: LearnerCognitiveProfile;
 }
 ```

@@ -108,3 +108,23 @@ Trong đó:
 * **Persona 1 (Sinh viên Năm 2 - $P(L_0) = 0.20$):** AI chỉ đưa ra câu hỏi Tier 1 (Truy vết biến).
 * **Persona 2 (Mid-Level Dev - $P(L_0) = 0.65$):** AI lập tức đưa câu hỏi Tier 2 (Bắt lỗi N+1 Query).
 * **Persona 3 (Senior sau 30 ngày nghỉ):** Bấm nút, điểm số lập tức tụt từ $0.95$ xuống $0.43$, đồ thị đổi viền vàng cam và AI kích hoạt câu hỏi ôn tập ngay trước mắt Ban Giám khảo!
+
+---
+
+# 6. CƠ CHẾ FAST-TRACK AUTO-PASS (MIỄN THI NODE NGƯỜI DÙNG ĐÃ QUÁ MẠNH)
+
+Để tối ưu hóa thời gian và chi phí Token, hệ thống áp dụng cơ chế **Fast-Track Auto-Pass (Miễn thi / Mở khóa nhanh)** dựa trên Ma trận 16 kỹ năng:
+
+### 6.1. Quy tắc Toán học BKT Fast-Track
+Mỗi Node $u$ trên Canvas được ánh xạ với một tập con các kỹ năng $\mathcal{K}_u \subseteq \mathcal{K}$ thông qua vector $q_u$:
+$$\text{Điều kiện Miễn thi (Auto-Pass): } \forall k \in \mathcal{K}_u, \quad P(L_t, k) \ge 0.85$$
+
+### 6.2. Phản ứng trên Giao diện & Luồng Thực thi:
+1. **Không xóa Node:** Đồ thị DAG vẫn giữ nguyên cấu trúc để sinh viên nhìn thấy toàn cảnh kiến trúc repo.
+2. **Tự động gắn cờ `is_auto_mastered = true`:**
+   * Khi Node $u$ được các node cha mở khóa: Nếu thỏa mãn điều kiện $P(L_t) \ge 0.85$ ở tất cả kỹ năng liên quan $\implies$ Node lập tức chuyển thẳng sang màu **XANH LÁ NHẠT (COMPLETED - AUTO PASS)**.
+   * Hiển thị huy hiệu nhỏ trên Node: *"Đã làm chủ ở Repo trước (Fast-Track)"*.
+   * Tự động kích hoạt mở khóa các Node phụ thuộc phía sau mà **hoàn toàn không cần gọi AI hay bắt sinh viên làm bài thi** (0 Token, $0.00$).
+3. **Dồn Hỏa lực vào Điểm Mù:**
+   * Hệ thống dồn sự chú ý (Focus) của người học vào các Node chứa kỹ năng mà sinh viên đang có xác suất thấp ($P(L_t) < 0.50$).
+

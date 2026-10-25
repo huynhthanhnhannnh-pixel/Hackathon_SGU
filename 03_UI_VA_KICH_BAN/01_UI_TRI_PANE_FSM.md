@@ -90,9 +90,48 @@ Giao diện được chia thành 3 cột tương tác phản ứng (Reactive Lay
 stateDiagram-v2
     [*] --> LOCKED: Khởi tạo đồ thị từ Tầng 2
     LOCKED --> AVAILABLE: Tất cả prerequisites đều COMPLETED
+    LOCKED --> COMPLETED: Đạt chuẩn Fast-Track (Kỹ năng BKT >= 0.85)
     AVAILABLE --> AVAILABLE: User click vào xem Tab 1 (X-Ray Walkthrough)
     AVAILABLE --> COMPLETED: Vượt qua sát hạch Feynman ở Tab 2 (Pass Rubric)
-    AVAILABLE --> FAILED: Trả lời sai 3 lần liên tiếp
+    AVAILABLE --> FAILED: Trả lời sai 3 lần liên tiếp (retry_count >= 3)
     FAILED --> AVAILABLE: Sinh viên bấm "Ôn tập lại từ đầu"
     COMPLETED --> AVAILABLE: Bị hao mòn trí nhớ sau 30 ngày (Half-Life Decay)
 ```
+
+---
+
+# 4. ĐẶC TẢ TƯƠNG TÁC NÂNG CAO CHO NGƯỜI 1 (FRONTEND DEV)
+
+### 4.1. Hiển thị Node Fast-Track Auto-Pass (Miễn thi)
+* Khi Node có cờ `is_auto_mastered === true`:
+  * Node hiển thị màu **XANH LÁ NHẠT (Mint Green)** kèm biểu tượng tia sét ⚡ và nhãn: *"Đã làm chủ ở Repo trước (Fast-Track)"*.
+  * Sinh viên không bắt buộc phải làm bài thi, các Node con phía sau tự động mở khóa.
+  * Nếu sinh viên vẫn click vào, hệ thống chỉ hiển thị Tab 1 (X-Ray) để đọc tham khảo.
+
+### 4.2. Giao diện Stepper Dành Cho Node Thuật Toán (`ALGORITHMIC_CORE`)
+* Nếu `node_type === "ALGORITHMIC_CORE"` (Node Dijkstra, Crypto, Sorting):
+  * Cột 3 và Cột 2 không hiển thị Stepper Controller $\to$ Service $\to$ Repo.
+  * Thay vào đó, Stepper hiển thị 3 bước giải thuật:
+    * **Step 1:** Khởi tạo Cấu trúc dữ liệu & Biến trạng thái (Min-Heap, Mảng 2D).
+    * **Step 2:** Vòng lặp Hạt nhân Biến đổi Trạng thái (Thư giãn cạnh, cập nhật khoảng cách).
+    * **Step 3:** Điều kiện Dừng & Trả kết quả (Đường đi ngắn nhất).
+
+### 4.3. Cơ Chế Chặn Spam Bấm Nộp Bài Tại Frontend (Client Guardrail)
+* **Khóa nút 3 giây (Debounce):** Sau khi bấm [Nộp Bài Chấm Điểm], nút chuyển sang trạng thái Loading và bị vô hiệu hóa (disabled) trong 3 giây.
+* **Chặn nộp trùng nội dung ($\ge 80\%$):** Nếu nội dung mới gõ không khác biệt nhiều so với câu vừa bị rớt $\implies$ Báo lỗi đỏ ngay tại form: *"Bạn chưa bổ sung ý mới, hãy diễn giải chi tiết hơn!"* (Tuyệt đối không gửi request lên backend).
+* **Khóa cứng sau 3 lần sai:** Khi `retry_count >= 3` $\implies$ Ẩn ô nhập bài, hiển thị đáp án giải thích chuẩn của hệ thống kèm nút *"Tôi đã hiểu, cho tôi đi tiếp sang Node sau!"*.
+
+### 4.4. Hook Nạp Ngầm Tiên Tri (`usePreFetchSuccessor` - Mở Bùng 0 Giây)
+* Khi sinh viên xem Tab 1 của Node hiện tại được quá **5 giây**:
+  * Frontend kích hoạt hook ngầm `usePreFetchSuccessor(activeNodeId)`.
+  * Âm thầm gửi request `/api/enrich-node` cho Node con kế tiếp trên đồ thị và lưu kết quả vào `nodeCache[successorId]`.
+  * **Trải nghiệm 0ms Latency:** Khi sinh viên hoàn thành Node hiện tại và click sang Node kế tiếp:
+    ```typescript
+    const cachedData = useNodeStore.getState().nodeCache[targetNodeId];
+    if (cachedData) {
+      // Dữ liệu đã có sẵn 100% ➔ Render bùng nổ tức thì (0ms), không cần hiện Skeleton Scanner!
+      setCurrentNodeData(cachedData);
+    }
+    ```
+
+

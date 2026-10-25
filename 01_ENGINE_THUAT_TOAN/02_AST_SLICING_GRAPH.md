@@ -104,3 +104,33 @@ Không trích xuất toàn bộ repo làm phình token AI, hệ thống áp dụ
 
 ### 2.5. Dagre Hierarchical Layout Engine
 Tính toán tọa độ trực giao $(x, y)$ cho các Node trên Canvas để thể hiện rõ **Đồ thị Phân nhánh và Hội tụ (Branched & Merging DAG)**, cấm tuyệt đối giao diện xếp thành 1 hàng dọc đơn điệu.
+
+---
+
+### 2.6. Phân Loại 2 Loại Node & Kỹ Thuật AST Code Folding (Cho Thuật Toán Phức Tạp)
+Hệ thống không chỉ xử lý code Web 3 tầng mà bóc tách chuẩn xác **2 Loại Node**:
+
+```text
+┌──────────────────────────────────────────────┬──────────────────────────────────────────────┐
+│ LOẠI 1: ARCHITECTURAL DATA-FLOW NODE         │ LOẠI 2: ALGORITHMIC CORE NODE (VIP NODE)     │
+│ (Lát cắt Luồng Dữ liệu Nghiệp vụ Web)        │ (Lát cắt Thuật toán Thuần túy - Xoắn não)    │
+├──────────────────────────────────────────────┼──────────────────────────────────────────────┤
+│ • Điều kiện: Có Controller ➔ Service ➔ DB    │ • Điều kiện: Cognitive Complexity > 15       │
+│ • Cấu trúc 3 bước:                           │ • Cấu trúc 3 bước:                           │
+│   Step 1: Controller Endpoint (Nhận DTO)     │   Step 1: Khởi tạo State & Cấu trúc dữ liệu  │
+│   Step 2: Service Method (Trừ kho, tính toán)│   Step 2: Vòng lặp Hạt nhân Relax Cạnh/Biến  │
+│   Step 3: Repository / DB Call (SQL/ORM)     │   Step 3: Điều kiện dừng & Trả kết quả       │
+└──────────────────────────────────────────────┴──────────────────────────────────────────────┘
+```
+
+* **Kỹ thuật AST Code Folding (Cho thuật toán dài 150 – 200 dòng):**
+  * Khi hàm giải thuật vượt quá 100 dòng, Người 2 dùng Tree-sitter gập gọn các câu lệnh log, comment dài, và mảng khởi tạo hằng số thành `// ... [collapsed 15 lines of setup/logging]`.
+  * Đảm bảo lát cắt code gửi cho Người 3 **luôn nằm trong trần an toàn $\le 1,500 \text{ tokens}$**, tuyệt đối không cắt cụt giữa chừng gây mất cú pháp.
+
+---
+
+### 2.7. Ngân Sách Hiển Thị Đồ Thị (Display Budget = 6 Đến 8 Nodes)
+* Để đồ thị không bị biến thành một "ma trận mạng nhện" khi gặp repo lớn:
+  * Thuật toán PageRank và Tarjan đặt **Ngân sách hiển thị mặc định: Top 6 – 8 Node trục chính (Architectural Backbone)**.
+  * Các file tiện ích hoặc hàm phụ trợ cấp thấp được gom cụm (Collapse) vào các Node cha, hỗ trợ người dùng click bung rộng (Sub-graph Expand) khi cần xem chi tiết.
+
