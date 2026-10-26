@@ -35,10 +35,40 @@ flowchart TD
       /venv/, /__pycache__/, /target/, /bin/, /coverage/
     ];
     ```
-  * Chỉ giữ lại các file có đuôi: `.ts`, `.tsx`, `.js`, `.jsx`, `.py`.
-  * Nếu là link GitHub: Dùng `isomorphic-git` hoặc tải file zip trực tiếp qua URL:  
-    `https://github.com/{user}/{repo}/archive/refs/heads/main.zip` (giải nén trong bộ nhớ RAM, không cần cài git cli trên server).
+  * **Mở rộng Đuôi tệp Hợp lệ (Hỗ trợ Đa nền tảng Web, Mobile, Desktop, System):**
+    Chỉ giữ lại các file mã nguồn: `.ts`, `.tsx`, `.js`, `.jsx`, `.py`, `.dart`, `.java`, `.kt`, `.go`, `.cs`, `.cpp`.
+  * Nếu là link GitHub: Tải file zip trực tiếp qua URL `codeload.github.com` giải nén trong bộ nhớ RAM (Zero-Disk).
 * **Đầu ra:** Danh sách khoảng 20 - 50 file code sạch.
+
+---
+
+### BƯỚC 1.5: MULTI-MANIFEST PRIORITY SCANNER & ĐỊNH DANH VÂN TAY DỰ ÁN (0 TOKEN - 5ms)
+
+Để giải quyết triệt để **bẫy Monorepo (Fullstack repo chiếm 60% đồ án)** và **đa dạng thể loại bài thi (Web, Mobile, Desktop, CLI)**:
+
+1. **Multi-Manifest Priority Scanner (Quét độ sâu 2 cấp thư mục `/` và `/*`):**
+   * Hệ thống tìm kiếm các file cấu hình: `package.json`, `pubspec.yaml`, `requirements.txt`, `pom.xml`, `go.mod`, `Cargo.toml`.
+   * **Dual-Role Folder Matching Regex:**
+     ```typescript
+     const CLIENT_PATTERNS = /^(client|frontend|web|ui|apps\/web|apps\/client)$/i;
+     const SERVER_PATTERNS = /^(server|backend|api|core|apps\/api|apps\/server)$/i;
+     ```
+   * **Quy tắc Monorepo:** Nếu phát hiện cả 2 thư mục Client và Server:
+     * Gán cờ `is_monorepo = true`.
+     * Mặc định chọn `root_dir_offset = "server/"` (hoặc `backend/`) để phân tích trước vì Backend chứa trọn vẹn nghiệp vụ lưu trữ DB và lỗi N+1 Query.
+     * Cung cấp nút gạt trên Header UI: `[Phân tích: Server | Client]` cho phép chuyển góc nhìn phân tích trong 1 click.
+
+2. **Bảng Nhận diện 6 Hình thái Dự án (`ProjectArchetype`):**
+   * **`WEB_BACKEND`:** `express`, `@nestjs/core`, `fastify`, `spring-boot`, `fastapi`, `django`, `gin`.
+   * **`MOBILE_APP`:** `react-native`, `expo`, hoặc thấy `pubspec.yaml` (Flutter), `build.gradle` (`com.android.application`).
+   * **`DESKTOP_APP`:** `electron`, `@tauri-apps/api`, `nw.js`.
+   * **`WEB_FRONTEND`:** `react-dom`, `vue`, `svelte` (không kèm server framework).
+   * **`CLI_TOOL`:** Có trường `"bin": ...`, hoặc dependencies `commander`, `yargs`, `click`, `typer`.
+   * **`ALGORITHM_CORE`:** Không chứa framework trên, chỉ có file giải thuật và tests (`jest`, `pytest`).
+
+3. **Kiểm soát Phạm vi Thực thi An Toàn trong 24h:**
+   * **Native AST (Tree-sitter WASM):** Hỗ trợ sâu 100% cho hệ sinh thái **JavaScript, TypeScript và Python** (chiếm 85% đồ án Web, React Native, Electron, FastAPI).
+   * **Heuristic Regex Pattern Fallback:** Với **Flutter (Dart)** hoặc **Android (Java/Kotlin)**, thay vì nạp file WASM nặng hàng chục MB, hệ thống kích hoạt Regex bóc tách `class ... extends StatelessWidget/Bloc` và nới lỏng Cổng Gác Nhị Phân (Relaxed Whitelist), đảm bảo không bao giờ bị gãy parser trong 24h!
 
 ---
 
@@ -140,17 +170,29 @@ interface SliceNode {
   position: { x: number; y: number };
 }
 
-// 2. Hàm giả lập gom cụm theo thư mục/tính năng (Auth, Product, Order...)
+// 2. Hàm gom cụm theo tính năng thích ứng (Web, Mobile, Desktop, Tool)
 function extractFeatureSlices(filePaths: string[]) {
   const groups: Record<string, string[]> = {};
 
   filePaths.forEach(file => {
-    // Tự động gom theo từ khóa trong đường dẫn
-    let feature = 'Core';
-    if (file.includes('auth') || file.includes('user')) feature = 'Auth';
-    else if (file.includes('product') || file.includes('catalog')) feature = 'Product';
-    else if (file.includes('order') || file.includes('cart') || file.includes('checkout')) feature = 'Order';
-    else if (file.includes('payment')) feature = 'Payment';
+    // 1. Nhận diện theo từ khóa nghiệp vụ phổ biến
+    let feature = '';
+    if (file.match(/auth|user|login|account|profile/i)) feature = 'Auth';
+    else if (file.match(/product|catalog|item|shop|goods/i)) feature = 'Product';
+    else if (file.match(/order|cart|checkout|invoice/i)) feature = 'Order';
+    else if (file.match(/payment|billing|wallet|stripe/i)) feature = 'Payment';
+    else if (file.match(/chat|message|socket|notify/i)) feature = 'Messaging';
+    else if (file.match(/dashboard|home|feed|analytics/i)) feature = 'Dashboard';
+    else {
+      // 2. Fallback: Lấy tên thư mục con đầu tiên dưới src/, lib/, app/
+      const parts = file.split(/[/\\]/);
+      const srcIdx = parts.findIndex(p => p === 'src' || p === 'lib' || p === 'app' || p === 'screens');
+      if (srcIdx !== -1 && parts[srcIdx + 1] && !parts[srcIdx + 1].includes('.')) {
+        feature = parts[srcIdx + 1].charAt(0).toUpperCase() + parts[srcIdx + 1].slice(1);
+      } else {
+        feature = 'CoreEngine';
+      }
+    }
 
     if (!groups[feature]) groups[feature] = [];
     groups[feature].push(file);

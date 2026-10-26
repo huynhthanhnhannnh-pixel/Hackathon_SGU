@@ -26,18 +26,49 @@ export type NodeStatus =
   | "FAILED";     // Màu ĐỎ: Trả lời sai quá 3 lần, ghi nhận điểm mù nhận thức
 
 // ==========================================
-// 2. Từng bước thực thi vi mô trong Lát cắt
+// 2. Nhận diện Hình thái Dự án (Project Archetype)
+// ==========================================
+export type ProjectArchetype = 
+  | "WEB_BACKEND"       // Express, NestJS, FastAPI, Spring Boot
+  | "WEB_FRONTEND"      // React, Vue, Next.js (Client SPA/SSR)
+  | "MOBILE_APP"        // React Native, Flutter, Expo
+  | "DESKTOP_APP"       // Electron, Tauri
+  | "CLI_TOOL"          // Commander, Typer, Argparse
+  | "ALGORITHM_CORE";   // Package giải thuật thuần
+
+export interface ProjectFingerprint {
+  archetype: ProjectArchetype;
+  primary_language: "TYPESCRIPT" | "JAVASCRIPT" | "PYTHON" | "DART" | "JAVA" | "OTHER";
+  detected_framework: string; // VD: "NestJS", "React Native", "Flutter", "FastAPI"
+  is_monorepo: boolean;
+  root_dir_offset: string;    // "" nếu single repo, "server/" hoặc "backend/" nếu monorepo
+}
+
+// ==========================================
+// 3. Tầng kiến trúc linh hoạt theo Archetype (Canonical 3-Tier)
 // ==========================================
 export type ArchitecturalLayer = 
-  | "CONTROLLER" 
-  | "MIDDLEWARE" 
-  | "SERVICE" 
-  | "REPOSITORY" 
-  | "DATABASE";
+  // Dùng chung cho Luồng Nghiệp vụ (Web, Mobile, Desktop, CLI)
+  | "ENTRY_POINT"       // Cửa vào: Controller (Web), Screen/Widget (Mobile), Command (CLI)
+  | "BUSINESS_LOGIC"    // Xử lý: Service (Web), ViewModel/Bloc (Mobile), Handler (CLI)
+  | "DATA_ACCESS"       // Dữ liệu: Repository/SQL (Web), LocalStore/APIClient (Mobile)
+  // Dùng riêng cho Thuật toán VIP
+  | "ALGO_SETUP"        // Khởi tạo Heap / Mảng / State
+  | "ALGO_EXECUTION"    // Vòng lặp thư giãn cạnh / biến đổi trạng thái
+  | "ALGO_TERMINATION"  // Điều kiện dừng & Trả kết quả
+  // Tương thích ngược (Legacy Aliases)
+  | "CONTROLLER" | "MIDDLEWARE" | "SERVICE" | "REPOSITORY" | "DATABASE";
+
+export interface LayerDisplayMeta {
+  layer: ArchitecturalLayer;
+  display_name: string; // VD: Web hiện "Controller", Mobile hiện "Màn hình (Screen)"
+  color_badge: string;
+}
 
 export interface ExecutionTraceStep {
   step_number: number;
   layer: ArchitecturalLayer;
+  display_meta?: LayerDisplayMeta; // Nhãn hiển thị thân thiện trên UI Cột 3
   file_path: string;           // VD: "src/services/order.service.ts"
   function_name: string;       // VD: "checkout"
   line_start: number;          // Tọa độ dòng bắt đầu (1-indexed)
@@ -48,17 +79,18 @@ export interface ExecutionTraceStep {
 }
 
 // ==========================================
-// 3. Bộ chỉ số Kiến trúc Uncle Bob theo Slice Scope
+// 4. Bộ chỉ số Kiến trúc Uncle Bob theo Slice Scope
 // ==========================================
 export interface UncleBobMetrics {
   instability: number;         // I = Ce / (Ca + Ce), trong đoạn [0, 1]
   abstractness: number;        // A = Na / (Na + Nc), trong đoạn [0, 1]
   distance: number;            // D = |A + I - 1|, trong đoạn [0, 1]
   diagnosis: "BALANCED" | "ZONE_OF_PAIN" | "ZONE_OF_USELESSNESS";
+  is_exempt?: boolean;         // true nếu miễn tính cho tầng UI_VIEW / ENTRY_POINT để tránh báo lỗi giả
 }
 
 // ==========================================
-// 4. Cấu trúc 1 Node Lai Kiến Trúc trên ReactFlow
+// 5. Cấu trúc 1 Node Lai Kiến Trúc trên ReactFlow
 // ==========================================
 export interface HybridArchitecturalNode {
   id: string;                    // VD: "slice-order-checkout"
@@ -77,10 +109,11 @@ export interface HybridArchitecturalNode {
 }
 
 // ==========================================
-// 5. Toàn bộ đồ thị trả về từ Static Engine
+// 6. Toàn bộ đồ thị trả về từ Static Engine
 // ==========================================
 export interface StaticEngineResult {
   repo_name: string;
+  fingerprint: ProjectFingerprint; // Định danh hình thái dự án bóc tách từ Tầng 0
   total_files: number;
   nodes: HybridArchitecturalNode[];
   edges: Array<{
@@ -103,7 +136,10 @@ export interface StaticEngineResult {
 export interface ContextSandwichPayload {
   macro_context: {
     repo_name: string;
-    tech_stack: string[];        // Trích xuất từ package.json
+    archetype: ProjectArchetype; // WEB_BACKEND, MOBILE_APP, DESKTOP_APP, v.v.
+    primary_language: string;    // TypeScript, Python, Dart, Java...
+    is_monorepo: boolean;
+    tech_stack: string[];        // Trích xuất từ package.json / pubspec.yaml
     node_id: string;
     node_title: string;
     dag_predecessors: string[];  // Node đứng trước

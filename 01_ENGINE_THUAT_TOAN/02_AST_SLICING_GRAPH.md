@@ -73,17 +73,23 @@ Nếu áp dụng PageRank thuần túy từ Google ($d=0.85$), các file tiện 
 
 ---
 
-### 2.3. Scoped Inter-procedural Slicing (Def-Use Tracking)
+### 2.3. Scoped Inter-procedural Slicing & Cầu Nối Định Danh Sự Kiện (Nominal Event Bridge)
 Không trích xuất toàn bộ repo làm phình token AI, hệ thống áp dụng kỹ thuật **Lát cắt Có Phạm vi Giới hạn**:
-* Từ điểm đón nhận tại Controller, lần theo chuỗi biến số:
+* **Với Web Backend (Chuỗi gọi hàm trực tiếp):**
+  Lần theo chuỗi biến số:
   $$\text{req.body} \xrightarrow{\text{validate}} \text{dto} \xrightarrow{\text{pass}} \text{serviceMethod(dto)} \xrightarrow{\text{extract}} \text{itemId} \xrightarrow{\text{query}} \text{updateStock(itemId)}$$
-* Thuật toán chỉ giữ lại đúng các câu lệnh đọc/ghi biến này và loại bỏ các dòng lệnh rác (`console.log`, đo thời gian thực thi).
-* **Kết quả:** Trích xuất một lát cắt hoàn hảo dài **60 – 100 dòng code thật trong 15ms**.
+* **Với Mobile App & Frontend (Kiến trúc Reactive / Event-Driven):**
+  * *Vấn đề đứt gãy:* Luồng gọi hàm trực tiếp bị đứt tại lệnh `dispatch(CheckoutEvent())` trong Flutter BLoC hoặc Redux/Zustand.
+  * *Giải pháp - Cầu nối Định danh Sự kiện (Nominal Event Bridge):*
+    1. Trích xuất tên sự kiện từ lệnh dispatch: `event_name = "CheckoutEvent"`.
+    2. Tra cứu trong file Store/Bloc/Slice tương ứng để tìm hàm xử lý đăng ký sự kiện (`on<CheckoutEvent>` trong Flutter hoặc `builder.addCase(checkout)` trong Redux).
+    3. **Nối cạnh ảo ngữ nghĩa (Virtual Semantic Edge)** từ UI Component $\to$ Handler trong BLoC $\to$ API Client / Local DB.
+* **Kết quả:** Trích xuất một lát cắt hoàn hảo dài **60 – 100 dòng code thật trong 15ms**, liền mạch cho cả kiến trúc Call-Chain lẫn Event-Driven.
 
 ---
 
-### 2.4. Bộ Chỉ Số Kiến Trúc Uncle Bob trên Slice Scope ($\mathcal{S}$)
-Để không báo lỗi giả, chỉ số được tính trên **Toàn bộ Lát cắt $\mathcal{S}$** (bao gồm file Service và file Interface/DTO đi kèm) với công thức có Guard-clause:
+### 2.4. Bộ Chỉ Số Kiến Trúc Uncle Bob trên Slice Scope ($\mathcal{S}$) & Miễn Trừ Lỗi Giả Tầng UI
+Để không báo lỗi giả, chỉ số được tính trên **Toàn bộ Lát cắt $\mathcal{S}$** với công thức có Guard-clause:
 
 1. **Độ Bất Ổn Định ($I$):**
    $$I = \begin{cases} 0 & \text{nếu } C_a + C_e = 0 \\ \frac{C_e}{C_a + C_e} & \text{ngược lại} \end{cases}$$
@@ -95,10 +101,14 @@ Không trích xuất toàn bộ repo làm phình token AI, hệ thống áp dụ
 3. **Khoảng Cách Tới Trục Chính ($D$):**
    $$D = |A + I - 1|$$
 
-* **Chẩn đoán:**
-  * $D < 0.3 \implies$ **`BALANCED`** (Kiến trúc cân bằng).
-  * $A \to 0, I \to 0 \implies D \to 1 \implies$ **`ZONE_OF_PAIN`** (*Khối bê tông kiến trúc - Sửa 1 hàm gây sập toàn dự án*).
-  * $A \to 1, I \to 1 \implies D \to 1 \implies$ **`ZONE_OF_USELESSNESS`** (*Mã rác trừu tượng thừa do AI sinh ra*).
+* **QUY TẮC MIỄN TRỪ LỖI GIẢ CHO TẦNG UI (UI FALSE-POSITIVE EXEMPTION):**
+  * Các file màn hình (`Screen.tsx`, `order_page.dart`) hiển nhiên import nhiều thư viện UI/Icon/Hooks ($C_e$ cao), ít file import ngược lại ($C_a \approx 0$), và không ai viết Abstract Class cho UI ($A = 0$). Nếu tính $D$ sẽ bị nhảy vọt vào `ZONE_OF_PAIN` một cách vô lý!
+  * **Giải pháp:** Đặt `is_exempt = true` cho các tầng giao diện thuần túy (`ENTRY_POINT` thuộc nhóm UI Screen).
+  * **Chỉ kích hoạt tính $I, A, D$ trên các tầng Logic & Dữ liệu (`BUSINESS_LOGIC`, `DATA_ACCESS`, `STATE_STORE`).**
+  * Tại các tầng Logic:
+    * $D < 0.3 \implies$ **`BALANCED`** (Kiến trúc cân bằng).
+    * $A \to 0, I \to 0 \implies D \to 1 \implies$ **`ZONE_OF_PAIN`** (*Khối bê tông kiến trúc - Sửa 1 hàm gây sập toàn dự án*).
+    * $A \to 1, I \to 1 \implies D \to 1 \implies$ **`ZONE_OF_USELESSNESS`** (*Mã rác trừu tượng thừa do AI sinh ra*).
 
 ---
 
@@ -107,21 +117,27 @@ Tính toán tọa độ trực giao $(x, y)$ cho các Node trên Canvas để th
 
 ---
 
-### 2.6. Phân Loại 2 Loại Node & Kỹ Thuật AST Code Folding (Cho Thuật Toán Phức Tạp)
-Hệ thống không chỉ xử lý code Web 3 tầng mà bóc tách chuẩn xác **2 Loại Node**:
+### 2.6. Phân Loại 2 Loại Node & Ba Tầng Chuẩn Hóa Đại Diện (Canonical 3-Tier)
+Hệ thống không đóng cứng vào mô hình Web Backend mà chuẩn hóa thành **2 Loại Node** với chuỗi 3 bước thích ứng theo `ProjectArchetype`:
 
 ```text
 ┌──────────────────────────────────────────────┬──────────────────────────────────────────────┐
 │ LOẠI 1: ARCHITECTURAL DATA-FLOW NODE         │ LOẠI 2: ALGORITHMIC CORE NODE (VIP NODE)     │
-│ (Lát cắt Luồng Dữ liệu Nghiệp vụ Web)        │ (Lát cắt Thuật toán Thuần túy - Xoắn não)    │
+│ (Lát cắt Nghiệp vụ: Web, Mobile, Desktop, CLI)│ (Lát cắt Thuật toán Thuần túy - Xoắn não)    │
 ├──────────────────────────────────────────────┼──────────────────────────────────────────────┤
-│ • Điều kiện: Có Controller ➔ Service ➔ DB    │ • Điều kiện: Cognitive Complexity > 15       │
-│ • Cấu trúc 3 bước:                           │ • Cấu trúc 3 bước:                           │
-│   Step 1: Controller Endpoint (Nhận DTO)     │   Step 1: Khởi tạo State & Cấu trúc dữ liệu  │
-│   Step 2: Service Method (Trừ kho, tính toán)│   Step 2: Vòng lặp Hạt nhân Relax Cạnh/Biến  │
-│   Step 3: Repository / DB Call (SQL/ORM)     │   Step 3: Điều kiện dừng & Trả kết quả       │
+│ • Điều kiện: Có luồng xử lý từ ngoài vào trong │ • Điều kiện: Cognitive Complexity > 15       │
+│ • Ba Tầng Chuẩn Hóa Đại Diện:                │ • Ba Pha Thuật Toán VIP:                     │
+│   Step 1: ENTRY_POINT (Controller/Screen/Cmd)│   Step 1: ALGO_SETUP (Khởi tạo State/Heap)   │
+│   Step 2: BUSINESS_LOGIC (Service/Bloc/Model)│   Step 2: ALGO_EXECUTION (Vòng lặp biến đổi) │
+│   Step 3: DATA_ACCESS (Repo/DB/API Client)   │   Step 3: ALGO_TERMINATION (Dừng & Trả kquả) │
 └──────────────────────────────────────────────┴──────────────────────────────────────────────┘
 ```
+
+* **Bảng Ánh Xạ Nhãn Hiển Thị Theo Hình Thái Dự Án (Display Mapping):**
+  * **Web Backend:** `ENTRY_POINT` = "Controller" | `BUSINESS_LOGIC` = "Service" | `DATA_ACCESS` = "Repository / DB"
+  * **Mobile App:** `ENTRY_POINT` = "Màn hình Widget (UI Screen)" | `BUSINESS_LOGIC` = "ViewModel / BLoC State" | `DATA_ACCESS` = "API Client / Local DB"
+  * **Desktop App:** `ENTRY_POINT` = "Renderer Window" | `BUSINESS_LOGIC` = "IPC Bridge / Store" | `DATA_ACCESS` = "System Service / Native API"
+  * **CLI Tool:** `ENTRY_POINT` = "CLI Command Argv" | `BUSINESS_LOGIC` = "Command Handler" | `DATA_ACCESS` = "Stdout / File I/O"
 
 * **Kỹ thuật AST Code Folding (Cho thuật toán dài 150 – 200 dòng):**
   * Khi hàm giải thuật vượt quá 100 dòng, Người 2 dùng Tree-sitter gập gọn các câu lệnh log, comment dài, và mảng khởi tạo hằng số thành `// ... [collapsed 15 lines of setup/logging]`.

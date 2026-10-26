@@ -184,15 +184,29 @@ Gemini Flash trả về cấu trúc JSON chuẩn mực đã được ép kiểu:
 Hàm code thuần kiểm tra kết quả JSON của Gemini trước khi trả về frontend:
 
 ```typescript
-function verifyWithBinaryGate(aiOutput: EnrichedSliceResponse, symbolTable: Set<string>, blacklist: string[]): boolean {
+function verifyWithBinaryGate(
+  aiOutput: EnrichedSliceResponse, 
+  symbolTable: Set<string>, 
+  blacklist: string[],
+  isRelaxedMode: boolean = false // Bật true cho Dart, Java, Kotlin khi dùng Regex Parser
+): boolean {
   // CHỐT 1: Kiểm tra Symbol Whitelist (Chống bịa tên biến/hàm)
-  const isSymbolsValid = aiOutput.referenced_symbols.every(sym => symbolTable.has(sym));
-  if (!isSymbolsValid) {
-    console.warn("REJECT: AI bịa ra tên hàm/biến không có trong AST!");
-    return false;
+  if (!isRelaxedMode) {
+    const isSymbolsValid = aiOutput.referenced_symbols.every(sym => symbolTable.has(sym));
+    if (!isSymbolsValid) {
+      console.warn("REJECT: AI bịa ra tên hàm/biến không có trong AST!");
+      return false;
+    }
+  } else {
+    // Relaxed Mode: Chỉ kiểm tra ít nhất 1 symbol chính (Class/Method) có trong bảng symbol
+    const hasAnyValidSymbol = aiOutput.referenced_symbols.some(sym => symbolTable.has(sym));
+    if (!hasAnyValidSymbol && aiOutput.referenced_symbols.length > 0) {
+      console.warn("REJECT (Relaxed): Không tìm thấy symbol nào trong mã nguồn!");
+      return false;
+    }
   }
 
-  // CHỐT 2: Regex Blacklist (Chống lôi công nghệ lạ ngoài package.json)
+  // CHỐT 2: Regex Blacklist (Chống lôi công nghệ lạ ngoài manifest: package.json / pubspec.yaml / requirements.txt)
   const questionLower = aiOutput.feynman_challenge.question.toLowerCase();
   const hasForbiddenKeyword = blacklist.some(kw => questionLower.includes(kw.toLowerCase()));
   if (hasForbiddenKeyword) {

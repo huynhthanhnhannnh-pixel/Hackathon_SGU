@@ -81,3 +81,9 @@
 
 7. **BGK hỏi:** *"Nếu trong lúc thi mất mạng Wi-Fi thì sản phẩm của các em có chạy được không?"*
    > **Đáp:** *"Dạ, chúng em đã chuẩn bị sẵn **Chế độ Fail-safe Demo Offline**: Chỉ cần bấm tổ hợp phím tắt `Ctrl + Shift + D`, hệ thống lập tức nạp Mock Data JSON cực đẹp chạy trơn tru 100% từ LocalStorage mà không phụ thuộc vào kết nối mạng của hội trường!"*
+
+8. **BGK hỏi:** *"Tôi thấy các em vẽ Controller với Service rất hay, nhưng nếu sinh viên nộp đồ án Mobile Flutter BLoC, React Native Redux hoặc Monorepo cả client lẫn server thì hệ thống của các em có bóc tách được không, hay lại báo lỗi trắng trang?"*
+   > **Đáp:** *"Dạ thưa Thầy, hệ thống của chúng em không đóng cứng vào Web Backend 3 tầng. Chúng em đã thiết kế cơ chế **Adaptive Archetype Fingerprinting** giải quyết trọn vẹn 3 vấn đề này:  
+   > • **Xử lý Monorepo:** Bộ quét Multi-Manifest tự động nhận diện cặp thư mục `client/` và `server/`, tự động chọn phân tích luồng Backend nghiệp vụ trước và cung cấp nút gạt `[Server ⇄ Client]` linh hoạt.  
+   > • **Hàn gắn đứt gãy Reactive (BLoC/Redux):** Luồng gọi hàm trực tiếp bị đứt tại lệnh `dispatch(Event)`. Hệ thống sử dụng **Cầu nối Định danh (Nominal Event Bridge)** để nối cạnh ảo từ UI Component $\to$ hàm `on<Event>` trong BLoC $\to$ API Client, bảo đảm lát cắt nghiệp vụ liền mạch 100%!  
+   > • **Chống báo lỗi giả:** Hệ thống tự động **miễn trừ tính chỉ số Uncle Bob** cho tầng màn hình UI và chỉ kích hoạt đo đạc trên tầng logic (BLoC, ViewModel, Service) để không bao giờ kết tội oan đồ án của sinh viên!"*
