@@ -97,7 +97,8 @@ export interface HybridArchitecturalNode {
   title: string;                 // VD: "Order Checkout Flow"
   node_type: "ARCHITECTURAL_DATA_FLOW" | "ALGORITHMIC_CORE"; // Phân loại luồng dữ liệu vs thuật toán
   status: NodeStatus;
-  is_auto_mastered?: boolean;    // true nếu được miễn thi do kỹ năng BKT >= 0.85 (Fast-Track)
+  is_auto_mastered?: boolean;    // true nếu được miễn thi do kỹ năng BKT >= 0.92 (Fast-Track)
+  preliminary_skills: SWESkill[]; // 1-3 kỹ năng gán tĩnh từ Tầng 2 để xét Auto-Pass trước khi gọi AI
   prerequisites: string[];       // Danh sách ID các node cha (để Dagre phân nhánh)
   position: { x: number; y: number }; // Tọa độ (x, y) do Dagre tính toán
   files: string[];               // Các file trong lát cắt (VD: ["order.controller.ts", "order.service.ts"])
@@ -136,8 +137,8 @@ export interface StaticEngineResult {
 export interface ContextSandwichPayload {
   macro_context: {
     repo_name: string;
-    archetype: ProjectArchetype; // WEB_BACKEND, MOBILE_APP, DESKTOP_APP, v.v.
-    primary_language: string;    // TypeScript, Python, Dart, Java...
+    archetype: ProjectArchetype;
+    primary_language: string;
     is_monorepo: boolean;
     tech_stack: string[];        // Trích xuất từ package.json / pubspec.yaml
     node_id: string;
@@ -151,22 +152,29 @@ export interface ContextSandwichPayload {
   };
   invariants: {
     learner_persona_tier: "NOVICE" | "PRACTITIONER" | "ARCHITECT";
-    forbidden_external_keywords: string[]; // Blacklist công nghệ không có trong repo
+    forbidden_external_keywords: string[]; // Dynamic Blacklist đã lọc trừ tech_stack thật
   };
 }
 
 // ==========================================
-// 2. Dữ liệu mổ xẻ & Thử thách Feynman do AI trả về
+// 2. Dữ liệu mổ xẻ & Thử thách Feynman do AI trả về (Anti-Spoiler)
 // ==========================================
-export type QuestionType = 
-  | "DATA_FLOW_BREAK"     // Tier 1: Truy vết dữ liệu gãy vỡ
-  | "DESIGN_TRADE_OFF"    // Tier 2: Tình huống giả định Điểm Hay
-  | "FEYNMAN_ANALOGY";    // Tier 3: Ẩn dụ bình dân giải thích Điểm Dở
-
 export interface CandidateProbe {
   angle: string;
   probe: string;
-  verdict: "SELECTED" | "REJECT";
+  verdict: "SELECTED" | "REJECT" | string;
+}
+
+export interface ExecutionStepDisplay {
+  step_index: number;
+  label: string;
+  file_path: string;
+  highlight_lines: number[];     // Tọa độ mảng dòng code để highlight trên Editor
+}
+
+export interface SocraticChallenge {
+  feynman_question: string;
+  smell_reveal_after_attempt: string; // Giải thích chi tiết lỗi và giải pháp, ẩn đi cho tới khi đạt hoặc hết 3 lần thử
 }
 
 export interface EnrichedSliceResponse {
@@ -175,20 +183,12 @@ export interface EnrichedSliceResponse {
   };
   internal_design_xray: {
     identified_pattern: string;  // VD: "Layered Architecture + Dependency Injection"
-    why_it_works: string;        // Điểm hay kiến trúc (Hiển thị ở Pha 1)
-    ai_vibe_smell: {
-      severity: "CRITICAL" | "WARNING" | "INFO";
-      location: string;          // VD: "order.service.ts: dòng 45"
-      smell_description: string; // VD: "Vòng lặp N+1 Query trong forEach"
-      consequence_plain_text: string; // Hậu quả sập DB khi có 100 người mua đồng thời
-    };
+    why_it_works: string;        // Lý do thiết kế
+    execution_steps: ExecutionStepDisplay[]; // Không chứa đáp án lỗi để tránh lộ đề
   };
-  referenced_symbols: string[];  // Danh sách các biến/hàm mà AI nhắc tới trong câu hỏi
-  feynman_challenge: {
-    question_type: QuestionType;
-    question: string;            // Nội dung câu hỏi Socratic (Pha 2)
-    target_skills: string[];     // Ánh xạ vào vector q-Matrix 16 kỹ năng SWE
-  };
+  referenced_symbols: string[];  // Danh sách các biến/hàm đối chiếu Symbol_Table
+  target_skills: SWESkill[];     // Ánh xạ vào vector q-Matrix 16 kỹ năng SWE
+  socratic_challenge: SocraticChallenge; // Thử thách sư phạm Feynman
 }
 
 // ==========================================
@@ -209,25 +209,25 @@ export interface FeynmanEvaluationResult {
 
 ```typescript
 // ==========================================
-// 1. Không gian 16 Kỹ năng SWE Chuẩn (q-Matrix)
+// 1. Không gian 16 Kỹ năng SWE Chuẩn Cố định (q-Matrix)
 // ==========================================
 export const SWE_SKILLS = [
   "HTTP_ROUTING",
   "DTO_VALIDATION",
+  "AUTH_SECURITY",
   "DEPENDENCY_INJECTION",
-  "LAYERED_ARCHITECTURE",
-  "DB_OPTIMIZATION",          // N+1 Query, Indexing
-  "TRANSACTION_MANAGEMENT",   // Rollback, ACID
-  "ASYNC_CONCURRENCY",        // Race condition, Promise.all
+  "LAYERED_SEPARATION",
+  "DB_OPTIMIZATION",
+  "ASYNC_CONCURRENCY",
+  "TRANSACTION_INTEGRITY",
   "ERROR_HANDLING",
-  "SECURITY_AUTH",
-  "INTERFACE_SEGREGATION",
-  "SINGLE_RESPONSIBILITY",
-  "DATA_INTEGRITY",
+  "STATE_MANAGEMENT",
+  "ALGORITHMIC_COMPLEXITY",
+  "MEMORY_MANAGEMENT",
+  "API_CONTRACT_DESIGN",
   "CACHING_STRATEGY",
-  "EVENT_DRIVEN",
-  "DEFENSIVE_PROGRAMMING",
-  "PERFORMANCE_BOTTLENECK"
+  "RATE_LIMIT_RESILIENCE",
+  "DATA_SERIALIZATION"
 ] as const;
 
 export type SWESkill = typeof SWE_SKILLS[number];
@@ -251,7 +251,7 @@ export interface LearnerCognitiveProfile {
 }
 
 // ==========================================
-// 3. Cấu hình Giả lập Persona Demo (Pitching Tool)
+// 3. Cấu hình Giả lập Persona Demo
 // ==========================================
 export type PersonaMode = "NEWBIE" | "MID_LEVEL" | "SENIOR_RUSTY";
 
@@ -269,7 +269,7 @@ export interface PersonaConfig {
 export interface ClientWorkbenchState {
   active_node_id: string | null;
   active_tab: "XRAY_WALKTHROUGH" | "FEYNMAN_CHALLENGE";
-  node_cache: Record<string, EnrichedSliceResponse>; // Cache nạp ngầm pre-fetch mở bùng 0ms
+  node_cache: Record<string, EnrichedSliceResponse>; // Cache nạp ngầm pre-fetch phản hồi tức thì 0ms
   is_prefetching: boolean;
   user_profile: LearnerCognitiveProfile;
 }

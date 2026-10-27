@@ -59,7 +59,7 @@ Trước khi đi vào từng bước cụ thể, toàn bộ hệ thống phối 
 | **9** | **Dagre Hierarchical Layout** | Sắp xếp đồ thị trên Canvas | Backend Tầng 2 | $\sim 0.01\text{s}$ | 0 Token | Tính tọa độ trực giao $(x, y)$ phân nhánh và hội tụ đa tầng |
 | **10**| **Single-Pass Contrastive CoT** | Sinh viên click chọn Node vàng | Backend Tầng 4 | $1.2\text{s} – 1.8\text{s}$ | $\sim 400$ Tokens | Gemini Flash nhẩm 3 hướng câu hỏi trong `_internal_reasoning`, chọn câu tối ưu |
 | **11**| **Cổng Gác Nhị Phân 2 Chốt** | Ngay khi nhận Output từ AI | Backend Tầng 4 | $\mathbf{0.001\text{s}}$ | 0 Token | Chốt 1 (AST Whitelist) + Chốt 2 (Regex Blacklist), diệt ảo giác 100% |
-| **12**| **Speculative Pre-fetching** | Đọc Tab 1 quá 5 giây | Worker ngầm | Chạy ngầm | $\sim 350$ Tokens | Nạp trước Node con kế tiếp vào `nodeCache`, giúp mở bùng tức thì **0ms Latency** |
+| **12**| **Speculative Pre-fetching** | Đọc Tab 1 quá 5 giây | Worker ngầm | Chạy ngầm | $\sim 350$ Tokens | Nạp trước Node con kế tiếp vào `nodeCache`, giúp phản hồi tức thì **0ms Latency** |
 | **13**| **Triple-Defense Guardrail** | Bấm nút [Nộp Bài Chấm Điểm] | Frontend + API | $\sim 0\text{ms}$ | 0 Token | Vòng 1: Semantic Debounce 3s; Vòng 2: Hard Cap 3 lần thử; Vòng 3: Quota $10,000$ tokens |
 | **14**| **Bayes BKT + Ebbinghaus Decay** | Sau khi AI chấm xong | Client Zustand | $\mathbf{< 0.002\text{s}}$ | 0 Token | Cập nhật $P(L_t)$ trên ma trận 16 kỹ năng SWE, kích hoạt **Fast-Track ⚡** hoặc viền Cam |
 
@@ -146,7 +146,7 @@ Trước khi đi vào từng bước cụ thể, toàn bộ hệ thống phối 
 #### A. Frontend (Trình duyệt)
 1. Sự kiện `onNodeClick(nodeId)` kích hoạt.
 2. Kiểm tra bộ nhớ đệm: `nodeCache[nodeId]` có sẵn dữ liệu chưa?
-   - **Nếu Cache Hit:** Mở bùng ra ngay lập tức trong **0ms** (không hiển thị Skeleton Scanner).
+   - **Nếu Cache Hit:** Hiển thị tức thì trong **0ms** (không hiển thị Skeleton Scanner).
    - **Nếu Cache Miss:** Hiển thị hiệu ứng quét Skeleton nhẹ và gửi `POST /api/enrich-node`.
 
 #### B. Backend (API Máy chủ) & Thuật toán thực thi
@@ -182,7 +182,7 @@ Trước khi đi vào từng bước cụ thể, toàn bộ hệ thống phối 
 * Tại Frontend, hook `usePreFetchSuccessor` theo dõi: Nếu người học ở Tab 1 quá **5 giây**:
 * Âm thầm gửi request ngầm `/api/enrich-node` cho **duy nhất 01 Node con trực tiếp kế tiếp** có độ ưu tiên cao nhất trên đồ thị.
 * Kết quả phân tích của Node con được lưu sẵn vào `nodeCache[successorId]` của Zustand Store.
-* **Hiệu quả:** Khi người học hoàn thành bài này và bấm sang bài tiếp theo, bài tiếp theo sẽ **mở bùng ra tức thì trong 0 giây (0ms Latency)**!
+* **Hiệu quả:** Khi người học hoàn thành bài này và bấm sang bài tiếp theo, bài tiếp theo sẽ **hiển thị tức thì trong 0 giây (0ms Latency)**!
 
 ---
 
@@ -364,12 +364,12 @@ sequenceDiagram
     Bayes->>Bayes: Tính công thức Bayes BKT (< 0.002s trên Zustand)
     Bayes->>C1: Đổi Node 1 sang XANH LÁ (COMPLETED)
     
-    %% Cơ chế Fast-Track & Mở bùng 0ms
-    Note over C1, C3: [UC02 & UC04] TRẢI NGHIỆM MỞ BÙNG TỨC THÌ 0 GIÂY!
-    Bayes->>C1: Kiểm tra Node 2 đạt chuẩn Fast-Track (P >= 0.85)? ➔ Đổi XANH LÁ NHẠT ⚡ (Miễn thi!)
+    %% Cơ chế Fast-Track & Phản hồi tức thì 0ms
+    Note over C1, C3: [UC02 & UC04] TRẢI NGHIỆM PHẢN HỒI TỨC THÌ (0ms LATENCY)!
+    Bayes->>C1: Kiểm tra Node 2 đạt chuẩn Fast-Track (P >= 0.92)? ➔ Đổi XANH LÁ NHẠT ⚡ (Miễn thi!)
     User->>C1: Click chọn Node tiếp theo
     C1->>C3: Kiểm tra nodeCache có sẵn? ➔ CÓ SẴN 100%!
-    C3-->>User: Mở bùng ra tức thì trong 0 GIÂY (0ms Latency, không Skeleton)!
+    C3-->>User: Hiển thị tức thì trong 0 GIÂY (0ms Latency, không Skeleton)!
 ```
 
 ---
@@ -385,6 +385,6 @@ sequenceDiagram
 3. **Nguyên tắc Diệt Ảo Giác Bằng Toán Học:**
    * Mọi nội dung AI sinh ra phải vượt qua Cổng Gác Nhị Phân 2 Chốt (AST Whitelist và Regex Blacklist) trong **$0.001\text{ giây}$**. Nếu AI bịa biến hoặc công nghệ ngoài lề, lập tức kích hoạt Fallback an toàn.
 4. **Nguyên tắc Trải Nghiệm Người Dùng Đỉnh Cao:**
-   * Nhờ cơ chế Nạp Ngầm Tiên Tri (`Speculative Pre-fetching`), người học trải nghiệm cảm giác **mở bùng nổ 0 giây (0ms Latency)**.
+   * Nhờ cơ chế Nạp Ngầm Tiên Tri (`Speculative Pre-fetching`), người học trải nghiệm cảm giác **phản hồi tức thì (0ms Latency)**.
    * Nhờ cơ chế Miễn Thi (`Fast-Track Auto-Pass ⚡`), người học không bị bắt làm lại những gì mình đã quá giỏi.
    * Nhờ phím tắt bí mật `Ctrl + Shift + D`, nhóm tự tin làm chủ sân khấu và thuyết phục hoàn toàn Ban Giám khảo ngay cả khi phòng thi mất mạng!
