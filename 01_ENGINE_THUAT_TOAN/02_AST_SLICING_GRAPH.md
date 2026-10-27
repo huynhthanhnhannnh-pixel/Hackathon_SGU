@@ -25,9 +25,13 @@ Sau khi Tầng 0 hoàn tất tải mã nguồn từ link GitHub vào `RAMCodeSto
 flowchart TD
     StoreRAM["RAMCodeStore (Map chứa code sạch từ Tầng 0)"] --> Pass1["1. Thuật toán Two-Pass Symbol Resolution (Pass 1)<br/>Quét AST thu hoạch: SymbolTable, InterfaceMap, ImportMap"]
     
-    Pass1 --> Pass2["2. Thuật toán Call Expression Linking (Pass 2)<br/>Nối dây các lời gọi hàm xuyên tệp ➔ Sinh Call-Graph"]
+    Pass1 --> Pass2["2. Thuật toán Call Expression Linking (Pass 2)<br/>Hỗ trợ Path Alias (@/) & Python Module Dot-Notation ➔ Sinh Call-Graph"]
 
-    Pass2 --> AlgTarjan["3. Thuật toán Tarjan SCC (Khử chu trình đồ thị)<br/>Co cụm chu trình A ⇄ B thành SuperNode ➔ Đảm bảo 100% DAG"]
+    Pass2 --> CheckEdges{"Có cạnh gọi hàm nào không?"}
+    CheckEdges -- "0 cạnh (Repo 1 file)" --> IntraFallback["Cơ chế Intra-File Function Slicing<br/>Bóc tách các hàm nội bộ trong file làm Node đại diện"]
+    CheckEdges -- "Đa file hợp lệ" --> AlgTarjan["3. Thuật toán Tarjan SCC (Khử chu trình đồ thị)<br/>Co cụm chu trình A ⇄ B thành SuperNode ➔ Đảm bảo 100% DAG"]
+
+    IntraFallback --> AlgTarjan
 
     AlgTarjan --> BranchT2{"Phân nhánh tính toán song song (Tầng 2)"}
 
@@ -99,6 +103,9 @@ Mỗi thuật toán dưới đây được chuẩn hóa theo cấu trúc 4 trụ
 
 #### 2. Cơ chế kỹ thuật:
 * Duyệt cây cú pháp trừu tượng 2 chặng (Two-Pass Abstract Syntax Tree Traversal) kết hợp Bảng Băm Ký hiệu Toàn cục (Global Symbol Table) trên bộ nhớ RAM.
+* **Hỗ trợ Path Alias (`@/*`, `~/*`) & Cú pháp Module Python (Dot-Notation):**
+  * Tự động chuyển đổi alias `@/services/...` thành `src/services/...`.
+  * Tự động chuyển đổi `from services.order import Order` thành file `services/order.py`.
 
 #### 3. Làm thế nào để cơ chế đó thực hiện được? (Từng thao tác cụ thể):
 * **Thao tác 1 (Pass 1 - Thu hoạch Khai báo):**
@@ -106,15 +113,20 @@ Mỗi thuật toán dưới đây được chuẩn hóa theo cấu trúc 4 trụ
   * Khai báo Class (`export class OrderController`) $\to$ Ghi nhận tên class.
   * Khai báo Hàm/Method (`async postCheckout(...)`) $\to$ Lưu vào `SymbolTable` với Key là `OrderController.postCheckout`, Value là `{ filePath: "src/controllers/order.controller.ts", lineStart: 8, lineEnd: 15 }`.
   * Khai báo Interface (`implements IOrderService`) $\to$ Lưu vào `InterfaceImplMap`.
-  * Câu lệnh Import (`import { OrderService } from '../services/order.service'`) $\to$ Lưu vào `ImportMap[currentFile]`.
-* **Thao tác 2 (Phân giải Đường dẫn Tương đối):**
-  Khi gặp câu lệnh import `./order.service`, hệ thống kết hợp với đường dẫn của file hiện tại (`src/controllers/order.controller.ts`), chuẩn hóa đường dẫn tương đối thành đường dẫn POSIX tuyệt đối trong repo: `src/services/order.service.ts`.
+  * Câu lệnh Import (`import { OrderService } from '@/services/order.service'`) $\to$ Lưu vào `ImportMap[currentFile]`.
+* **Thao tác 2 (Phân giải Đường dẫn Tương đối, Path Alias & Python):**
+  * *TypeScript Path Alias:* Nếu đường dẫn bắt đầu bằng `@/` hoặc `~/` $\implies$ Thay thế `@/` thành `src/` (hoặc kiểm tra `tsconfig.json`).
+  * *Python Module:* Nếu là file `.py`, chuyển câu lệnh `from services.order import Order` bằng cách thay dấu `.` thành `/` $\implies$ `services/order.py`.
+  * *Đường dẫn tương đối:* Ghép `./` hoặc `../` với thư mục của file hiện tại để tìm file đích trên RAM.
 * **Thao tác 3 (Pass 2 - Nối Cạnh Cuộc Gọi):**
   Duyệt quét các biểu thức gọi hàm `CallExpression` (VD: `this.orderService.processCheckout(...)`):
   1. Trích xuất đối tượng gọi: `orderService`.
   2. Tra cứu trong `ImportMap` của file hiện tại để tìm class gốc: `OrderService` $\to$ được import từ `src/services/order.service.ts`.
   3. Tra cứu trong `SymbolTable` để xác nhận method `processCheckout` thực sự tồn tại ở file đích.
   4. Nối một cạnh có hướng vào danh sách kề: `CallGraph.get("order.controller.ts").add("order.service.ts")`.
+* **Thao tác 4 (Cơ chế Dự phòng Intra-File cho Repo 1 File Duy Nhất):**
+  * Nếu repo chỉ có 1 file (VD: sinh viên viết tất cả vào `app.ts` hoặc `main.py`), số cạnh giữa các file bằng 0.
+  * *Giải pháp:* Hệ thống tự động chuyển sang **Intra-file Slicing**: Bóc tách các hàm bên trong file đó (`postCheckout` gọi `processCheckout` gọi `updateStock`), coi mỗi hàm là 1 Node để đồ thị luôn hiển thị 3-tier DAG lung linh, không bao giờ bị trắng trang!
 
 #### 4. Minh họa Code súc tích có chú thích:
 ```typescript

@@ -32,11 +32,11 @@ flowchart TD
 
     AlgBranch --> AlgStream["5. Thuật toán CodeloadStreamClient<br/>Tải stream nén trực tiếp từ codeload.github.com (Zero API Limit)"]
     
-    AlgStream --> AlgTreePruner["6. Thuật toán TreePrunerOnTheFlyFilter<br/>Đọc header zip LFH: Hủy file rác ngay trên luồng stream bằng entry.autodrain()"]
+    AlgStream --> AlgTreePruner["6. Thuật toán TreePrunerOnTheFlyFilter<br/>Đọc header zip LFH: Hủy file rác, chặn Zip Slip, lọc Null Byte bằng entry.autodrain()"]
 
     AlgTreePruner --> StoreRAM["7. Lưu vào RAMCodeStore: Map&lt;path, code&gt;<br/>(Tối đa 50 file code sạch, RAM &lt; 15MB)"]
 
-    StoreRAM --> AlgManifest["8. Thuật toán MultiManifestScanner & ArchetypeClassifier<br/>Quét package.json, pom.xml... xác định 1 trong 6 hình thái dự án & tech_stack"]
+    StoreRAM --> AlgManifest["8. Thuật toán MultiManifestScanner & ArchetypeClassifier<br/>Quét package.json, pom.xml... ưu tiên manifest server/ khi là Monorepo"]
 
     AlgManifest --> HandoverEngine["9. BÀN GIAO SANG TẦNG 1 (Engine):<br/>• RAMCodeStore (Map chứa code sạch)<br/>• ProjectFingerprint (Ngôn ngữ chính, Monorepo, Offset)"]
 
@@ -62,7 +62,7 @@ Toàn bộ dữ liệu được lưu trữ trong 2 bảng băm trên RAM:
 │    └── Giá trị (Value): Toàn bộ chuỗi mã nguồn sạch UTF-8                              │
 │                                                                                        │
 │ 2. ManifestStore: Map<string, string>                                                  │
-│    ├── Khóa (Key): Tên file cấu hình (VD: "package.json", "backend/requirements.txt")  │
+│    ├── Khóa (Key): Tên file cấu hình (VD: "package.json", "server/package.json")       │
 │    └── Giá trị (Value): Nội dung thô của file cấu hình                                 │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -182,12 +182,15 @@ interface GithubRepoInfo {
 
 #### 1. Tại sao cần bước này & Vai trò của nó?
 * **Vấn đề thực tế:** Một repo đồ án sinh viên có thể nặng 200MB (trong đó `node_modules` chiếm 180MB, `.git` chiếm 15MB, ảnh/video chiếm 4MB, code thật chỉ 1MB!).
-* **Hậu quả nếu tải truyền thống:** Tải cả 200MB về máy rồi ghi ra ổ cứng sẽ làm nghẽn băng thông phòng thi, tốn 30 giây tải, làm cạn kiệt IOPS ổ đĩa và crash server! Nếu gọi qua GitHub REST API thì bị khóa sau 60 request/giờ.
+* **Hậu quả nếu tải truyền thống:** Tải cả 200MB về máy rồi ghi ra ổ đĩa sẽ làm nghẽn băng thông phòng thi, tốn 30 giây tải, làm cạn kiệt IOPS ổ đĩa và crash server! Nếu gọi qua GitHub REST API thì bị khóa sau 60 request/giờ.
 * **Vai trò:** "Trái tim tốc độ" của Tầng 0. Giúp hệ thống tải mã nguồn trong **0.8 giây**, lọc sạch rác ngay trên luồng nhị phân, chỉ nạp 1MB code sạch vào RAM, hoàn toàn không chạm ổ đĩa (Zero-Disk) và không bị giới hạn Rate Limit.
 
 #### 2. Cơ chế kỹ thuật:
 * Tải luồng nhị phân trực tiếp từ máy chủ CDN `codeload.github.com` (bỏ qua REST API rate limit).
 * Phân tích cấu trúc tệp ZIP theo chuẩn PKWARE APPNOTE kết hợp cơ chế ngắt dòng nhị phân `entry.autodrain()` của thư viện `unzipper` (Node.js Transform Stream).
+* **Phòng thủ Bảo mật Chống Zip Slip & Lọc Ký tự Nhị phân (Security Defenses):**
+  * Chặn tấn công Path Traversal: Xóa sạch `../` trong tên file.
+  * Lọc tệp nhị phân: Kiểm tra 512 bytes đầu, nếu chứa null byte `\0` thì tự động xả bỏ.
 
 #### 3. Làm thế nào để cơ chế đó thực hiện được? (Từng thao tác cụ thể):
 * **Thao tác 1 (Bắt luồng nhị phân từ CDN):**
@@ -198,16 +201,18 @@ interface GithubRepoInfo {
   * *Bản chất cấu trúc ZIP:* Mỗi tệp tin nén bắt đầu bằng **Local File Header (LFH)** dài cố định 30 bytes với chữ ký nhị phân `0x04034b50`.
   * LFH chứa 2 trường số nguyên quan trọng: `Filename Length` (độ dài chuỗi tên tệp) và `Compressed Size` (kích thước byte của khối dữ liệu nén phía sau).
   * Ngay sau LFH là chuỗi tên tệp `entry.path`. Tại thời điểm đọc xong tên tệp, **thân file nén (Compressed Data) chưa hề được giải nén qua thuật toán DEFLATE**!
-* **Thao tác 3 (Bộ lọc TreePruner on-the-fly):**
-  So khớp chuỗi `entry.path` với bảng `IGNORE_PATTERNS` regex:
-  * Nếu khớp với rác (`node_modules`, `.git`, `dist`, `.png`, `.lock`):
-    $$\implies \text{Hệ thống lập tức gọi } \mathbf{entry.autodrain()}$$
-    Hàm `autodrain()` thông báo cho stream parser nhảy cóc (skip) đúng số lượng byte bằng `Compressed Size`, xả bỏ toàn bộ dữ liệu nén của file rác mà **hoàn toàn không tiêu tốn chu kỳ CPU để giải thuật toán INFLATE và không cấp phát 1 byte RAM nào**!
-  * Nếu không khớp rác và thuộc `VALID_EXTENSIONS` (`.ts`, `.js`, `.py`, `.java`, `.dart`, `.go`):
-    Cho phép luồng byte nạp vào thuật toán giải nén INFLATE, tích lũy các chunk nhị phân vào mảng `chunks: Buffer[]`.
-* **Thao tác 4 (Kiểm soát Quota an toàn):**
+* **Thao tác 3 (Bộ lọc TreePruner on-the-fly & Chống Zip Slip):**
+  * *Khử Path Traversal:* Chuẩn hóa `sanitizedPath = entry.path.replace(/^(\.\.[\/\\])+/, '')`.
+  * So khớp `sanitizedPath` với bảng `IGNORE_PATTERNS` regex:
+    * Nếu khớp với rác (`node_modules`, `.git`, `dist`, `.png`, `.lock`):
+      $$\implies \text{Hệ thống lập tức gọi } \mathbf{entry.autodrain()}$$
+      Hàm `autodrain()` thông báo cho stream parser nhảy cóc (skip) đúng số lượng byte bằng `Compressed Size`, xả bỏ toàn bộ dữ liệu nén của file rác mà **hoàn toàn không tiêu tốn chu kỳ CPU để giải thuật toán INFLATE và không cấp phát 1 byte RAM nào**!
+    * Nếu không khớp rác và thuộc `VALID_EXTENSIONS` (`.ts`, `.js`, `.py`, `.java`, `.dart`, `.go`):
+      Cho phép luồng byte nạp vào thuật toán giải nén INFLATE, tích lũy các chunk nhị phân vào mảng `chunks: Buffer[]`.
+* **Thao tác 4 (Kiểm soát Quota an toàn & Lọc Null Byte):**
+  * Kiểm tra 512 bytes đầu của chunk: Nếu chứa ký tự nhị phân `\0` (null byte) $\implies$ Gọi `entry.autodrain()`, bỏ qua vì là file nhị phân đổi đuôi.
   * Trong vòng lặp chunk, liên tục cộng dồn `totalStreamBytes += chunk.length`. Nếu tổng byte vượt quá $15\text{ MB}$ $\implies$ Ngắt kết nối stream ngay để phòng chống Zip-Bomb.
-  * Nếu kích thước file đơn lẻ $> 1\text{ MB}$ (thường là file bundle bị commit nhầm) $\implies$ Gọi `entry.autodrain()` hủy file đó.
+  * Nếu kích thước file đơn lẻ $> 1\text{ MB}$ $\implies$ Gọi `entry.autodrain()` hủy file đó.
 * **Thao tác 5 (Chuẩn hóa đường dẫn & Ghi vào RAMCodeStore):**
   * Ghép các chunk thành chuỗi UTF-8: `content = Buffer.concat(chunks).toString('utf-8')`.
   * File zip của GitHub luôn bọc trong 1 thư mục gốc (VD: `react-main/src/...`). Hệ thống cắt bỏ thư mục gốc bằng `path.substring(path.indexOf('/') + 1)` để đường dẫn trở thành chuẩn POSIX: `src/...`.
@@ -220,25 +225,28 @@ interface GithubRepoInfo {
 
 #### 1. Tại sao cần bước này & Vai trò của nó?
 * **Vấn đề thực tế:** Đồ án sinh viên rất đa dạng: Web Backend, Web Frontend, Mobile Flutter, Desktop Electron, CLI tool hoặc Thuật toán LeetCode. Nếu không nhận diện đúng, hệ thống sẽ áp dụng sai mô hình (ví dụ ép Mobile App phải có Controller như Web Backend sẽ làm gãy AST parser).
-* Đồng thời, hơn 60% đồ án là Monorepo (chứa cả 2 folder `client/` và `server/`). Nếu không định tuyến, đồ thị sẽ hiển thị lẫn lộn cả component giao diện nút bấm lẫn logic cơ sở dữ liệu.
-* **Vai trò:** "Bộ não nhận thức kiến trúc" giúp hệ thống hiểu được dự án thuộc thể loại gì, trích xuất danh sách công nghệ (`tech_stack`) để phục vụ Cổng Gác Nhị Phân và hướng dẫn AI hỏi đúng trọng tâm.
+* Đồng thời, hơn 60% đồ án là Monorepo (chứa cả 2 folder `client/` và `server/`). Trong Monorepo, file `package.json` ở root thường chỉ là lerna/workspaces rỗng; toàn bộ framework chính (`express`, `nestjs`, `typeorm`) lại nằm trong `server/package.json`!
+* **Vai trò:** "Bộ não nhận thức kiến trúc" giúp hệ thống hiểu được dự án thuộc thể loại gì, trích xuất chính xác `tech_stack` ưu tiên từ thư mục server để phục vụ Cổng Gác Nhị Phân và hướng dẫn AI hỏi đúng trọng tâm.
 
 #### 2. Cơ chế kỹ thuật:
-* Quét cấu trúc cây thư mục độ sâu $\le 2$ (Depth-2 Manifest Traversal) kết hợp thuật toán khớp mẫu luật (Rule-based Dependency Inference).
+* Quét cấu trúc cây thư mục độ sâu $\le 2$ (Depth-2 Manifest Traversal) kết hợp thuật toán **Ưu tiên Manifest Monorepo (Monorepo Manifest Priority)** và khớp mẫu luật (Rule-based Dependency Inference).
 
 #### 3. Làm thế nào để cơ chế đó thực hiện được? (Từng thao tác cụ thể):
 * **Thao tác 1 (Quét tìm Manifest):**
   Duyệt qua danh sách các file trong `codeStore`. Lọc ra các file có tên thuộc danh sách `package.json`, `pubspec.yaml`, `requirements.txt`, `pom.xml`, `go.mod` nằm ở root `/` hoặc thư mục con cấp 1 (độ sâu $\le 2$).
-* **Thao tác 2 (Phát hiện Monorepo song hành):**
+* **Thao tác 2 (Phát hiện Monorepo song hành & Xác định Offset):**
   Quét tiền tố đường dẫn các file trong `codeStore` bằng Regex:
   * Khớp `CLIENT_REGEX = /^(client|frontend|web|ui)/i`
   * Khớp `SERVER_REGEX = /^(server|backend|api|core)/i`
-  * Nếu cả 2 Regex đều khớp ít nhất 1 file $\implies$ Gán `is_monorepo = true`, và tự động gán `root_dir_offset = "server/"` (hoặc `backend/`). Điều này chỉ đạo cho Tầng 1 tập trung phân tích code xử lý DB trong folder server trước.
-* **Thao tác 3 (Trích xuất thư viện & tech_stack):**
+  * Nếu cả 2 Regex đều khớp ít nhất 1 file $\implies$ Gán `is_monorepo = true`, và tự động gán `root_dir_offset = "server/"` (hoặc `backend/`).
+* **Thao tác 3 (Monorepo Manifest Priority - Ưu tiên Manifest Server):**
+  * *Quy tắc:* Nếu `is_monorepo = true`, hệ thống tìm xem có `server/package.json` (hoặc `backend/package.json`, `backend/requirements.txt`) hay không.
+  * Nếu có $\implies$ **Ưu tiên đọc manifest của thư mục server trước** thay vì đọc root `package.json`! Nhờ vậy, các thư viện backend quan trọng (`typeorm`, `nestjs`, `fastapi`) không bao giờ bị bỏ sót!
+* **Thao tác 4 (Trích xuất thư viện & tech_stack):**
   * Với `package.json`: Gọi `JSON.parse(content)`. Gom tất cả các key trong `dependencies` và `devDependencies` thành mảng chuỗi `tech_stack` (VD: `["express", "typeorm", "mysql", "zod"]`).
   * Với `requirements.txt`: Dùng regex `/^([a-zA-Z0-9_.-]+)/gm` để bóc tách tên thư viện Python (VD: `["fastapi", "uvicorn", "sqlalchemy"]`).
   * Với `pubspec.yaml`: Dùng regex quét dưới trường `dependencies:` để bóc tên package Flutter/Dart.
-* **Thao tác 4 (Phân loại 6 Hình thái Archetype):**
+* **Thao tác 5 (Phân loại 6 Hình thái Archetype):**
   Duyệt mảng `tech_stack` qua bộ lọc luật:
   * Nếu có `react-native`, `expo`, hoặc thấy `pubspec.yaml` $\implies$ Phân loại **`MOBILE_APP`**.
   * Nếu có `electron`, `@tauri-apps/api` $\implies$ Phân loại **`DESKTOP_APP`**.
@@ -246,7 +254,7 @@ interface GithubRepoInfo {
   * Nếu có `react-dom`, `vue`, `svelte` (mà không có framework server) $\implies$ Phân loại **`WEB_FRONTEND`**.
   * Nếu có trường `"bin"` hoặc `commander`, `typer` $\implies$ Phân loại **`CLI_TOOL`**.
   * Nếu không chứa framework nào trên mà chỉ có code thuật toán/test $\implies$ Phân loại **`ALGORITHM_CORE`**.
-* **Thao tác 5 (Đóng gói ProjectFingerprint):**
+* **Thao tác 6 (Đóng gói ProjectFingerprint):**
   Gói toàn bộ thông tin thành đối tượng `ProjectFingerprint`, sẵn sàng bàn giao cho Tầng 1 và Tầng 4.
 
 ---
@@ -323,27 +331,39 @@ async function streamAndPruneZip(owner: string, repo: string, branch: string) {
   const zipParser = nodeStream.pipe(unzipper.Parse({ verbose: false }));
 
   for await (const entry of zipParser) {
-    const path: string = entry.path;
+    // 1. Chống Zip Slip: gọt sạch ../ nếu có
+    const rawPath: string = entry.path.replace(/^(\.\.[\/\\])+/, '');
     const isDir = entry.type === 'Directory';
 
-    // 1. Kiểm tra rác hoặc file không hợp lệ
-    const isGarbage = /node_modules|\.git|dist|build|\.(png|jpg|lock|svg)$/i.test(path);
-    const isValidCode = /\.(ts|tsx|js|jsx|py|java|dart|go)$/i.test(path) || path.includes('package.json');
+    // 2. Kiểm tra rác hoặc file không hợp lệ
+    const isGarbage = /node_modules|\.git|dist|build|\.(png|jpg|lock|svg)$/i.test(rawPath);
+    const isValidCode = /\.(ts|tsx|js|jsx|py|java|dart|go)$/i.test(rawPath) || rawPath.includes('package.json');
 
     if (isDir || isGarbage || !isValidCode || codeStore.size >= 50) {
       entry.autodrain(); // HỦY FILE NGAY LẬP TỨC TRÊN STREAM (KHÔNG TỐN RAM)
       continue;
     }
 
-    // 2. Đọc nội dung file sạch vào RAM
+    // 3. Đọc nội dung file sạch vào RAM & kiểm tra Null Byte
     const chunks: Buffer[] = [];
+    let isBinary = false;
     for await (const chunk of entry) {
+      if (chunks.length === 0 && chunk.includes(0x00)) {
+        isBinary = true; // Phát hiện file nhị phân đổi đuôi giả mạo
+        break;
+      }
       chunks.push(chunk);
     }
+
+    if (isBinary) {
+      entry.autodrain();
+      continue;
+    }
+
     const content = Buffer.concat(chunks).toString('utf-8');
 
-    // 3. Chuẩn hóa đường dẫn: bỏ folder gốc GitHub tạo (repo-main/src/... -> src/...)
-    const cleanPath = path.substring(path.indexOf('/') + 1);
+    // 4. Chuẩn hóa đường dẫn: bỏ folder gốc GitHub tạo (repo-main/src/... -> src/...)
+    const cleanPath = rawPath.substring(rawPath.indexOf('/') + 1);
     codeStore.set(cleanPath, content);
   }
 
@@ -382,3 +402,4 @@ Tầng 0 không chỉ phục vụ Tầng 1 (Engine) mà còn cung cấp **2 dữ
 | Mạng tải quá 5 giây | `ERR_STREAM_TIMEOUT` | *"Đường truyền tới GitHub bị chậm. Hệ thống đang tự động thử kết nối lại..."* |
 | Repo quá 15MB file nén | `ERR_STREAM_QUOTA_EXCEEDED` | *"Repository quá lớn (> 15MB). Hệ thống ưu tiên phân tích 50 tệp mã nguồn nghiệp vụ chính."* |
 | Repo không chứa file code hợp lệ | `ERR_NO_SOURCE_FILES_FOUND` | *"Không tìm thấy file mã nguồn (.ts, .js, .py, .java, .dart, .go). Vui lòng kiểm tra lại repository."* |
+| Quá tải CDN GitHub (Secondary Rate Limit) | `ERR_GITHUB_RATE_LIMIT_CDN` | *"GitHub CDN đang hạn chế lưu lượng tạm thời. Vui lòng đợi 30 giây rồi thử lại."* |
