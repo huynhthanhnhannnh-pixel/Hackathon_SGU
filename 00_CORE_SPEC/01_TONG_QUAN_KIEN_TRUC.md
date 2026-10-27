@@ -70,7 +70,7 @@ flowchart TD
     end
 
     subgraph T5 ["TẦNG 5: ĐỘNG CƠ BAYESIAN q-MATRIX & THANG TIẾN HÓA (0.002s - TOÁN HỌC)"]
-        D4 --> A5["Sinh viên click dòng nghi vấn & giải thích bằng ví dụ đời thường"]
+        D4 --> A5["Sinh viên đọc mã nguồn hạt nhân & giải thích bằng ví dụ đời thường"]
         A5 --> B5["Gemini Flash chấm điểm Rubric (Accuracy, Simplicity)"]
         B5 --> C5["Động cơ BKT: Cập nhật Xác suất Năng lực P(Mastery) qua q-Matrix"]
         C5 --> D5["Thang Tiến Hóa 3 Bậc (Novice ➔ Practitioner ➔ Architect)"]

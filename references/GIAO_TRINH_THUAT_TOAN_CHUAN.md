@@ -411,28 +411,22 @@ Chỉ còn lại đúng các dòng: `{ 1, 5, 8, 9, 10, 12, 13 }`.
 
 # CHƯƠNG 8: QUY TRÌNH 3 BƯỚC CỘT 3 & CỔNG GÁC NHỊ PHÂN CHỐNG ẢO GIÁC
 
-### 8.1. Quy trình Sư phạm 3 Bước (Loại bỏ Lỗi "Tự lộ Đáp án")
-Ở thiết kế cũ, việc hiển thị ngay dòng chữ *"Lỗi N+1 Query tại dòng 45"* khiến sinh viên chỉ việc đọc chép lại là xong, không có tác dụng học tập.
-
-Hệ thống chuẩn hóa Quy trình 3 Bước tại Cột 3:
+### 8.1. Quy trình Sư phạm Socratic Feynman Chuẩn Hóa
+Hệ thống chuẩn hóa Quy trình Sư phạm 2 Pha tại Buồng lái Nhận thức:
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
-│ BƯỚC 1: EXECUTION STEPPER (DẪN ĐƯỜNG LUỒNG CHẠY)                       │
-│ • Cột 3 chỉ hiển thị luồng dữ liệu biến đổi:                           │
-│   Controller (Nhận DTO) ➔ Service (Duyệt mảng) ➔ Repo (Cập nhật DB)   │
-│ • TUYỆT ĐỐI GIẤU TÊN LỖI "N+1 Query" VÀ GIẤU TỌA ĐỘ DÒNG LỖI!           │
+│ PHA 1: EXECUTION WALKTHROUGH & THE FLASHPOINT                          │
+│ • Hiển thị trích đoạn mã nguồn hạt nhân (The Flashpoint 15-30 dòng)    │
+│   kèm luồng biến đổi dữ liệu (Controller ➔ Service ➔ Repository).      │
+│ • Phân tích mẫu thiết kế (Design Pattern) và lợi ích phân tầng.        │
 ├────────────────────────────────────────────────────────────────────────┤
-│ BƯỚC 2: SPOT THE BOTTLENECK (THỬ THÁCH ĐỊNH VỊ)                        │
-│ • AI thách đố: "Trong 3 bước trên, có một vị trí mã nguồn sẽ khiến      │
-│   Database bị quá tải khi có 100 người mua. Hãy click vào dòng đó!"    │
-│ • Sinh viên phải nhìn code ở Cột 2 và CLICK CHUỘT VÀO DÒNG 45!         │
-├────────────────────────────────────────────────────────────────────────┤
-│ BƯỚC 3: FEYNMAN PROVE (CHỨNG MINH BẢN CHẤT ĐÓNG KHUNG NỘI TẠI)         │
-│ • Khi click đúng dòng 45 ➔ Cột 3 mới mở hộp thoại Feynman:             │
-│   "Bạn hãy dùng một ví dụ đời thường (quán ăn, đi chợ) giải thích tại  │
-│   sao lệnh gọi ở dòng này lại gây nghẽn hệ thống?"                     │
-│ • Câu hỏi HOÀN TOÀN ĐÓNG KHUNG TRONG REPO, không hỏi lan man ngoài lề. │
+│ PHA 2: SOCRATIC FEYNMAN CHALLENGE (SÁT HẠCH BẢN CHẤT)                  │
+│ • AI Co-Architect đưa ra câu hỏi Socratic đóng khung trong đoạn code:  │
+│   "Dựa vào đoạn mã trên, hãy dùng một ví dụ đời thường (quán ăn, đi    │
+│   chợ) giải thích tại sao câu lệnh này làm máy chủ bị nghẽn I/O?"      │
+│ • Học viên nhập lời giải thích bình dân vào ô văn bản và bấm [Nộp Bài].│
+│ • Nếu chưa đạt: Hệ thống tung giàn giáo câu hỏi mồi qua 3 lần thử.     │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -464,64 +458,83 @@ $$\text{Obs} = \begin{cases} \text{Correct} & \text{nếu } \text{core\_accuracy
 
 ---
 
-### 9.2. Ví dụ Chạy Tay Bằng Số Cập Nhật Mạng Bayes (Numerical Dry-Run)
-Xét kỹ năng $k_5$: `DB_OPTIMIZATION` (N+1 Query).
-Tham số chuẩn hóa:
-* $P(L_0) = 0.20$ (Ban đầu coi như chưa vững).
-* $P(T) = 0.20$ (Tốc độ tiếp thu).
-* $P(G) = 0.15$ (Đoán mò trúng).
-* $P(S) = 0.05$ (Sơ suất bấm nhầm).
+### 9.2. Ví dụ Chạy Tay Bằng Số Cập Nhật Mạng Bayes (Numerical Dry-Run Trace)
+Xét kỹ năng $k_6$: `DB_OPTIMIZATION` (N+1 Query).
+Hệ thống tham số BKT chuẩn hóa:
+* $P(L_0) = 0.25$ (Xác suất tiên nghiệm làm chủ ban đầu).
+* $P(T \mid \text{Correct}) = 0.20$ (Tỷ lệ tiếp thu tri thức sau khi giải thích đúng).
+* $P(T \mid \text{Incorrect}) = 0.02$ (Tỷ lệ tiếp thu từ gợi ý khi trả lời sai).
+* $P(G) = 0.15$ (Xác suất đoán mò trúng).
+* $P(S) = 0.05$ (Xác suất sơ suất gõ thiếu ý).
 
-Sinh viên giải thích thành công bằng ví dụ quán ăn $\implies \text{Obs} = \text{Correct}$.
+#### TRƯỜNG HỢP A: Sinh viên giải thích ĐÚNG ($\text{Obs} = \text{Correct}$)
+1. Cập nhật Xác suất Hậu nghiệm $P(L_0 \mid \text{Correct})$:
+   $$P(L_0 \mid \text{Correct}) = \frac{P(L_0) \times (1 - P(S))}{P(L_0) \times (1 - P(S)) + (1 - P(L_0)) \times P(G)}$$
+   * Tử số: $0.25 \times (1 - 0.05) = 0.25 \times 0.95 = \mathbf{0.2375}$
+   * Mẫu số: $0.2375 + (1 - 0.25) \times 0.15 = 0.2375 + 0.75 \times 0.15 = 0.2375 + 0.1125 = \mathbf{0.3500}$
+   * Xác suất hậu nghiệm:
+     $$P(L_0 \mid \text{Correct}) = \frac{0.2375}{0.3500} \approx \mathbf{0.6786}$$
+2. Bước Chuyển trạng thái Tiếp thu có Điều kiện $P(L_1)$:
+   $$P(L_1) = P(L_0 \mid \text{Correct}) + \Big(1 - P(L_0 \mid \text{Correct})\Big) \times P(T \mid \text{Correct})$$
+   $$P(L_1) = 0.6786 + (1 - 0.6786) \times 0.20 = 0.6786 + 0.3214 \times 0.20 = 0.6786 + 0.0643 = \mathbf{0.7429}$$
+* **Kết luận:** $P(L_t)$ **tăng vọt từ $0.25 \to 0.7429$** ($+49.3\%$).
 
-#### BƯỚC 1: Cập nhật Xác suất Hậu nghiệm $P(L_0 \mid \text{Correct})$
-$$P(L_0 \mid \text{Correct}) = \frac{P(L_0) \times (1 - P(S))}{P(L_0) \times (1 - P(S)) + (1 - P(L_0)) \times P(G)}$$
-
-Thay số:
-* Tử số: $0.20 \times (1 - 0.05) = 0.20 \times 0.95 = \mathbf{0.190}$
-* Mẫu số: $0.190 + (1 - 0.20) \times 0.15 = 0.190 + (0.80 \times 0.15) = 0.190 + 0.120 = \mathbf{0.310}$
-* Xác suất cập nhật:
-  $$P(L_0 \mid \text{Correct}) = \frac{0.190}{0.310} \approx \mathbf{0.6129}$$
-
-#### BƯỚC 2: Tính Bước Tiếp Thu Cho Lần Kế Tiếp $P(L_1)$
-$$P(L_1) = P(L_0 \mid \text{Correct}) + \Big(1 - P(L_0 \mid \text{Correct})\Big) \times P(T)$$
-$$P(L_1) = 0.6129 + (1 - 0.6129) \times 0.20 = 0.6129 + (0.3871 \times 0.20) = 0.6129 + 0.0774 = \mathbf{0.6903}$$
+#### TRƯỜNG HỢP B: Sinh viên giải thích SAI ($\text{Obs} = \text{Incorrect}$)
+1. Cập nhật Xác suất Hậu nghiệm $P(L_0 \mid \text{Incorrect})$:
+   $$P(L_0 \mid \text{Incorrect}) = \frac{P(L_0) \times P(S)}{P(L_0) \times P(S) + (1 - P(L_0)) \times (1 - P(G))}$$
+   * Tử số: $0.25 \times 0.05 = \mathbf{0.0125}$
+   * Mẫu số: $0.0125 + (1 - 0.25) \times (1 - 0.15) = 0.0125 + 0.75 \times 0.85 = 0.0125 + 0.6375 = \mathbf{0.6500}$
+   * Xác suất hậu nghiệm:
+     $$P(L_0 \mid \text{Incorrect}) = \frac{0.0125}{0.6500} \approx \mathbf{0.0192}$$
+2. Bước Chuyển trạng thái Tiếp thu có Điều kiện với $P(T \mid \text{Incorrect}) = 0.02$:
+   $$P(L_1) = P(L_0 \mid \text{Incorrect}) + \Big(1 - P(L_0 \mid \text{Incorrect})\Big) \times P(T \mid \text{Incorrect})$$
+   $$P(L_1) = 0.0192 + (1 - 0.0192) \times 0.02 = 0.0192 + 0.9808 \times 0.02 = 0.0192 + 0.0196 = \mathbf{0.0388}$$
+* **Kết luận:** $P(L_t)$ **giảm mạnh từ $0.25 \to 0.0388$** ($-21.1\%$).
+* **Chứng minh:** Thỏa mãn nghiêm ngặt bất đẳng thức $P(L_1 \mid \text{Incorrect}) < 0.25$, triệt tiêu hoàn toàn nghịch lý của công thức cũ dùng $P(T) = 0.20$ cố định làm điểm bị tăng lên $0.2116$.
 
 ---
 
-### 9.3. Thang Tiến Hóa Câu Hỏi 3 Bậc (3-Tier Escalation)
-Sau câu trả lời trên, điểm số của sinh viên tăng từ $0.20 \to \mathbf{0.69}$:
+### 9.3. Ma Trận Điều Phối Độ Khó 3 Bậc (3-Tier Escalation) & Fast-Track Auto-Pass
+
+#### 1. Công thức Điểm Đại diện Node Đa Kỹ năng (Weakest-Link Principle):
+$$P_{\text{node}}(u) = \min_{k \in \mathcal{K}_u} P(L_t, k)$$
+
+#### 2. Bảng Phân định 4 Ngưỡng Không Chồng Lấn:
 
 ```text
 ┌──────────────────────────┬───────────────────────┬─────────────────────────────────────┐
 │ CẤP ĐỘ NHẬN THỨC         │ NGƯỠNG NĂNG LỰC       │ DẠNG CÂU HỎI SOCRATIC FEYNMAN       │
 ├──────────────────────────┼───────────────────────┼─────────────────────────────────────┤
-│ TIER 1: NOVICE           │ P(L_t) < 0.50         │ DATA-FLOW TRACING                   │
-│ (Người mới bắt đầu)      │                       │ Truy vết đường đi của biến số.      │
+│ TIER 1: NOVICE           │ P_node < 0.45         │ DATA-FLOW TRACING                   │
+│ (Người mới bắt đầu)      │                       │ Truy vết đường đi của biến số, DTO. │
 ├──────────────────────────┼───────────────────────┼─────────────────────────────────────┤
-│ TIER 2: PRACTITIONER     │ 0.50 ≤ P(L_t) < 0.85  │ DESIGN CRITIQUE & AI SMELLS         │
+│ TIER 2: PRACTITIONER     │ 0.45 ≤ P_node < 0.75  │ DESIGN CRITIQUE & AI SMELLS         │
 │ (Lập trình viên thực thụ)│                       │ Bắt bệnh N+1 query, thiếu rollback. │
 ├──────────────────────────┼───────────────────────┼─────────────────────────────────────┤
-│ TIER 3: MASTER/ARCHITECT │ P(L_t) ≥ 0.85         │ DEEP INVARIANTS & CONCURRENCY EDGE  │
+│ TIER 3: ARCHITECT        │ 0.75 ≤ P_node < 0.92  │ DEEP INVARIANTS & CONCURRENCY EDGE  │
 │ (Kỹ sư trưởng kiến trúc) │                       │ Race Condition, Dead-lock, ACID.    │
+├──────────────────────────┼───────────────────────┼─────────────────────────────────────┤
+│ FAST-TRACK AUTO-PASS     │ P_node ≥ 0.92         │ MIỄN THI HOÀN TOÀN (EXEMPT)         │
+│ (Đã làm chủ Architect)   │ (Tất cả k ∈ K_u)      │ Mở khóa tức thì (0 Token, 0ms).     │
 └──────────────────────────┴───────────────────────┴─────────────────────────────────────┘
 ```
 
-* Ban đầu điểm $0.20 < 0.50 \implies$ Hệ thống xếp ở **Tier 1 (Novice)**.
-* Sau khi trả lời đúng, điểm đạt $0.69 \implies$ Hệ thống **tự động thăng cấp lên Tier 2 (Practitioner)**!
-* Ở Node tiếp theo, AI sẽ tự động kích hoạt câu hỏi phân tích kiến trúc sâu sắc hơn, không còn hỏi câu đơn giản nữa!
+* Người học ban đầu có $P(L_0) = 0.25 < 0.45 \implies$ Hệ thống xếp ở **Tier 1 (Novice)**.
+* Sau khi giải thích đúng, điểm tăng lên $0.7429 \in [0.45, 0.75) \implies$ Tự động thăng cấp lên **Tier 2 (Practitioner)**!
+* Nếu tiếp tục vượt qua câu hỏi Tier 2, điểm vượt $0.75 \implies$ Nâng lên **Tier 3 (Architect)**.
+* Nếu ở dự án trước đã đạt $\ge 0.92$ ở tất cả kỹ năng cấu thành $\implies$ Kích hoạt **Fast-Track Auto-Pass**, tự động đánh dấu Node `COMPLETED (AUTO-PASS)` mà không cần gọi AI.
 
 ---
 
 ### 9.4. Công thức Bán Rã Trí Nhớ (Half-Life Decay) Sau 30 Ngày
-Giả sử sinh viên đạt đỉnh cao Master với $P(L_{\text{last}}) = 0.95$.
+Giả sử sinh viên từng đạt đỉnh cao với $P(L_{\text{last}}) = 0.95$.
 Sau $\Delta t = 30 \text{ ngày}$ không ôn tập, với chu kỳ bán rã $h = 14 \text{ ngày}$:
 
 $$P(L_{\text{current}}) = P(L_{\text{last}}) \times 2^{-\frac{\Delta t}{h}} = 0.95 \times 2^{-\frac{30}{14}} = 0.95 \times 2^{-2.143}$$
-$$2^{-2.143} \approx 0.2264 \implies P(L_{\text{current}}) = 0.95 \times 0.2264 = \mathbf{0.215}$$
+$$2^{-2.143} \approx 0.2264 \implies P(L_{\text{current}}) = 0.95 \times 0.2264 = \mathbf{0.215} < 0.45$$
 
 * **Hiện tượng:** Điểm số tụt từ $0.95$ xuống còn **$0.215$ (Rớt về lại Tier 1)**!
-* **Giao diện:** Node đổi sang viền **VÀNG CAM**. AI kích hoạt câu hỏi ôn tập điểm mù cũ ngay lập tức khi người học quay lại!
+* **Giao diện:** Node đổi sang viền **VÀNG CAM (Decay Warning)**. AI kích hoạt câu hỏi ôn tập điểm mù cũ ngay lập tức khi người học quay lại!
 
 ---
 

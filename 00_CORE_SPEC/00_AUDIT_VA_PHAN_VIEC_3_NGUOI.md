@@ -66,11 +66,11 @@
    - Đã định nghĩa TypeScript Interfaces chuẩn xác: `NodeStatus`, `ExecutionTraceStep`, `UncleBobMetrics`, `HybridArchitecturalNode`, `ContextSandwichPayload`, `EnrichedSliceResponse`, `FeynmanEvaluationResult`, `CognitiveSkillState`.
    - Có đầy đủ 16 kỹ năng SWE chuẩn trong ma trận $q$-Matrix.
 2. **Những điểm còn mơ hồ, rườm rà hoặc mâu thuẫn:**
-   - Cần bổ sung kiểu dữ liệu cho sự kiện người dùng click vào dòng code ở Cột 2 (`CodeLineClickEvent`).
+   - Cần đồng bộ kiểu dữ liệu cho giao diện Buồng lái Socratic (Cockpit Socratic Card).
 3. **Những phần đang thiếu thốn cần bổ sung gấp:**
    - Interface cho thông số Fallback Mock JSON phòng khi mất mạng (`OfflineMockBundle`).
 4. **Checklist giao việc cụ thể cho NGƯỜI 1:**
-   - [ ] Bổ sung interface `OfflineMockBundle` và `CodeLineClickEvent`.
+   - [ ] Bổ sung interface `OfflineMockBundle`.
    - [ ] Đóng băng hợp đồng dữ liệu, gửi cho Người 2 và Người 3 để bắt đầu triển khai code mà không bị lệch kiểu.
 
 ---

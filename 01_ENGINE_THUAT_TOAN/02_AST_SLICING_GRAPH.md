@@ -150,3 +150,18 @@ Hệ thống không đóng cứng vào mô hình Web Backend mà chuẩn hóa th
   * Thuật toán PageRank và Tarjan đặt **Ngân sách hiển thị mặc định: Top 6 – 8 Node trục chính (Architectural Backbone)**.
   * Các file tiện ích hoặc hàm phụ trợ cấp thấp được gom cụm (Collapse) vào các Node cha, hỗ trợ người dùng click bung rộng (Sub-graph Expand) khi cần xem chi tiết.
 
+---
+
+### 2.8. Gán Nhãn Tĩnh Sơ Bộ (`preliminary_skills`) Phục Vụ Fast-Track Auto-Pass (Khử đứt mạch Hợp đồng)
+* Để Động cơ Bayes (Tầng 5) và Client UI có thể kiểm tra điều kiện Fast-Track Auto-Pass ($P_{\text{node}} \ge 0.92$) ngay khi mở khóa Node mà **hoàn toàn không cần tốn token gọi AI** (`/api/enrich-node`):
+  * Tầng 2 khi duyệt AST của từng Node áp dụng bảng quy tắc Heuristics tĩnh để gán mảng `preliminary_skills: SWESkill[]` (từ 1 đến 3 kỹ năng) trực tiếp vào đối tượng `HybridArchitecturalNode`.
+  * **Quy tắc gán nhãn nhanh (0 Token, 0ms):**
+    - Nếu lát cắt chứa decorator route (`@Get`, `@Post`, `router.`) $\implies$ Gán `HTTP_ROUTING`.
+    - Nếu lát cắt chứa schema validation (Zod, class-validator) $\implies$ Gán `DTO_VALIDATION`.
+    - Nếu lát cắt chứa query DB trong vòng lặp (`for`, `map`, `forEach`) $\implies$ Gán `DB_OPTIMIZATION`.
+    - Nếu lát cắt chứa `async/await`, `Promise.all` $\implies$ Gán `ASYNC_CONCURRENCY`.
+    - Nếu lát cắt chứa transaction (`queryRunner`, `startTransaction`) $\implies$ Gán `TRANSACTION_INTEGRITY`.
+    - Nếu là `ALGORITHMIC_CORE` có Cognitive Complexity > 15 $\implies$ Gán `ALGORITHMIC_COMPLEXITY`.
+  * Đầu ra `StaticEngineResult.nodes` của Người 2 cam kết xuất trường `preliminary_skills` đầy đủ 100% cho từng Node để Người 1 và Người 3 sử dụng tức thì, đảm bảo tính liên tục của luồng dữ liệu (Pipeline Continuity).
+
+
