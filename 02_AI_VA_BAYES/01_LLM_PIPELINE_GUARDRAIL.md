@@ -42,7 +42,7 @@ sequenceDiagram
     Gate-->>C3: Nạp dữ liệu vào Buồng lái Socratic (Hiển thị Code Flashpoint & Câu hỏi)
 
     Note over User, Bayes: THỜI ĐIỂM 2: NỘP BÀI GIẢI THÍCH FEYNMAN
-    User->>C3: Nhập lời giải thích bằng ẩn dụ đời thường ➔ Bấm [Nộp Bài]
+    User->>C3: Nhập lời giải thích bằng lời của mình (ẩn dụ đời thường là điểm cộng) ➔ Bấm [Nộp Bài]
     C3->>Backend: Gọi POST /api/evaluate-feynman
     Backend->>Gemini: Gửi câu hỏi + Lời giải thích của người học
     Gemini-->>Backend: Trả về Rubric { core_accuracy, simplicity, is_passed }
@@ -127,7 +127,7 @@ Prompt yêu cầu Gemini tự nhẩm qua trường `_internal_reasoning` và l�
 
 | Chế độ Node | Điều kiện Kích hoạt | Yêu cầu Kỹ thuật Sư phạm trong CoT |
 | :--- | :--- | :--- |
-| **Chế độ A: Web Business Flow** | Mặc định (`node_type !== "ALGORITHMIC_CORE"`) | • Phân tích mẫu thiết kế (`identified_pattern`) và lý do phân tầng (`why_it_works`).<br>• Trích xuất `execution_steps` tuần tự kèm tọa độ dòng highlight.<br>• Đóng gói thử thách Socratic Feynman (`socratic_challenge`) yêu cầu người học dùng ví dụ đời thường để giải thích bản chất kiến trúc. |
+| **Chế độ A: Web Business Flow** | Mặc định (`node_type !== "ALGORITHMIC_CORE"`) | • Phân tích mẫu thiết kế (`identified_pattern`) và lý do phân tầng (`why_it_works`).<br>• Trích xuất `execution_steps` tuần tự kèm tọa độ dòng highlight.<br>• Đóng gói thử thách Socratic Feynman (`socratic_challenge`) yêu cầu người học giải thích **vì sao code được thiết kế như vậy**, bám vào hàm/biến cụ thể trong snippet; khuyến khích dùng ví dụ đời thường. |
 | **Chế độ B: Algorithmic Core VIP** | `node_type === "ALGORITHMIC_CORE"` (Cognitive Complexity > 15) | • Không hỏi N+1 query web thông thường.<br>• CoT nhẩm theo 3 góc độ: (1) Điều kiện biên gãy vỡ (Edge-cases, chu trình vô hạn, trọng số âm), (2) Thắt cổ chai Big-O (so sánh cấu trúc mảng vs Heap/Tree), (3) Ẩn dụ Feynman về cấu trúc dữ liệu. |
 
 #### Nội dung System Prompt Chuẩn:
@@ -139,7 +139,7 @@ NHIỆM VỤ: Phân tích đoạn code được cung cấp và xuất dữ liệ
    - Xác định identified_pattern và lý do thiết kế why_it_works.
    - Trích xuất execution_steps (mỗi bước gồm: step_index, label, file_path, highlight_lines: number[]).
 2. Đóng gói thử thách sư phạm vào socratic_challenge:
-   - feynman_question: Câu hỏi Socratic yêu cầu dùng ví dụ đời thường (quán ăn, đi chợ, giao thông) để giải thích bản chất luồng thực thi hoặc điểm thắt cổ chai theo cấp độ ${learner_tier}.
+   - feynman_question: Câu hỏi Socratic yêu cầu người học giải thích VÌ SAO luồng thực thi hoặc điểm thắt cổ chai trong đoạn code này được viết như vậy, theo cấp độ ${learner_tier}. Câu hỏi phải nhắc tới ít nhất 1 hàm/biến/dòng có thật trong snippet. Có thể gợi ý (không bắt buộc) dùng ví dụ đời thường (quán ăn, đi chợ, giao thông).
    - smell_reveal_after_attempt: Phân tích kỹ thuật chi tiết và giải pháp kiến trúc chuẩn mực (ẩn đi cho đến khi học viên hoàn thành hoặc sau 3 lần thử).
 3. Ràng buộc:
    - referenced_symbols: 100% phải là tên biến/hàm/lớp có thật trong snippet.
@@ -286,19 +286,28 @@ export interface EvaluateFeynmanRequest {
 BẠN LÀ: Giám khảo Chấm thi Sư phạm Feynman trong SimpliFey V2 Pro.
 NHIỆM VỤ: Đánh giá câu trả lời của sinh viên cho câu hỏi kiến trúc dựa trên đoạn code mục tiêu.
 
+NGƯỜI HỌC: sinh viên IT, vibecoder hoặc người trái ngành đang muốn hiểu đoạn code (thường do AI viết).
+Chấp nhận mọi cách diễn đạt: lời bình dân, ẩn dụ, hay thuật ngữ chuyên ngành đều được.
+
 RUBRIC CHẤM ĐIỂM (0 - 100):
-1. core_accuracy (0 - 100):
-   - 90 - 100: Hiểu đúng bản chất kỹ thuật (Nghẽn I/O Database, Round-trip overhead, Race Condition).
-   - 60 - 80: Đúng hướng nhưng diễn giải chưa gãy gọn.
-   - < 60: Sai lệch bản chất kỹ thuật.
-2. simplicity (0 - 100):
-   - 90 - 100: Sử dụng ẩn dụ đời thường trực quan (quán ăn, đi chợ, giao thông), không lạm dụng thuật ngữ.
-   - 60 - 80: Có dùng ví dụ nhưng vẫn chêm thuật ngữ chưa giải nghĩa.
-   - < 60: Nói vẹt nguyên văn sách giáo khoa, không có tính chuyển hóa tri thức.
+1. core_accuracy (0 - 100) — TIÊU CHÍ QUYẾT ĐỊNH ĐẠT/TRƯỢT:
+   - 90 - 100: Giải thích đúng VÌ SAO code được viết như vậy (VD: nghẽn I/O Database, round-trip, race condition)
+               VÀ bám đúng code thật (nhắc đúng hàm/biến/luồng trong snippet).
+   - 60 - 80: Đúng hướng nhưng còn thiếu ý, hoặc nói đúng lý thuyết mà không gắn được vào đoạn code này.
+   - < 60: Sai bản chất, hoặc chỉ đọc thuộc định nghĩa/thuật ngữ mà không giải thích được trong code này.
+2. simplicity (0 - 100) — ĐIỂM CỘNG, KHÔNG ảnh hưởng Đạt/Trượt:
+   - 90 - 100: Có ẩn dụ đời thường trực quan (quán ăn, đi chợ, giao thông) giúp người ngoài ngành hiểu.
+   - 60 - 80: Diễn đạt rõ ràng nhưng chưa có ví dụ đời thường.
+   - < 60: Khó hiểu, rời rạc.
+   - Dùng thuật ngữ chuyên ngành KHÔNG bị trừ điểm.
 
 QUY TẮC ĐẠT (PASS):
-is_passed = true NẾU VÀ CHỈ NẾU (core_accuracy >= 70 && simplicity >= 70).
+is_passed = true NẾU VÀ CHỈ NẾU core_accuracy >= 70.
+(Backend tự tính lại is_passed từ core_accuracy, không tin trường is_passed do model trả về.)
 ```
+
+> [!NOTE]
+> **Vì sao ẩn dụ chỉ là điểm cộng:** Mục tiêu sản phẩm là giúp người dùng **hiểu code AI viết và vì sao nó được viết như vậy**, không phải luyện diễn đạt. Một người trả lời đúng bằng thuật ngữ ("đây là N+1 query, nên gom lại thành bulk update") đã hiểu thật và phải được Đạt. Việc chống "học vẹt" chuyển sang tiêu chí **bám code** trong `core_accuracy`: đọc thuộc định nghĩa mà không chỉ ra được nó nằm ở đâu trong đoạn code này thì vẫn Trượt.
 
 ---
 
@@ -313,6 +322,7 @@ is_passed = true NẾU VÀ CHỈ NẾU (core_accuracy >= 70 && simplicity >= 70)
   "detected_jargons": []
 }
 ```
+* `detected_jargons`: chỉ để hiển thị gợi ý (VD: giải nghĩa thuật ngữ cho người trái ngành), **không dùng để trừ điểm**.
 
 #### Sơ đồ Xử lý Trạng thái & Đổi màu Node:
 
