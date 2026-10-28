@@ -448,13 +448,12 @@ flowchart TD
 # CHƯƠNG 9: MÔ HÌNH HÓA NHẬN THỨC BKT, q-MATRIX & THANG TIẾN HÓA 3 BẬC
 
 ### 9.1. Quy tắc Ánh xạ Rubric sang Quan sát BKT
-Mỗi câu trả lời của sinh viên được Gemini chấm theo 3 cột điểm:
-* `core_accuracy` $\in [0, 100]$: Điểm chính xác bản chất kỹ thuật.
-* `simplicity` $\in [0, 100]$: Điểm bình dân, không nói vẹt.
-* `analogy_grounding` $\in [0, 100]$: Điểm sát thực tế đời thường.
+Mỗi câu trả lời của sinh viên được Gemini chấm theo rubric:
+* `core_accuracy` $\in [0, 100]$: Điểm chính xác bản chất kỹ thuật và bám code thật (tiêu chí duy nhất quyết định Đạt/Trượt).
+* `simplicity` $\in [0, 100]$: Điểm cộng về mức độ bình dân, ẩn dụ đời thường (không ảnh hưởng Đạt/Trượt).
 
 Trạng thái quan sát của BKT:
-$$\text{Obs} = \begin{cases} \text{Correct} & \text{nếu } \text{core\_accuracy} \ge 70 \text{ VÀ } \text{simplicity} \ge 70 \\ \text{Incorrect} & \text{ngược lại} \end{cases}$$
+$$\text{Obs} = \begin{cases} \text{Correct} & \text{nếu } \text{core\_accuracy} \ge 70 \\ \text{Incorrect} & \text{ngược lại} \end{cases}$$
 
 ---
 
@@ -462,34 +461,34 @@ $$\text{Obs} = \begin{cases} \text{Correct} & \text{nếu } \text{core\_accuracy
 Xét kỹ năng $k_6$: `DB_OPTIMIZATION` (N+1 Query).
 Hệ thống tham số BKT chuẩn hóa:
 * $P(L_0) = 0.25$ (Xác suất tiên nghiệm làm chủ ban đầu).
-* $P(T \mid \text{Correct}) = 0.20$ (Tỷ lệ tiếp thu tri thức sau khi giải thích đúng).
-* $P(T \mid \text{Incorrect}) = 0.02$ (Tỷ lệ tiếp thu từ gợi ý khi trả lời sai).
-* $P(G) = 0.15$ (Xác suất đoán mò trúng).
-* $P(S) = 0.05$ (Xác suất sơ suất gõ thiếu ý).
+* $P(T \mid \text{Correct}) = 0.08$ (Tỷ lệ tiếp thu tri thức sau khi giải thích đúng).
+* $P(T \mid \text{Incorrect}) = 0.03$ (Tỷ lệ tiếp thu từ gợi ý khi trả lời sai).
+* $P(G) = 0.25$ (Xác suất đoán mò / ăn may trúng rubric).
+* $P(S) = 0.12$ (Xác suất sơ suất gõ thiếu ý / chấm nhiễu).
 
 #### TRƯỜNG HỢP A: Sinh viên giải thích ĐÚNG ($\text{Obs} = \text{Correct}$)
 1. Cập nhật Xác suất Hậu nghiệm $P(L_0 \mid \text{Correct})$:
    $$P(L_0 \mid \text{Correct}) = \frac{P(L_0) \times (1 - P(S))}{P(L_0) \times (1 - P(S)) + (1 - P(L_0)) \times P(G)}$$
-   * Tử số: $0.25 \times (1 - 0.05) = 0.25 \times 0.95 = \mathbf{0.2375}$
-   * Mẫu số: $0.2375 + (1 - 0.25) \times 0.15 = 0.2375 + 0.75 \times 0.15 = 0.2375 + 0.1125 = \mathbf{0.3500}$
+   * Tử số: $0.25 \times (1 - 0.12) = 0.25 \times 0.88 = \mathbf{0.2200}$
+   * Mẫu số: $0.2200 + (1 - 0.25) \times 0.25 = 0.2200 + 0.75 \times 0.25 = 0.2200 + 0.1875 = \mathbf{0.4075}$
    * Xác suất hậu nghiệm:
-     $$P(L_0 \mid \text{Correct}) = \frac{0.2375}{0.3500} \approx \mathbf{0.6786}$$
+     $$P(L_0 \mid \text{Correct}) = \frac{0.2200}{0.4075} \approx \mathbf{0.5399}$$
 2. Bước Chuyển trạng thái Tiếp thu có Điều kiện $P(L_1)$:
    $$P(L_1) = P(L_0 \mid \text{Correct}) + \Big(1 - P(L_0 \mid \text{Correct})\Big) \times P(T \mid \text{Correct})$$
-   $$P(L_1) = 0.6786 + (1 - 0.6786) \times 0.20 = 0.6786 + 0.3214 \times 0.20 = 0.6786 + 0.0643 = \mathbf{0.7429}$$
-* **Kết luận:** $P(L_t)$ **tăng vọt từ $0.25 \to 0.7429$** ($+49.3\%$).
+   $$P(L_1) = 0.5399 + (1 - 0.5399) \times 0.08 = 0.5399 + 0.4601 \times 0.08 = 0.5399 + 0.0368 = \mathbf{0.5767}$$
+* **Kết luận:** $P(L_t)$ **tăng từ $0.25 \to 0.5767$** ($+32.7\%$), lên đúng **Tier 2 (Practitioner)**.
 
 #### TRƯỜNG HỢP B: Sinh viên giải thích SAI ($\text{Obs} = \text{Incorrect}$)
 1. Cập nhật Xác suất Hậu nghiệm $P(L_0 \mid \text{Incorrect})$:
    $$P(L_0 \mid \text{Incorrect}) = \frac{P(L_0) \times P(S)}{P(L_0) \times P(S) + (1 - P(L_0)) \times (1 - P(G))}$$
-   * Tử số: $0.25 \times 0.05 = \mathbf{0.0125}$
-   * Mẫu số: $0.0125 + (1 - 0.25) \times (1 - 0.15) = 0.0125 + 0.75 \times 0.85 = 0.0125 + 0.6375 = \mathbf{0.6500}$
+   * Tử số: $0.25 \times 0.12 = \mathbf{0.0300}$
+   * Mẫu số: $0.0300 + (1 - 0.25) \times (1 - 0.25) = 0.0300 + 0.75 \times 0.75 = 0.0300 + 0.5625 = \mathbf{0.5925}$
    * Xác suất hậu nghiệm:
-     $$P(L_0 \mid \text{Incorrect}) = \frac{0.0125}{0.6500} \approx \mathbf{0.0192}$$
-2. Bước Chuyển trạng thái Tiếp thu có Điều kiện với $P(T \mid \text{Incorrect}) = 0.02$:
+     $$P(L_0 \mid \text{Incorrect}) = \frac{0.0300}{0.5925} \approx \mathbf{0.0506}$$
+2. Bước Chuyển trạng thái Tiếp thu có Điều kiện với $P(T \mid \text{Incorrect}) = 0.03$:
    $$P(L_1) = P(L_0 \mid \text{Incorrect}) + \Big(1 - P(L_0 \mid \text{Incorrect})\Big) \times P(T \mid \text{Incorrect})$$
-   $$P(L_1) = 0.0192 + (1 - 0.0192) \times 0.02 = 0.0192 + 0.9808 \times 0.02 = 0.0192 + 0.0196 = \mathbf{0.0388}$$
-* **Kết luận:** $P(L_t)$ **giảm mạnh từ $0.25 \to 0.0388$** ($-21.1\%$).
+   $$P(L_1) = 0.0506 + (1 - 0.0506) \times 0.03 = 0.0506 + 0.9494 \times 0.03 = 0.0506 + 0.0285 = \mathbf{0.0791}$$
+* **Kết luận:** $P(L_t)$ **giảm từ $0.25 \to 0.0791$** ($-17.1\%$).
 * **Chứng minh:** Thỏa mãn nghiêm ngặt bất đẳng thức $P(L_1 \mid \text{Incorrect}) < 0.25$, triệt tiêu hoàn toàn nghịch lý của công thức cũ dùng $P(T) = 0.20$ cố định làm điểm bị tăng lên $0.2116$.
 
 ---
@@ -520,8 +519,9 @@ $$P_{\text{node}}(u) = \min_{k \in \mathcal{K}_u} P(L_t, k)$$
 ```
 
 * Người học ban đầu có $P(L_0) = 0.25 < 0.45 \implies$ Hệ thống xếp ở **Tier 1 (Novice)**.
-* Sau khi giải thích đúng, điểm tăng lên $0.7429 \in [0.45, 0.75) \implies$ Tự động thăng cấp lên **Tier 2 (Practitioner)**!
-* Nếu tiếp tục vượt qua câu hỏi Tier 2, điểm vượt $0.75 \implies$ Nâng lên **Tier 3 (Architect)**.
+* Sau khi giải thích đúng lần 1, điểm tăng lên $0.5767 \in [0.45, 0.75) \implies$ Tự động thăng cấp lên **Tier 2 (Practitioner)**!
+* Nếu tiếp tục vượt qua câu hỏi Tier 2 (lần 2), điểm đạt $0.8413 \in [0.75, 0.92) \implies$ Nâng lên **Tier 3 (Architect)**.
+* Người học cần trả lời đúng liên tiếp 3 lần ($0.25 \to 0.5767 \to 0.8413 \to 0.9532 \ge 0.92$) để kích hoạt **Fast-Track Auto-Pass** (miễn thi ở các Node sau chứa kỹ năng này).
 * Nếu ở dự án trước đã đạt $\ge 0.92$ ở tất cả kỹ năng cấu thành $\implies$ Kích hoạt **Fast-Track Auto-Pass**, tự động đánh dấu Node `COMPLETED (AUTO-PASS)` mà không cần gọi AI.
 
 ---

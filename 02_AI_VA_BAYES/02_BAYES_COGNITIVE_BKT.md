@@ -44,66 +44,39 @@ Hệ thống định lượng trình độ người học trên không gian véc
 * **Bản chất vấn đề:** Nếu phải chờ Gemini Flash phân tích ở `/api/enrich-node` mới có danh sách kỹ năng, hệ thống buộc phải tiêu tốn token và chịu độ trễ $1.5\text{s}$ trước khi biết người học có đủ điều kiện miễn thi hay không.
 * **Giải pháp Kỹ thuật:**
   1. Tại **Tầng 2 (Static AST Parsing - 0 Token, < 1.5s)**: Parser tự động đối sánh mã nguồn Node với bảng heuristics ở trên để gán mảng `preliminary_skills: SWESkill[]` (từ 1 đến 3 kỹ năng) vào metadata của từng Node trên đồ thị DAG.
-  2. Ngay khi Node được mở khóa: Client Zustand Store kiểm tra trực tiếp điều kiện Auto-Pass ($\ge 0.92$) với `preliminary_skills`. Nếu thỏa mãn, Node lập tức chuyển sang trạng thái hoàn thành mà **hoàn toàn không cần gọi API AI**.
+  2. Ngay khi Node **đủ điều kiện mở khóa** (mọi node cha đã COMPLETED hoặc FAILED): Client Zustand Store kiểm tra điều kiện Auto-Pass ($\ge 0.92$, tính trên điểm **đã decay**) với `preliminary_skills`. Nếu thỏa mãn (và node không bị Capstone Lock, Mục 3.3), Node chuyển thẳng sang `COMPLETED` với `is_auto_mastered = true` mà **hoàn toàn không cần gọi API AI**; ngược lại chuyển sang `AVAILABLE`.
+  3. AI chỉ được chọn `target_skills` **trong** `preliminary_skills` (Cổng gác kiểm tra, xem `01_LLM_PIPELINE_GUARDRAIL.md` Mục 3), để BKT cập nhật đúng tập kỹ năng mà Fast-Track xét.
 
 ---
 
-### 1.3. Cấu trúc Dữ liệu Lưu trữ `UserCognitiveState` (Local Storage / Zustand)
+### 1.3. Cấu trúc Dữ liệu Lưu trữ `LearnerCognitiveProfile` (localStorage / Zustand)
 
-```typescript
-export type SWESkill =
-  | "HTTP_ROUTING" | "DTO_VALIDATION" | "AUTH_SECURITY" | "DEPENDENCY_INJECTION"
-  | "LAYERED_SEPARATION" | "DB_OPTIMIZATION" | "ASYNC_CONCURRENCY" | "TRANSACTION_INTEGRITY"
-  | "ERROR_HANDLING" | "STATE_MANAGEMENT" | "ALGORITHMIC_COMPLEXITY" | "MEMORY_MANAGEMENT"
-  | "API_CONTRACT_DESIGN" | "CACHING_STRATEGY" | "RATE_LIMIT_RESILIENCE" | "DATA_SERIALIZATION";
+Kiểu dữ liệu định nghĩa duy nhất trong [`00_CORE_SPEC/02_DATA_CONTRACTS.md`](../00_CORE_SPEC/02_DATA_CONTRACTS.md) Mục 3: `SWESkill`, `CognitiveSkillState`, `NodeProgressRecord`, `LearnerCognitiveProfile`. Quy tắc quan trọng: `p_mastery` là giá trị **gốc** sau lần cập nhật BKT gần nhất; giá trị đã decay **không được lưu**, chỉ tính khi đọc (Mục 2.4).
 
-/** Kết quả cuối cùng của Node sau tất cả các lần thử */
-export type NodeOutcome =
-  | "PASS_FIRST"       // Đạt ngay lần 1, không cần gợi ý
-  | "PASS_AFTER_HINT"  // Đạt sau khi nhận gợi ý (lần 2 hoặc 3)
-  | "FAILED";          // Hết 3 lần vẫn chưa đạt
-
-export interface SkillMasteryRecord {
-  p_mastery: number;                // Xác suất làm chủ P(L_t) ∈ [0.0, 1.0] — giá trị RAW, không bao gồm decay
-  last_practiced_timestamp: number; // Unix timestamp tính bằng mili-giây
-  practice_count: number;           // Tổng số lần nộp bài liên quan đến skill này
-  correct_count: number;            // Số lần trả lời đạt
-}
-
-export interface UserCognitiveState {
-  user_id: string;
-  last_updated_timestamp: number;
-  skills: Record<SWESkill, SkillMasteryRecord>;
-  node_history: Record<string, {
-    node_id: string;
-    status: "LOCKED" | "AVAILABLE" | "COMPLETED" | "FAILED";
-    outcome: NodeOutcome | null;    // null khi chưa có kết quả cuối cùng
-    is_auto_mastered: boolean;
-    primary_skill: SWESkill | null; // Kỹ năng chính được hỏi tại Node này
-    attempt_count: number;          // Tổng số lần thử (tối đa 3)
-    last_attempt_timestamp: number;
-  }>;
-}
-```
+> [!IMPORTANT]
+> **Đề xuất bổ sung contract (chưa có trong `02_DATA_CONTRACTS.md`, cần NGƯỜI 1 thêm vào):** kiểu `NodeOutcome = "PASS_FIRST" | "PASS_AFTER_HINT" | "FAILED"` (Mục 2.1a); và 3 trường của `NodeProgressRecord`: `outcome: NodeOutcome | null`, `primary_skill: SWESkill | null` (Mục 2.1b), `remediation_count: number` (số lần đã Ôn lại trong phiên, Mục 2.1c). Danh sách đầy đủ ở Phụ lục cuối `01_LLM_PIPELINE_GUARDRAIL.md`.
 
 ```json
 {
   "user_id": "usr_dev_4091",
-  "last_updated_timestamp": 1774000000000,
+  "overall_tier": "PRACTITIONER",
+  "last_updated_at": 1774000000000,
   "skills": {
-    "HTTP_ROUTING": { "p_mastery": 0.82, "last_practiced_timestamp": 1773900000000, "practice_count": 4, "correct_count": 3 },
-    "DB_OPTIMIZATION": { "p_mastery": 0.25, "last_practiced_timestamp": 1773800000000, "practice_count": 1, "correct_count": 0 },
-    "ASYNC_CONCURRENCY": { "p_mastery": 0.74, "last_practiced_timestamp": 1773950000000, "practice_count": 3, "correct_count": 3 }
+    "HTTP_ROUTING": { "skill": "HTTP_ROUTING", "p_mastery": 0.82, "last_practiced_at": 1773900000000, "practice_count": 4, "correct_count": 3 },
+    "DB_OPTIMIZATION": { "skill": "DB_OPTIMIZATION", "p_mastery": 0.25, "last_practiced_at": 1773800000000, "practice_count": 1, "correct_count": 0 },
+    "ASYNC_CONCURRENCY": { "skill": "ASYNC_CONCURRENCY", "p_mastery": 0.74, "last_practiced_at": 1773950000000, "practice_count": 3, "correct_count": 3 }
   },
   "node_history": {
     "slice-order-checkout": {
       "node_id": "slice-order-checkout",
       "status": "COMPLETED",
-      "outcome": "PASS_FIRST",
       "is_auto_mastered": false,
-      "primary_skill": "LAYERED_SEPARATION",
-      "attempt_count": 1,
-      "last_attempt_timestamp": 1773950000000
+      "has_warning": false,
+      "retry_count": 1,
+      "last_attempt_at": 1773950000000,
+      "outcome": "PASS_AFTER_HINT",
+      "primary_skill": "DB_OPTIMIZATION",
+      "remediation_count": 0
     }
   }
 }
@@ -313,32 +286,34 @@ Mức độ làm chủ tri thức suy giảm tự nhiên theo thời gian nếu 
 
 $$P_{\text{eff}} = P(L_0) + \big(P_{\text{last}} - P(L_0)\big) \cdot 2^{-\Delta t / h}, \quad h = 14 \text{ ngày}$$
 
-* $P_{\text{last}}$: Giá trị `p_mastery` raw (lưu trong `SkillMasteryRecord`, **không bị ghi đè bởi decay**).
+* $P_{\text{last}}$: Giá trị `p_mastery` raw (lưu trong `CognitiveSkillState`, **không bị ghi đè bởi decay**).
 * $\Delta t$: Thời gian trôi qua kể từ lần thực hành gần nhất (tính theo ngày).
 * $h = 14\text{ ngày}$: Chu kỳ bán rã trí nhớ chuẩn.
 * $P(L_0) = 0.25$: Sàn decay — kỹ năng không tụt dưới mức tiên nghiệm.
 
 > [!WARNING]
-> **Lỗi cũ đã sửa:** Hàm `applyHalfLifeDecay` cũ **ghi đè** `p_mastery` mà không cập nhật `last_practiced_timestamp`, khiến mỗi lần mở app đều tính decay lồng (compound decay). Ví dụ (theo công thức cũ $P \times 2^{-\Delta t/14}$): kỹ năng $0.9532$ sau 20 ngày lẽ ra phải là $0.3541$ nhưng thực tế bị tụt xuống $0.2158$ nếu mở app ở ngày 10 rồi ngày 20.
+> **Lỗi cũ đã sửa:** Hàm `applyHalfLifeDecay` cũ **ghi đè** `p_mastery` mà không cập nhật `last_practiced_at`, khiến mỗi lần mở app đều tính decay lồng (compound decay). Ví dụ (theo công thức cũ $P \times 2^{-\Delta t/14}$): kỹ năng $0.9532$ sau 20 ngày lẽ ra phải là $0.3541$ nhưng thực tế bị tụt xuống $0.2158$ nếu mở app ở ngày 10 rồi ngày 20.
 >
-> **Cách sửa:** Thay thế bằng **pure function** `getEffectiveMastery(record, now)` — tính trên read, **không bao giờ ghi đè** `p_mastery`. Giá trị `p_mastery` raw chỉ thay đổi khi `updateBKTState` được gọi (có bằng chứng mới).
+> **Cách sửa:** Thay thế bằng **pure function** `getDecayedMastery(record, now)` — tính trên read, **không bao giờ ghi đè** `p_mastery`. Giá trị `p_mastery` raw chỉ thay đổi khi `updateBKTState` được gọi (có bằng chứng mới).
 
 **Ví dụ số với công thức mới** (sàn $P(L_0)=0.25$):
 
 * Kỹ năng tại $0.5767$ (1 lần đúng) sau **10 ngày**:
-  $$P_{\text{eff}} = 0.25 + (0.5767 - 0.25) \times 2^{-10/14} = 0.25 + 0.3267 \times 0.6095 = 0.25 + 0.1992 = 0.4492$$
+  $$P_{\text{eff}} = 0.25 + (0.5767 - 0.25) \times 2^{-10/14} = 0.25 + 0.3267 \times 0.6095 = 0.25 + 0.1991 = 0.4491$$
   → Tụt dưới $0.45$ ⇒ **kích hoạt cảnh báo Decay Warning**.
 
 * Kỹ năng tại $0.9532$ (mastered, 3 lần đúng) sau **26 ngày**:
-  $$P_{\text{eff}} = 0.25 + (0.9532 - 0.25) \times 2^{-26/14} = 0.25 + 0.7032 \times 0.2691 = 0.25 + 0.1892 = 0.4392$$
+  $$P_{\text{eff}} = 0.25 + (0.9532 - 0.25) \times 2^{-26/14} = 0.25 + 0.7032 \times 0.2760 = 0.25 + 0.1941 = 0.4441$$
   → Tụt dưới $0.45$ ⇒ kích hoạt cảnh báo.
 
 * Kỹ năng tại $0.9532$ sau **30 ngày**:
   $$P_{\text{eff}} = 0.25 + 0.7032 \times 2^{-30/14} = 0.25 + 0.7032 \times 0.2264 = 0.25 + 0.1592 = \mathbf{0.4092}$$
 
-* **Cảnh báo Trí nhớ Bào mòn:** Nếu $P_{\text{eff}} < 0.45$, Node tự động chuyển sang viền **VÀNG CAM (Decay Warning)** và AI kích hoạt câu hỏi ôn tập điểm mù khi người học click vào.
+* **Kỹ năng dưới sàn không "hồi phục":** nếu `p_mastery` gốc $\le 0.25$ (VD: vừa FAILED còn $0.0791$), decay trả về nguyên giá trị đó — thời gian trôi qua không phải bằng chứng là người học đã hiểu. Sàn $0.25$ chỉ áp cho decay; bước cập nhật BKT vẫn kẹp trong $[0.01, 0.99]$.
+* **Cảnh báo Trí nhớ Bào mòn (chỉ là lớp hiển thị):** Nếu một node `COMPLETED` có $P_{\text{node}}$ (Mục 3.1, tính trên điểm đã decay) tụt dưới $0.45$, Node **giữ nguyên trạng thái `COMPLETED`** nhưng đổi sang viền **VÀNG CAM (Decay Warning)**. Khi người học click vào, enrich-node được gọi với Tier tính từ điểm đã decay để ôn lại kỹ năng yếu nhất hiện tại.
+* **Vì sao chọn công thức "kéo về sàn" thay cho $\max\big(0.25,\, P \cdot 2^{-\Delta t/14}\big)$:** công thức `max` khiến 1 lần đạt ($0.5767$) tụt dưới $0.45$ chỉ sau khoảng 5 ngày, kỹ năng đã làm chủ ($0.9532$) về hẳn $0.25$ sau khoảng 27 ngày, và kéo kỹ năng vừa FAILED lên $0.25$ ngay lập tức. Công thức kéo về sàn giữ lại một phần hiểu biết đã có và tụt êm hơn (10 ngày / 26 ngày).
 
-**Lưu ý:** `updateBKTState` sử dụng `getEffectiveMastery` làm $P(L_{t-1})$ — tức là khi nhận bằng chứng mới, BKT tính trên giá trị đã decay (phản ánh trí nhớ thực tế), rồi ghi kết quả mới vào `p_mastery` raw.
+**Lưu ý:** `updateBKTState` sử dụng `getDecayedMastery` làm $P(L_{t-1})$ — tức là khi nhận bằng chứng mới, BKT tính trên giá trị đã decay (phản ánh trí nhớ thực tế), rồi ghi kết quả mới vào `p_mastery` raw.
 
 ---
 
@@ -364,12 +339,18 @@ $$P_{\text{node}}(u) = \min_{k \in \mathcal{K}_u} P(L_t, k)$$
 
 ---
 
+### 3.3. Khóa Fast-Track ở Node Trọng Yếu (Capstone Lock — audit Case 4.4)
+Trong mỗi đồ thị, node có `cognitive_complexity` cao nhất (hòa ⇒ node có Rank Score cao nhất) **không bao giờ được Auto-Pass**. Người học giỏi vẫn phải trả lời ít nhất một câu hỏi Tier 3 trên repo đó thay vì "3 click là xong".
+
+---
+
 # 4. ĐẶC TẢ GIAO DIỆN HÀM (MODULE INTERFACE CHO NGƯỜI 3 CODE)
 
 Toàn bộ logic toán học của Tầng 5 được đóng gói thành các hàm thuần túy (Pure Functions) trong file `src/lib/bkt-engine.ts`:
 
 ```typescript
-import { SWESkill, UserCognitiveState, SkillMasteryRecord, NodeOutcome } from "./types";
+import { SWESkill, LearnerCognitiveProfile, CognitiveSkillState } from "./types"; // từ 02_DATA_CONTRACTS.md
+import { NodeOutcome } from "./types";  // ĐỀ XUẤT bổ sung contract (Mục 1.3)
 
 // ==========================================
 // Hằng số BKT
@@ -389,7 +370,7 @@ export interface NodeEvaluationResult {
   tier: "NOVICE" | "PRACTITIONER" | "ARCHITECT";
   is_auto_pass: boolean;
   representative_score: number;
-  weakest_skill: SWESkill;
+  weakest_skill: SWESkill | null;  // null khi node không có kỹ năng gán tĩnh
 }
 
 /**
@@ -398,18 +379,18 @@ export interface NodeEvaluationResult {
  * Công thức: P_eff = P(L0) + (P_last - P(L0)) * 2^(-Δt / h)
  * Sàn decay = P(L0) = 0.25 (không bao giờ tụt dưới prior)
  */
-export function getEffectiveMastery(
-  record: SkillMasteryRecord,
+export function getDecayedMastery(
+  record: CognitiveSkillState | undefined,
   currentTimestamp: number,
   halfLifeDays: number = BKT_PARAMS.HALF_LIFE_DAYS
 ): number {
   const msPerDay = 86_400_000;
 
-  if (!record || record.last_practiced_timestamp <= 0) {
+  if (!record || record.last_practiced_at <= 0) {
     return record?.p_mastery ?? BKT_PARAMS.P_L0;
   }
 
-  const deltaDays = Math.max(0, (currentTimestamp - record.last_practiced_timestamp) / msPerDay);
+  const deltaDays = Math.max(0, (currentTimestamp - record.last_practiced_at) / msPerDay);
 
   // Kỹ năng đang ở dưới prior (VD: vừa FAILED còn 0.0791) không "hồi phục" theo thời gian:
   // decay chỉ kéo kỹ năng ĐÃ HỌC về sàn P(L0), không đẩy kỹ năng yếu lên.
@@ -425,19 +406,20 @@ export function getEffectiveMastery(
 
 /**
  * 2. Hàm đánh giá cấp độ Tier câu hỏi và cờ Fast-Track Auto-Pass cho một Node
- *    Sử dụng getEffectiveMastery để tính decay trước khi so ngưỡng.
+ *    Sử dụng getDecayedMastery để tính decay trước khi so ngưỡng.
  */
 export function evaluateNodeTierAndAutoPass(
   preliminarySkills: SWESkill[],
-  state: UserCognitiveState,
-  currentTimestamp: number = Date.now()
+  profile: LearnerCognitiveProfile,
+  currentTimestamp: number = Date.now(),
+  isCapstone: boolean = false        // Capstone Lock (Mục 3.3)
 ): NodeEvaluationResult {
   if (preliminarySkills.length === 0) {
     return {
       tier: "NOVICE",
       is_auto_pass: false,
-      representative_score: 0.25,
-      weakest_skill: "HTTP_ROUTING"
+      representative_score: BKT_PARAMS.P_L0,
+      weakest_skill: null
     };
   }
 
@@ -450,10 +432,8 @@ export function evaluateNodeTierAndAutoPass(
   // preliminarySkills đã được Tầng 2 sắp theo độ mạnh tín hiệu AST giảm dần,
   // nên khi hòa hoàn toàn, kỹ năng đứng trước (đặc trưng nhất của Node) được giữ lại.
   for (const skill of preliminarySkills) {
-    const record = state.skills[skill];
-    const score = record
-      ? getEffectiveMastery(record, currentTimestamp)
-      : BKT_PARAMS.P_L0;
+    const record = profile.skills[skill];
+    const score = getDecayedMastery(record, currentTimestamp); // chưa có record ⇒ P(L0)
     const practiceCount = record?.practice_count ?? 0;
 
     if (score < 0.92) {
@@ -477,7 +457,7 @@ export function evaluateNodeTierAndAutoPass(
 
   return {
     tier,
-    is_auto_pass: allAboveAutoPass && minScore >= 0.92,
+    is_auto_pass: !isCapstone && allAboveAutoPass && minScore >= 0.92,
     representative_score: Number(minScore.toFixed(4)),
     weakest_skill: weakestSkill
   };
@@ -490,25 +470,26 @@ export function evaluateNodeTierAndAutoPass(
  *    - Tham số `outcome: NodeOutcome` thay cho `isPassed: boolean`
  *    - Chỉ cập nhật `primary_skill` (1 skill), không phải mảng targetSkills
  *    - Sử dụng P(G_hint) = 0.50 cho PASS_AFTER_HINT
- *    - Dùng getEffectiveMastery làm P(L_{t-1}) để tính trên giá trị đã decay
+ *    - Dùng getDecayedMastery làm P(L_{t-1}) để tính trên giá trị đã decay
  */
 export function updateBKTState(
   primary_skill: SWESkill,
   outcome: NodeOutcome,
-  state: UserCognitiveState,
+  profile: LearnerCognitiveProfile,
   currentTimestamp: number = Date.now()
-): UserCognitiveState {
-  const updatedSkills = { ...state.skills };
+): LearnerCognitiveProfile {
+  const updatedSkills = { ...profile.skills };
 
-  const currentRecord = updatedSkills[primary_skill] ?? {
+  const currentRecord: CognitiveSkillState = updatedSkills[primary_skill] ?? {
+    skill: primary_skill,
     p_mastery: BKT_PARAMS.P_L0,
-    last_practiced_timestamp: currentTimestamp,
+    last_practiced_at: currentTimestamp,
     practice_count: 0,
     correct_count: 0
   };
 
   // Lấy P(L_{t-1}) có tính decay
-  const pL = getEffectiveMastery(currentRecord, currentTimestamp);
+  const pL = getDecayedMastery(currentRecord, currentTimestamp);
 
   let posterior = 0;
   let isPassed = false;
@@ -545,15 +526,16 @@ export function updateBKTState(
   const newPL = posterior + (1 - posterior) * pTransit;
 
   updatedSkills[primary_skill] = {
+    skill: primary_skill,
     p_mastery: Math.max(0.01, Math.min(0.99, Number(newPL.toFixed(4)))),
-    last_practiced_timestamp: currentTimestamp,
+    last_practiced_at: currentTimestamp,
     practice_count: currentRecord.practice_count + 1,
     correct_count: currentRecord.correct_count + (isPassed ? 1 : 0)
   };
 
   return {
-    ...state,
-    last_updated_timestamp: currentTimestamp,
+    ...profile,
+    last_updated_at: currentTimestamp,
     skills: updatedSkills
   };
 }
@@ -561,7 +543,7 @@ export function updateBKTState(
 
 ```mermaid
 flowchart TD
-    A["Node mở khóa"] --> B["evaluateNodeTierAndAutoPass<br/>(dùng getEffectiveMastery)"]
+    A["Node mở khóa"] --> B["evaluateNodeTierAndAutoPass<br/>(dùng getDecayedMastery)"]
     B -- "is_auto_pass = true" --> C["FAST-TRACK<br/>0 Token, 0ms"]
     B -- "is_auto_pass = false" --> D["primary_skill = weakest_skill<br/>AI sinh câu hỏi Tier tương ứng"]
     D --> E["Người học trả lời"]
@@ -604,8 +586,11 @@ erDiagram
         string node_id
         string status
         string outcome
-        int attempt_count
+        string primary_skill
+        int retry_count
+        int remediation_count
         boolean is_auto_mastered
+        boolean has_warning
         bigint updated_at
     }
 
@@ -613,7 +598,7 @@ erDiagram
         string turn_id PK
         string learner_id FK
         string node_id
-        int attempt_no
+        int attempt_number
         string question_type
         string primary_skill
         string answer_hash
@@ -652,7 +637,7 @@ erDiagram
 | Bảng | Khóa chính | Mô tả |
 | :--- | :--- | :--- |
 | **`LEARNER`** | `learner_id` | Thông tin người học. Tối giản cho hackathon — chỉ cần ID và timestamp tạo. |
-| **`SKILL_STATE`** | `(learner_id, skill)` | Trạng thái BKT của từng kỹ năng. `p_mastery_raw` là giá trị **raw** (không bao gồm decay) — decay tính runtime qua `getEffectiveMastery`. |
+| **`SKILL_STATE`** | `(learner_id, skill)` | Trạng thái BKT của từng kỹ năng. `p_mastery_raw` là giá trị **raw** (không bao gồm decay) — decay tính runtime qua `getDecayedMastery`. |
 | **`NODE_PROGRESS`** | `(learner_id, repo_id, node_id)` | Tiến trình học tập trên từng Node. `outcome` lưu giá trị `PASS_FIRST` / `PASS_AFTER_HINT` / `FAILED` / `null`. `status` tuân theo FSM 4 trạng thái. |
 | **`ATTEMPT_TURN`** | `turn_id` | **Append-only** — mỗi lần nộp bài tạo 1 record mới, không sửa/xóa. `question_type` phân biệt `MAIN` / `FOLLOW_UP_CONCEPT` / `FOLLOW_UP_CODE` / `REMEDIATION`. `primary_skill` ghi lại kỹ năng đang được đánh giá. Dữ liệu này phục vụ fitting lại tham số BKT trong giai đoạn 2. |
 | **`LLM_CALL_LOG`** | `call_id` | Log mọi cuộc gọi LLM. `gate_passed` cho biết response có qua được Cổng Gác Nhị Phân (Symbol Guard) hay không. Dùng để audit chi phí và chất lượng mô hình. |

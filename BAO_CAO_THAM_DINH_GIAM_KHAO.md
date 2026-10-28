@@ -147,6 +147,27 @@ pie showData
 
 # 5. ĐIỂM YẾU — SOI TOÀN DIỆN
 
+> **Trạng thái xử lý (cập nhật 2026-10-28, sau đợt đồng bộ spec):** các bảng phát hiện bên dưới giữ nguyên nội dung và số dòng **tại thời điểm thẩm định**; số dòng trích dẫn có thể đã lệch. "Đã sửa" nghĩa là **đặc tả** đã sửa, chưa có code.
+>
+> | Mục | Trạng thái | Ghi chú |
+> | :--- | :---: | :--- |
+> | ❷ Thuật toán node/cạnh tiên quyết | 🟡 Một phần | Có Hub + VIP làm gốc, Display Budget 6–8 + Critical Path, bao đóng bắc cầu (AST Thuật toán 3, 7); chưa có luật cạnh theo entity/DTO dùng chung |
+> | ❸ "Vibe-answer" | 🟡 Một phần | Prompt ưu tiên câu hỏi phản thực tế bám dòng code; rubric bám code. Chưa có cờ "nghi dán", câu hỏi nối tiếp |
+> | ❹ Đáp án lộ ở trình duyệt | ✅ Đã sửa | `challenge_token` (AES-GCM), `EnrichNodeClientResponse` không chứa đáp án, `/api/reveal` (contract Mục 2) |
+> | ❺ Nói quá | ✅ Phần lớn | Đã gỡ "100%", "0ms", "an toàn tuyệt đối"; chi phí đổi thành ≈ $0.03/phiên (ước lượng). "< 1.5s" giữ là **mục tiêu** kèm điều kiện (Tổng quan Mục 5) |
+> | E1 PageRank | 🟡 Một phần | Pitch Q3 đã trả lời trung thực; vẫn dùng PageRank + Ingress Bonus, chưa chạy trên đồ thị đảo chiều |
+> | E2–E7, E9, E10 | ✅ Đã sửa | Pass 2 trên AST; regex neo segment; Central-Directory-First + `FilePriorityScore`; `ManifestStore`; đếm byte 2 lớp; probe trả enum; bảng CC = 12; luật Uncle Bob đủ |
+> | E8 `autodrain` | 🟡 Chờ đo | Đã ghi "cần kiểm chứng thực nghiệm" |
+> | A1–A9, A11 | ✅ Đã sửa | Decay tính khi đọc + sàn 0.25; một mô hình `LearnerCognitiveProfile`; S = 0.12; Tier không nhảy cóc; ngưỡng decay 0.45 chỉ là lớp hiển thị; `target_skills ⊆ preliminary_skills`; Gate v2; quota 50,000 ở server; bỏ Intent Router; rubric 2 tiêu chí |
+> | A10 Prompt injection | 🟡 Một phần | Đóng khung dữ liệu + cờ `suspicious_instruction_files` + đáp án tham chiếu trong prompt chấm |
+> | A12 Ổn định output | 🟡 Một phần | `temperature` thấp, tắt thinking; Response Cache nằm ở Roadmap |
+> | A13, H1–H6 | ⏳ Còn mở | Hạ tầng, deploy, test, đo thật — làm khi có code. H3 có thêm upload `.zip` |
+> | 5.3 Sư phạm | 🟡 Một phần | Mục 1 (ẩn dụ là điểm cộng) đã sửa; các mục còn lại còn mở |
+> | 5.4 Sản phẩm & UX | 🟡 Một phần | Upload `.zip` (Ingestion Bước 0), chế độ trình chiếu (UI Mục 1); `index.html` vẫn lộ lỗi N+1 |
+> | 5.6 Thuyết trình | 🟡 Một phần | Mục 1, 3, 7 đã sửa; thời lượng chờ BTC; slide, áp phích, số liệu mở đầu còn mở |
+> | 5.7 Bảng số liệu lệch | ✅ Đã sửa | Một bảng số liệu chuẩn duy nhất ở `01_TONG_QUAN_KIEN_TRUC.md` Mục 5; Guardrail/BKT không còn chép interface |
+> | 5.7 Vệ sinh repo | ✅ Phần lớn | `docchoi.md`, `enterprise_arch.md` chuyển vào `archive/`; README bỏ link tuyệt đối; file Audit đã cập nhật |
+
 | Mức | Ý nghĩa |
 | :---: | :--- |
 | 🔴 **Chí mạng** | Có thể mất phần lớn điểm "Lập trình", mất uy tín trước BGK, hoặc mất tư cách thi |
@@ -419,7 +440,7 @@ pie showData
 
 | # | BGK hỏi | Câu trả lời hiện có trong repo | Nên trả lời |
 | :-: | :--- | :--- | :--- |
-| 1 | "Đây là repo của tôi, chạy thử ngay được không?" | Chưa có | "Được, với repo TS/JS public hoặc file .zip; ngôn ngữ khác hiện sẽ báo chưa hỗ trợ." Và sản phẩm phải *thật sự* chạy được |
+| 1 | "Đây là repo của tôi, chạy thử ngay được không?" | Chưa có | "Được, với repo TS/JS (và Python) public hoặc file .zip là phạm vi đã kiểm chứng đầy đủ; ngôn ngữ khác có Tree-sitter vẫn vẽ được đồ thị ở tier `STRUCTURAL` nhưng cạnh chỉ là suy luận, chưa đảm bảo 100%." Và sản phẩm phải *thật sự* chạy được |
 | 2 | "Khác gì DeepWiki, hay dán code vào ChatGPT rồi hỏi?" | Chỉ so sánh với Aider và Duolingo ([KyVong45 L143-L152](KyVong45.md#L143-L152)) | Dùng câu ở mục 4.4: các công cụ đó giúp *đọc*; SimpliFey *kiểm chứng mức hiểu*, ghi nhớ chỗ hổng, đặt câu hỏi bám code |
 | 3 | "SV copy câu hỏi sang ChatGPT thì sao?" | Chưa có | Câu hỏi phản thực tế bám dòng code, chấm điểm bám code, cờ nghi dán, câu hỏi nối tiếp. Nói rõ là "giảm chứ không loại bỏ" |
 | 4 | "Sao biết điểm 70/70 của AI là đúng?" | Chưa có | Đưa ra độ đồng thuận đo trên bộ 20–30 câu đã gắn nhãn, và nói rõ đây mới là bước đầu |
@@ -455,7 +476,7 @@ pie showData
 | :--- | :--- |
 | **Bắt buộc** | Ingest GitHub public và upload .zip · TS/JS (Express, NestJS, Next.js route) · Tree-sitter, phát hiện entry point, call-chain slicing, Tarjan, node builder, Dagre · enrich (X-Ray, 1 câu hỏi, đáp án nằm trong token) với gate v2 · evaluate có đáp án tham chiếu · BKT, FSM, lưu localStorage · giao diện 3 cột có chế độ trình chiếu · đồng hồ chi phí · mock là bản ghi output thật · video dự phòng |
 | **Nên có** | Fast-Track · decay kèm persona "du hành thời gian" (nói rõ là mô phỏng) · prefetch · Python · thang gợi ý 2 nấc · cờ "nghi dán" |
-| **Để vào Roadmap** | Dart/Java/Flutter và Nominal Event Bridge · Uncle Bob đầy đủ · AST folding · Context Caching · 6 archetype (chỉ hiển thị nhãn) · Intent Router · Dashboard giảng viên · nhập bằng giọng nói |
+| **Để vào Roadmap** | Resolver riêng (tier `RESOLVED`) cho Dart/Java/Go/Flutter và Nominal Event Bridge · Language Registry đầy đủ + Universal Resolver (tier `STRUCTURAL`) cho các ngôn ngữ còn lại · Uncle Bob đầy đủ · AST folding · Context Caching · 6 archetype (chỉ hiển thị nhãn) · Intent Router · Dashboard giảng viên · nhập bằng giọng nói |
 
 | Giờ | Người 1 (UI/Lead) | Người 2 (Engine) | Người 3 (AI/BKT) |
 | :--- | :--- | :--- | :--- |

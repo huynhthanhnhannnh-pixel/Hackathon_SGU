@@ -32,8 +32,8 @@
 | # | Hiện tại (theo spec) | Vấn đề | Hướng nâng cấp |
 | :-: | :--- | :--- | :--- |
 | G1 | Mọi trạng thái ở Zustand client | Không có dữ liệu tập trung → không làm được dashboard, không fit BKT, không đo KPI | Postgres + event log bất biến |
-| G2 | BKT tham số cố định ($P(L_0)=0.20$, $P(T)=0.20$, $P(G)=0.15$, $P(S)=0.05$), ngưỡng 70/70 | Tham số "đoán"; nhiễu của bộ chấm LLM bị coi là nhãn chắc chắn | Fit EM bằng `pyBKT`; logistic hiệu chuẩn nhãn 0/1 |
-| G3 | Nối hàm bằng Two-Pass heuristic | Sai với dynamic dispatch, DI, alias, re-export; Dart/Java chỉ có Regex + Relaxed Gate | Resolver chính xác hơn (LSP/SCIP) + độ tin cậy trên cạnh |
+| G2 | BKT tham số đặt tay ($P(L_0)=0.25$, $P(T\mid\text{Correct})=0.08$, $P(T\mid\text{Incorrect})=0.03$, $P(G)=0.25$, $P(S)=0.12$), ngưỡng `core_accuracy >= 70` | Tham số "đoán" có lý do sư phạm; nhiễu của bộ chấm LLM bị coi là nhãn chắc chắn | Fit EM bằng `pyBKT`; logistic hiệu chuẩn nhãn 0/1 |
+| G3 | Nối hàm bằng Two-Pass heuristic | Sai với dynamic dispatch, DI, alias, re-export; ngôn ngữ tier `STRUCTURAL` chỉ có Universal Resolver (cạnh `INFERRED`) + Relaxed Gate | Resolver chính xác hơn (LSP/SCIP) + độ tin cậy trên cạnh |
 | G4 | "Slicing" thực chất là call-chain + Nominal Event Bridge | Không phải program slicing theo nghĩa Weiser (PDG) | Đổi tên đúng bản chất; tăng độ mịn best-effort, đo thay vì hứa |
 | G5 | Trần 50 file / 15MB, Top 6–8 node | Không dùng được cho monorepo doanh nghiệp | Phân cụm cộng đồng + indexing tăng dần + cache theo commit SHA |
 | G6 | Guardrail chỉ chặn bịa symbol + từ khóa ngoài repo | Chưa chống prompt-injection từ comment trong repo; chưa chống nhờ AI trả lời Feynman | Sanitize ngữ cảnh + tín hiệu hành vi |
@@ -68,7 +68,7 @@
 
 ### 2.3. Đo lường & rủi ro
 - Đo **baseline** thời gian soạn đề của GV *trước* pilot — không có baseline thì con số 60% không bảo vệ được. Thêm: SUS/NPS, tỉ lệ Gate reject, chi phí token thực tế/SV, tỉ lệ trúng Response Cache.
-- Repo SV ngoài phạm vi ngôn ngữ (PHP/C#…) → hiển thị thông báo "chưa hỗ trợ" rõ ràng thay vì đồ thị rỗng.
+- Repo SV viết bằng ngôn ngữ chưa có resolver riêng (PHP/C#…) → vẫn dựng đồ thị ở tier `STRUCTURAL` kèm huy hiệu "độ tin cậy thấp"; chỉ ngôn ngữ **không có grammar** mới hiển thị thông báo "chưa hỗ trợ" rõ ràng thay vì đồ thị rỗng.
 
 ---
 
@@ -98,7 +98,7 @@
 - **Tùy chọn tăng độ mịn — lát cắt bám biến best-effort:** duyệt **AST** (không Regex trên text, vì Regex không phân biệt phạm vi/chuỗi/comment): thu binding từ `variable_declarator`, `assignment_expression`, bóc đệ quy `object_pattern/array_pattern`; lập chuỗi def→use trong thân hàm; nối tham số sang hàm được gọi nếu resolve được. Gặp tái gán trong nhánh/vòng lặp, alias, spread, `eval`/dynamic key → **mở rộng thành cả câu lệnh/hàm** và hạ độ tin cậy; không resolve được → **fallback cả hàm**.
 - **Đo thay vì hứa:** báo tỉ lệ hàm áp dụng được, mức giảm số dòng trung bình, độ phủ so với nhãn tay. Lợi ích không rõ thì ghi nhận là kết quả âm.
 - **Bộ nhãn tay 30–40 repo SV** (2 người gán slice "đúng"): đo precision/recall cạnh gọi hàm và overlap slice, so với (a) Aider-style repo-map, (b) gom theo thư mục. Đây là bằng chứng thực nghiệm cho luận điểm "Inverse EdTech".
-- **Độ tin cậy cạnh:** import tĩnh = 1.0; qua `Interface_Map` = 0.8; heuristic theo tên = 0.5. UI vẽ nét đứt cho cạnh < 0.8; Relaxed Gate dùng ngưỡng này thay vì cờ bật/tắt theo ngôn ngữ.
+- **Độ tin cậy cạnh:** import tĩnh = 1.0; qua `InterfaceImplMap` = 0.8; heuristic theo tên = 0.5. UI vẽ nét đứt cho cạnh < 0.8; Relaxed Gate dùng ngưỡng này thay vì cờ bật/tắt theo ngôn ngữ.
 - Dùng số Super-Node từ Tarjan SCC làm đặc trưng "độ khó" của node.
 
 ### 3.4. Thiết kế thí nghiệm
@@ -123,7 +123,7 @@
 - **Giọng nói:** Web Speech API → Whisper/Gemini audio; tốc độ nói/ngập ngừng chỉ là tín hiệu phụ, **không** đưa vào BKT.
 - **Repo riêng tư:** GitHub App/OAuth quyền fine-grained `contents:read`, token chỉ sống trong bộ nhớ; vẫn stream, không ghi đĩa.
 - **Thanh toán & quan sát:** PayOS/VNPay/MoMo + Stripe, bảng `subscriptions` + webhook idempotent; OpenTelemetry + Langfuse.
-- **Chi phí:** `< $15/tháng` hiện chỉ tính token. Tách "chi phí LLM biên/người dùng" (khoảng $0.002/phiên) khỏi "chi phí hạ tầng cố định" (Postgres, Redis, hosting) để không bị bắt bẻ; cập nhật con số khi có số đo thật từ pilot.
+- **Chi phí:** con số "$110–120/tháng cho 1.000 MAU" (KyVong45) hiện chỉ tính token. Tách "chi phí LLM biên/người dùng" (ước lượng ≈ $0.03/phiên, `00_CORE_SPEC/01_TONG_QUAN_KIEN_TRUC.md` Mục 5) khỏi "chi phí hạ tầng cố định" (Postgres, Redis, hosting) để không bị bắt bẻ; cập nhật con số khi có số đo thật từ pilot.
 
 ## 4B. B2B — Developer Onboarding On-Premise
 **Đóng gói:** Docker Compose/Helm gồm `web`, `postgres`, `redis`, (`worker` chỉ khi vượt ngưỡng ở Mục 2.1) và LLM nội bộ (vLLM/Ollama, ví dụ Qwen2.5-Coder).
@@ -177,20 +177,28 @@
 - **Luật kiến trúc khai báo** kiểu ArchUnit (`layer(controller) may not call layer(repository)`), chỉ kiểm tra trên cạnh có độ tin cậy ≥ ngưỡng.
 - **Đầu ra:** SARIF 2.1 (GitHub Code Scanning), bình luận PR, GitHub Action / GitLab CI template.
 
-### 5.3. Hỗ trợ 5 ngôn ngữ
+### 5.3. Hỗ trợ đa ngôn ngữ theo tầng (Language Registry)
+
+Mục tiêu không phải "chỉ 5 ngôn ngữ" mà là **mọi ngôn ngữ có grammar Tree-sitter**, chia hai tầng (xem `01_ENGINE_THUAT_TOAN/02_AST_SLICING_GRAPH.md` §3.0 và Thao tác 2b):
+
+- **Tầng nền `STRUCTURAL` (mặc định cho mọi ngôn ngữ có grammar):** thêm ngôn ngữ = thêm file `.wasm` + `.scm`, không viết code thuật toán. Symbol chính xác (từ AST); cạnh suy luận bằng Universal Resolver, gắn `confidence: INFERRED`, UI vẽ nét đứt, **không đảm bảo 100%**.
+- **Tầng `RESOLVED` (nâng cấp có chọn lọc):** viết thêm `importResolver` riêng cho ngôn ngữ phổ biến ⇒ cạnh và lát cắt chính xác cao. Khởi điểm: TS/JS, Python, Java, Go, Dart. Ứng viên tiếp theo theo mức phổ biến trong đồ án SV: C#, PHP, Kotlin, Rust.
+- Tiêu chí nâng tầng: ngôn ngữ đạt **conformance test** (precision/recall cạnh trên bộ nhãn tay) vượt ngưỡng đã đặt trước.
+
+Độ khó riêng của 5 ngôn ngữ khởi điểm khi nâng độ chính xác:
 
 | Ngôn ngữ | Thách thức | Xử lý |
 | :--- | :--- | :--- |
-| Java | DI Spring (`@Autowired`, interface→impl) | Mở rộng `Interface_Map` bằng quét annotation + `@Qualifier`/`@Primary` |
+| Java | DI Spring (`@Autowired`, interface→impl) | Mở rộng `InterfaceImplMap` bằng quét annotation + `@Qualifier`/`@Primary` |
 | Go | Interface thỏa mãn ngầm | So khớp **method-set** của struct với interface |
 | Python | Decorator định tuyến (FastAPI/Flask), duck typing | Bắt decorator làm `ENTRY_POINT`; cạnh duck-typing độ tin cậy thấp |
 | Dart | Cầu BLoC/Provider/Riverpod ngoài `on<Event>` | Mở rộng Nominal Event Bridge cho từng thư viện state |
 | TypeScript | Path alias, re-export, barrel file | `tsconfig` project references / TS compiler API |
 
-Thay Regex fallback bằng grammar tree-sitter + truy vấn `tags.scm` riêng từng ngôn ngữ; bộ **conformance test** (repo mẫu + kết quả mong đợi) chạy trong CI trước mỗi bản phát hành.
+Mọi ngôn ngữ dùng grammar tree-sitter + truy vấn `tags.scm`/`.scm` của adapter (không còn Regex fallback theo tên ngôn ngữ); bộ **conformance test** (repo mẫu + kết quả mong đợi) chạy trong CI trước mỗi bản phát hành.
 
 ### 5.4. Phân phối & đo KPI
-Telemetry **opt-in**, ẩn danh; theo dõi retention D7/D30 chứ không chỉ lượt tải; WASM tải lười theo ngôn ngữ, bundle gọn vì ảnh hưởng đánh giá trên Marketplace.
+Telemetry **opt-in**, ẩn danh; theo dõi retention D7/D30 chứ không chỉ lượt tải; WASM đóng gói trong bundle và nạp lười theo ngôn ngữ thực sự có trong repo, bundle gọn vì ảnh hưởng đánh giá trên Marketplace.
 
 ---
 
