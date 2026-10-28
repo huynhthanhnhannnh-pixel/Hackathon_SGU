@@ -36,7 +36,7 @@ sequenceDiagram
     participant Bayes as 🧠 Động cơ Bayes (Tầng 5)
 
     Note over User, Gate: THỜI ĐIỂM 1: CLICK CHỌN NODE TRÊN CANVAS
-    User->>C1: Click chọn Node (VD: "Order Checkout Flow")
+    User->>C1: Click chọn Node (VD: "Order Checkout")
     C1->>Backend: Gọi POST /api/enrich-node
     Backend->>Gemini: Gửi Context Sandwich Payload (Code vi mô + Ngữ cảnh)
     Gemini-->>Gate: Trả về EnrichedSliceResponse (X-Ray + Thử thách Socratic)
@@ -61,7 +61,7 @@ sequenceDiagram
 | Tầng Phòng Thủ | Vị trí Thực thi | Cơ chế Kiểm soát & Điều kiện Kích hoạt | Hành vi Hệ thống khi Vi phạm |
 | :--- | :--- | :--- | :--- |
 | **Tầng 1: Client Semantic Debounce** | Client UI (0ms, $0\text{ Token}$) | • Vô hiệu hóa nút bấm 3 giây sau mỗi lần click.<br>• Chặn câu trả lời < 15 ký tự (sau khi bỏ khoảng trắng).<br>• So sánh chuỗi (Levenshtein): nội dung mới trùng lặp $\ge 80\%$ so với lần thử trước. | Chặn ngay tại trình duyệt. Thông báo: *"Nội dung chưa thay đổi đáng kể, vui lòng bổ sung lập luận!"* |
-| **Tầng 2: Hard Cap Retry Limit** | Client Store + Backend ($0\text{ Token}$) | Chỉ cho gửi bài khi `retry_count < 3`. Mỗi lần trượt `retry_count += 1`. | Khi `retry_count === 3` (sai **đủ** 3 lần): khóa form submit, đổi Node sang **ĐỎ (FAILED)**, hiển thị `smell_reveal`, mở khóa node con theo soft-bypass. |
+| **Tầng 2: Hard Cap Retry Limit** | Backend + Postgres `node_progress` ($0\text{ Token}$); client chỉ khóa form theo giá trị server trả về | Chỉ cho gửi bài khi `retry_count < 3`. Mỗi lần trượt server ghi `retry_count += 1`. | Khi `retry_count === 3` (sai **đủ** 3 lần): khóa form submit, đổi Node sang **ĐỎ (FAILED)**, hiển thị `smell_reveal`, mở khóa node con theo soft-bypass. |
 | **Tầng 3: Session Token Quota** | Backend (đếm ở server theo phiên/IP) | Trần **$50,000\text{ tokens/phiên}$** (ước lượng tiêu thụ: $\approx 30,000$ token cho 7 node, xem Mục 1.4). | Ngừng gọi Gemini API. Chuyển sang **câu hỏi AST tĩnh** cho enrich và **chấm offline** từ `OfflineMockBundle.sample_evaluations` cho evaluate, có thông báo rõ cho người học. |
 
 ---
@@ -90,7 +90,7 @@ sequenceDiagram
 
 # 2. ĐẶC TẢ ENDPOINT 1 — `POST /api/enrich-node`
 
-Endpoint nhận `node_id` từ Client, server tra `StaticEngineResult` đã cache, đóng gói `ContextSandwichPayload`, gửi đến Gemini 2.5 Flash để bóc tách mẫu thiết kế và chuẩn bị bài tập phản biện.
+Endpoint nhận `EnrichNodeRequest { session_id, node_id }` từ Client. Server tra `learning_sessions` ⇒ `StaticEngineResult` (cache RAM, hết hạn thì dựng lại theo commit SHA — `00_CORE_SPEC/04_LUU_TRU_VA_DONG_BO.md` Mục 7.2), tự tính `learner_persona_tier` từ `skill_states` đã decay (không nhận Tier từ client), đóng gói `ContextSandwichPayload`, gửi đến Gemini 2.5 Flash để bóc tách mẫu thiết kế và chuẩn bị bài tập phản biện.
 
 ### 2.1. Input (`ContextSandwichPayload` — xem contract, chỉ tồn tại ở server)
 Payload theo cấu trúc Sandwich 3 lớp: `macro_context` (ngữ cảnh repo + vị trí node trên DAG), `micro_trace` (đoạn code lát cắt + DTO + `hidden_challenge` nếu có), `invariants` (`learner_persona_tier`, `allowed_skills`, `forbidden_external_keywords`).
@@ -266,7 +266,7 @@ export function verifyWithBinaryGate(
 Endpoint chấm điểm câu trả lời của sinh viên theo phương pháp sư phạm Feynman và phát tín hiệu cập nhật trạng thái đồ thị.
 
 ### 4.1. Input (`EvaluateFeynmanRequest` — xem contract)
-Client gửi `node_id`, `challenge_token`, `student_answer`, `attempt_number`. Server giải mã token để lấy câu hỏi, đáp án tham chiếu, `target_skills` và đoạn code (tra theo `snippet_hash`) — client **không** thể sửa câu hỏi hay đọc đáp án trước khi chấm.
+Client gửi `session_id`, `node_id`, `challenge_token`, `student_answer`, `attempt_number`. Server giải mã token để lấy câu hỏi, đáp án tham chiếu, `target_skills` và đoạn code (tra theo `snippet_hash`) — client **không** thể sửa câu hỏi hay đọc đáp án trước khi chấm. `attempt_number` chỉ để đối chiếu: số lần thử thật lấy từ `node_progress.retry_count` trên server, nên client sửa request thành `attempt_number: 3` cũng không mở được đáp án sớm.
 
 ---
 
@@ -325,12 +325,12 @@ flowchart TD
     
     CheckPass -- "ĐẠT (PASS)" --> PassAction["1. ĐỔI MÀU NODE SANG XANH LÁ (COMPLETED) TỨC THÌ!<br/>2. Mở khóa các Node phân nhánh kế tiếp trên DAG!<br/>3. Hiển thị smell_reveal (Điểm Dở)"]
     PassAction --> ObsCorrect["Obs = Correct"]
-    ObsCorrect --> BKT["Động cơ BKT (Client Store):<br/>Cập nhật xác suất P(L_t) tăng cho target_skills"]
+    ObsCorrect --> BKT["Động cơ BKT (server, ghi Postgres):<br/>Cập nhật xác suất P(L_t) tăng cho target_skills"]
     BKT --> ReadyNext["P(L_t) mới dùng để chọn Tier (NOVICE / PRACTITIONER / ARCHITECT) hoặc xét Fast-Track cho các Node sau!"]
 
     CheckPass -- "CHƯA ĐẠT (FAIL)" --> FailAction["retry_count += 1"]
     FailAction --> ObsIncorrect["Obs = Incorrect"]
-    ObsIncorrect --> BKTFail["Động cơ BKT (Client Store):<br/>Cập nhật xác suất P(L_t) giảm theo BKT"]
+    ObsIncorrect --> BKTFail["Động cơ BKT (server, ghi Postgres):<br/>Cập nhật xác suất P(L_t) giảm theo BKT"]
     FailAction --> CheckRetry{"retry_count === 3 ?"}
     CheckRetry -- "Đã sai đủ 3 lần" --> RedNode["Khóa form, đổi Node sang ĐỎ (FAILED)<br/>Hiển thị smell_reveal + Architectural Debrief Box<br/>Mở khóa node con (soft-bypass, has_warning = true)"]
     CheckRetry -- "Còn lượt thử" --> RetryUI["Yêu cầu người học bổ sung lập luận ở Tab 2"]
@@ -340,28 +340,17 @@ flowchart TD
 > **Quy tắc Đổi màu Node:** Node chuyển sang trạng thái **XANH LÁ (COMPLETED)** ngay lập tức khi `is_passed === true`. Chỉ số $P(L_t)$ là điểm tích lũy dài hạn qua các bài toán để điều phối Tier câu hỏi và kích hoạt Fast-Track ở các Node sau, **không dùng $P(L_t)$ để chặn hoàn thành Node hiện tại**.
 
 > [!NOTE]
-> **Bỏ qua node (thay cho Intent Router):** Tab 2 có nút **"Tôi chịu, bỏ qua node này"** chạy hoàn toàn ở client (0 token): gọi `POST /api/reveal` để lấy đáp án, đổi node sang **FAILED**, mở Debrief Box và mở khóa node con theo soft-bypass. Hành động này **không** tạo quan sát BKT (không phạt thêm). Không dùng LLM để phân loại ý định người học.
+> **Bỏ qua node (thay cho Intent Router):** Tab 2 có nút **"Tôi chịu, bỏ qua node này"** (0 token): gọi `POST /api/reveal`; server trả đáp án, ghi node **FAILED** vào `node_progress` và mở khóa node con theo soft-bypass; client mở Debrief Box. Hành động này **không** tạo quan sát BKT (không phạt thêm). Không dùng LLM để phân loại ý định người học.
 
-#### Mã giả Zustand Client Store:
+#### Luồng xử lý: server ghi, client hiển thị
+Toàn bộ bước BKT, đếm `retry_count`, đổi trạng thái node và mở khóa (kể cả Fast-Track) chạy ở server trong **một transaction Postgres**: mã giả ở [`00_CORE_SPEC/04_LUU_TRU_VA_DONG_BO.md`](../00_CORE_SPEC/04_LUU_TRU_VA_DONG_BO.md) Mục 6.2. Client nhận `EvaluateFeynmanResponse` và chỉ thay bản sao:
+
 ```typescript
-// File: store/useCognitiveStore.ts
-const handleFeynmanResult = (result: FeynmanEvaluationResult, targetSkills: SWESkill[]) => {
-  const isCorrect = result.is_passed === true;
-
-  // 1. Cập nhật BKT cho các kỹ năng mục tiêu (xem 02_BAYES_COGNITIVE_BKT.md Mục 4)
-  setProfile(updateBKTState(targetSkills, isCorrect, getProfile(), Date.now()));
-
-  // 2. Cập nhật trạng thái đồ thị DAG (node_history là nguồn chân lý)
-  if (isCorrect) {
-    setNodeStatus(currentNodeId, "COMPLETED");
-    unlockSuccessorNodes(currentNodeId);          // xét Fast-Track cho từng node con vừa đủ điều kiện mở
-  } else {
-    const retry = incrementRetryCount(currentNodeId);
-    if (retry === 3) {
-      setNodeStatus(currentNodeId, "FAILED");
-      unlockSuccessorNodes(currentNodeId, { hasWarning: true }); // soft-bypass
-    }
-  }
-  if (result.smell_reveal) showSmellReveal(currentNodeId, result.smell_reveal);
+// File: store/useCognitiveStore.ts — client KHÔNG gọi updateBKTState
+const handleFeynmanResponse = (res: EvaluateFeynmanResponse) => {
+  setProfile(res.profile);                        // điểm kỹ năng + node_history mới do server tính
+  animateUnlock(res.unlocked_node_ids);           // hiệu ứng mở khóa / ⚡ Fast-Track
+  if (res.smell_reveal) showSmellReveal(currentNodeId, res.smell_reveal);
+  if (res.sync_receipt) queueReceipt(res.sync_receipt); // Postgres lỗi ⇒ giữ biên nhận đã ký, hiện "Chưa đồng bộ"
 };
 ```

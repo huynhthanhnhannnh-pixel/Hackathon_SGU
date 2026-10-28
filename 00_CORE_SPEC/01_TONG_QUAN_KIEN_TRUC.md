@@ -9,7 +9,7 @@
 | **Phân hệ** | `00_CORE_SPEC/01_TONG_QUAN_KIEN_TRUC.md` |
 | **Người phụ trách** | **NGƯỜI 1 (LEAD ARCHITECT & FULLSTACK)** |
 | **Trạng thái** | **Khóa Kiến trúc (Documentation Phase — Tuyệt đối không sinh code)** |
-| **Tech-Stack** | Next.js 15 (App Router), ReactFlow (Canvas DAG), Monaco Editor, Tree-sitter WASM, Gemini 2.5 Flash, Zustand Client Store |
+| **Tech-Stack** | Next.js 15 (App Router), ReactFlow (Canvas DAG), Monaco Editor, Tree-sitter WASM, Gemini 2.5 Flash, Zustand Client Store, Supabase (Postgres + Auth) cho hồ sơ người học |
 | **Nguyên tắc Vàng** | **Code thuần chạy trước (0 Token, mục tiêu < 1.5s)** dựng xong toàn bộ đồ thị DAG $\to$ **AI chạy sau (JIT, 1.2s – 1.8s)** phục vụ tương tác nhận thức |
 | **Chi phí & Độ trễ** | Cold-start DAG: **< 1.5s (0 Token, $0.00)** • JIT enrich: **1.2s – 1.8s (≤ 2,000 token vào / ≤ 900 token ra)** • Ước lượng **≈ $0.03/phiên (< 1.000đ)** — số liệu chuẩn ở Mục 5 |
 
@@ -51,7 +51,8 @@ flowchart TD
         C2 --> D2["Uncle Bob Metrics theo Slice Scope: Đo I, A, D trên toàn cụm"]
         B2 --> E2["Bộ Dung hợp Lát cắt (Slice Merger) + Display Budget 6–8 node"]
         D2 --> E2
-        E2 --> F2["Dagre Layout Engine (Phân nhánh & Hội tụ)"]
+        E2 --> N2["Deterministic Node Naming:<br/>Route ➔ Tên hàm ➔ Từ khóa miền ➔ Thư mục ➔ Tên file"]
+        N2 --> F2["Dagre Layout Engine (Phân nhánh & Hội tụ)"]
         F2 --> G2["🖥️ CỘT 1: ReactFlow Canvas 4 Màu (Đồ thị DAG phân nhánh có chiều sâu)"]
     end
 
@@ -76,8 +77,11 @@ flowchart TD
         C5 --> D5["Thang Tiến Hóa 3 Bậc (Novice ➔ Practitioner ➔ Architect)"]
         D5 --> E5["Hàm suy giảm Trí nhớ Ebbinghaus: max(0.25, P·2^(-Δt/14))"]
         C5 --> F5["Đổi Node sang XANH (GREEN) ➔ Mở khóa Node phân nhánh kế tiếp!"]
+        C5 --> G5[("🗄️ Postgres: skill_states + node_progress<br/>(server ghi trong 1 transaction, KHÔNG lưu code)")]
     end
 ```
+
+> **Tầng lưu trữ:** hồ sơ năng lực và tiến độ từng node nằm trong Postgres (Supabase), chỉ server được ghi; mã nguồn vẫn chỉ sống trong RAM. Phiên cũ được mở lại bằng commit SHA nhờ engine tất định. Chi tiết: [`04_LUU_TRU_VA_DONG_BO.md`](04_LUU_TRU_VA_DONG_BO.md).
 
 ---
 
@@ -91,6 +95,8 @@ flowchart TD
 3. **Phòng tuyến Không thực thi code & Zero-Disk:**
    * Không bao giờ dùng `git clone` (tránh đầy ổ đĩa server); file `.zip` tải lên cũng chỉ nằm trong RAM.
    * Không bao giờ thực thi code của người dùng (`eval` hoặc chạy container) để tránh mã độc. Toàn bộ là **Phân tích Tĩnh (Static Analysis)**.
+   * Zero-Disk áp dụng cho **mã nguồn của người dùng**: code, snippet và `StaticEngineResult` đầy đủ không bao giờ vào ổ đĩa hay cơ sở dữ liệu. Postgres chỉ chứa dữ liệu học tập (điểm kỹ năng, tiến độ node, câu trả lời Feynman) và khung đồ thị không có code (`04_LUU_TRU_VA_DONG_BO.md` Mục 1).
+6. **Server là nguồn chân lý của tiến độ học:** chỉ server được gọi `updateBKTState`, đếm số lần thử và quyết định mở đáp án. Client chỉ hiển thị bản sao do server trả về.
 4. **Cổng Gác Nhị Phân (Binary Guardrail):** Mọi nội dung do AI sinh ra phải vượt qua 2 chốt kiểm tra (AST Symbol Whitelist và Blacklist công nghệ ngoài repo) trước khi xuất hiện trên giao diện. Cổng gác **chặn được việc bịa tên hàm/biến và công nghệ không có trong repo**; nó không kiểm chứng được ngữ nghĩa của lời giải thích.
 5. **Đa ngôn ngữ theo tầng:** mọi ngôn ngữ có grammar Tree-sitter đều dựng được đồ thị; ngôn ngữ có `ImportResolver` riêng (tier `RESOLVED`) cho cạnh chính xác cao, các ngôn ngữ còn lại (tier `STRUCTURAL`) cho cạnh suy luận, gắn nhãn và không đảm bảo 100%.
 
@@ -100,9 +106,9 @@ flowchart TD
 
 | Vai trò | Phụ trách Phân hệ | Nhiệm vụ kỹ thuật trọng tâm |
 | :--- | :--- | :--- |
-| **NGƯỜI 1 (LEAD ARCHITECT)** | `00_CORE_SPEC/`<br/>`03_UI_VA_KICH_BAN/` | • Quản lý Data Contracts và luồng dữ liệu toàn hệ thống.<br/>• Dựng giao diện 3 Cột (ReactFlow DAG Canvas, Monaco Viewer, Cockpit 2 Pha).<br/>• Quản lý Zustand Store, FSM 4 màu, và kịch bản Demo 5 phút cho Ban Giám khảo. |
-| **NGƯỜI 2 (STATIC ENGINE DEV)**| `01_ENGINE_THUAT_TOAN/` | • Viết Tầng 0: Tải zip vào RAM (URL hoặc upload) + TreePruner lọc rác.<br/>• Viết Tầng 1: Tree-sitter WASM + Language Registry + Tarjan SCC khử chu trình.<br/>• Viết Tầng 2: PageRank lọc file tiện ích + Scoped Call-Chain Slicing + Uncle Bob. |
-| **NGƯỜI 3 (AI & COGNITIVE DEV)** | `02_AI_VA_BAYES/` | • Viết Tầng 3: Đóng gói Context Sandwich.<br/>• Viết Tầng 4: Prompt Gemini Flash CoT qua JSON Schema + Cổng gác nhị phân 2 chốt + `challenge_token`.<br/>• Viết Tầng 5: Động cơ Bayesian Knowledge Tracing (BKT) + Ma trận $q$-Matrix + Half-Life Decay. |
+| **NGƯỜI 1 (LEAD ARCHITECT)** | `00_CORE_SPEC/`<br/>`03_UI_VA_KICH_BAN/` | • Quản lý Data Contracts và luồng dữ liệu toàn hệ thống.<br/>• Dựng giao diện 3 Cột (ReactFlow DAG Canvas, Monaco Viewer, Cockpit 2 Pha).<br/>• Quản lý Zustand Store, FSM 4 màu, và kịch bản Demo 5 phút cho Ban Giám khảo.<br/>• Dựng Supabase (5 bảng + RLS, đăng nhập khách/GitHub) và các API phiên học (`04_LUU_TRU_VA_DONG_BO.md`). |
+| **NGƯỜI 2 (STATIC ENGINE DEV)**| `01_ENGINE_THUAT_TOAN/` | • Viết Tầng 0: Tải zip vào RAM (URL hoặc upload) + TreePruner lọc rác.<br/>• Viết Tầng 1: Tree-sitter WASM + Language Registry + Tarjan SCC khử chu trình.<br/>• Viết Tầng 2: PageRank lọc file tiện ích + Scoped Call-Chain Slicing + Uncle Bob + đặt tên node tất định. |
+| **NGƯỜI 3 (AI & COGNITIVE DEV)** | `02_AI_VA_BAYES/` | • Viết Tầng 3: Đóng gói Context Sandwich.<br/>• Viết Tầng 4: Prompt Gemini Flash CoT qua JSON Schema + Cổng gác nhị phân 2 chốt + `challenge_token`.<br/>• Viết Tầng 5: Động cơ Bayesian Knowledge Tracing (BKT) + Ma trận $q$-Matrix + Half-Life Decay, chạy ở server trong transaction `evaluate-feynman`. |
 
 ---
 
@@ -121,15 +127,19 @@ flowchart TD
 | Khử chu trình Tarjan SCC | Duyệt DFS tuyến tính | $\sim 0.002\text{s}$ | $0$ Token |
 | PageRank + Cognitive Complexity | Power Iteration, duyệt AST | $\sim 0.015\text{s}$ | $0$ Token |
 | Scoped Call-Chain Slicing + Uncle Bob | Def-Use + Control trên AST | $\sim 0.02\text{s}$ | $0$ Token |
+| Đặt tên node | Thang ưu tiên nguồn + TF-IDF | $\sim 0.005\text{s}$ | $0$ Token |
 | Display Budget + Dagre Layout | Critical Path + Sugiyama | $\sim 0.01\text{s}$ | $0$ Token |
 | **Tầng 1 + Tầng 2** | **Code thuần** | **< 0.25s** (trần cứng `ENGINE_BUDGET_MS = 600`) | **0** |
 | **TỔNG PHA DỰNG DAG (cold-start)** | **CODE THUẦN (0 TOKEN)** | **< 1.5s** | **$0.00** |
 | **JIT `enrich-node` (khi click Node)** | Gemini 2.5 Flash Structured Outputs | $1.2\text{s} – 1.8\text{s}$ | ≤ 2,000 vào / ≤ 900 ra |
 | **JIT `evaluate-feynman` (khi nộp bài)** | Gemini 2.5 Flash Structured Outputs | $0.8\text{s} – 1.2\text{s}$ | ~ 800 vào / ~ 200 ra |
 | **Cổng Gác Nhị Phân 2 Chốt** | Set Intersection + so khớp chuỗi | $0.001\text{s}$ | $0$ Token |
-| **Cập nhật Điểm Bayes BKT** | Toán xác suất trên Client Store | $< 0.002\text{s}$ | $0$ Token |
+| **Cập nhật Điểm Bayes BKT** | Toán xác suất (hàm thuần, chạy ở server) | $< 0.002\text{s}$ | $0$ Token |
+| Đọc hồ sơ người học (`GET /api/me`) | Postgres Supabase, cùng vùng với server | $\sim 0.05\text{s} – 0.1\text{s}$ | $0$ Token |
+| Transaction ghi tiến độ (attempt + BKT + node + mở khóa) | Postgres Supabase | $\sim 0.03\text{s} – 0.08\text{s}$, cộng vào `evaluate-feynman` | $0$ Token |
+| Mở lại phiên cũ (cache đã hết hạn) | Tải lại theo commit SHA + Tầng 0–2 | Như cold-start: **< 1.5s** | $0$ Token |
 
-*Điều kiện của mục tiêu < 1.5s:* repo ≤ 15MB nén, mạng ổn định, grammar Tree-sitter đã warm khi server khởi động. Khi nói với BGK, kèm số đo thật hiển thị trên giao diện.
+*Điều kiện của mục tiêu < 1.5s:* repo ≤ 15MB nén, mạng ổn định, grammar Tree-sitter đã warm khi server khởi động. Khi nói với BGK, kèm số đo thật hiển thị trên giao diện. Ghi Postgres không tính vào mục tiêu này vì chạy sau khi đã có đồ thị. Các dòng Postgres là ước lượng khi server và Supabase cùng vùng (VD: Singapore), cần đo lại.
 
 ### 5.2. Token & chi phí
 * Trần code gửi AI: **≤ 100 dòng/node, ≤ 30 dòng/step, ≤ 1,500 token**.

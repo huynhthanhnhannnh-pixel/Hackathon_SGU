@@ -56,6 +56,9 @@ Giao diện được chia thành 3 cột tương tác phản ứng (Reactive Lay
 
 ### 2.1. Cột 1: ReactFlow Branched DAG Canvas (Bản đồ Nhận thức)
 * **Tính chất phân nhánh & hội tụ:** Sử dụng thuật toán Dagre để sắp xếp tọa độ các Node (6–8 node). Không chấp nhận đồ thị thẳng tuột một hàng dọc!
+* **Tên node:** hiển thị `title` do Engine sinh tất định (`02_AST_SLICING_GRAPH.md` Thuật toán 8), không do AI đặt và không đổi sau khi enrich.
+  * `title_source` thuộc nhóm suy ra (`DOMAIN_TERMS`, `DIRECTORY`, `FILE_BASENAME`) ⇒ thêm tiền tố `~` (VD: `~Crawler / Page`) để người học biết đây là tên gần đúng.
+  * Tooltip khi hover luôn hiện tên đầy đủ (kể cả khi bị cắt `…` ở 32 ký tự) kèm `title_evidence`, VD *"Từ route POST /orders/checkout"*, *"Từ hàm OrderController.postCheckout"*, *"Suy ra từ từ khóa: order×6, inventory×3"*.
 * **Máy Trạng Thái 4 Màu (4-Color FSM):**
   * ⚪ **LOCKED (Xám mờ - Viền đứt nét):** Còn node cha chưa đi qua (chưa COMPLETED hoặc FAILED). Không thể click.
   * 🟡 **AVAILABLE (Vàng hổ phách `#F59E0B` - Có hào quang Pulse sáng):** Node đã mở khóa, sẵn sàng cho sinh viên chọn học. Mọi node gốc (in-degree = 0) đều AVAILABLE từ đầu.
@@ -110,6 +113,8 @@ stateDiagram-v2
 
 *Suy giảm trí nhớ không làm đổi trạng thái:* node `COMPLETED` bị decay vẫn là `COMPLETED`, chỉ đổi viền Vàng Cam; click vào sẽ mở câu hỏi ôn tập theo Tier tính từ điểm đã decay.
 
+*Ai đổi trạng thái:* mọi mũi tên trên sơ đồ do **server** quyết định và ghi vào Postgres (`node_progress`); UI chỉ đổi màu theo `profile.node_history` và `unlocked_node_ids` mà server trả về (`00_CORE_SPEC/04_LUU_TRU_VA_DONG_BO.md` Mục 6.2). Ngoại lệ duy nhất là chế độ Offline (Mục 4.5).
+
 ---
 
 # 4. ĐẶC TẢ TƯƠNG TÁC NÂNG CAO CHO NGƯỜI 1 (FRONTEND DEV)
@@ -133,7 +138,7 @@ stateDiagram-v2
 * **Khóa nút 3 giây (Debounce):** Sau khi bấm [Nộp Bài], nút chuyển sang trạng thái Loading và bị vô hiệu hóa (disabled) trong 3 giây.
 * **Chặn câu trả lời quá ngắn:** < 15 ký tự (sau khi bỏ khoảng trắng) ⇒ báo ngay tại form, không gửi request.
 * **Chặn nộp trùng nội dung ($\ge 80\%$):** Nếu nội dung mới gõ không khác biệt nhiều so với câu vừa bị rớt $\implies$ Báo lỗi đỏ ngay tại form: *"Bạn chưa bổ sung ý mới, hãy diễn giải chi tiết hơn!"* (Tuyệt đối không gửi request lên backend).
-* **Khóa cứng khi sai đủ 3 lần:** Khi `retry_count === 3` $\implies$ Ẩn ô nhập bài, hiển thị đáp án giải thích chuẩn (`smell_reveal`) kèm nút *"Tôi đã hiểu, cho tôi đi tiếp sang Node sau!"*.
+* **Khóa cứng khi sai đủ 3 lần:** Khi `retry_count === 3` (giá trị server trả về, không phải biến client tự đếm) $\implies$ Ẩn ô nhập bài, hiển thị đáp án giải thích chuẩn (`smell_reveal`) kèm nút *"Tôi đã hiểu, cho tôi đi tiếp sang Node sau!"*.
 
 ### 4.4. Hook Nạp Ngầm Tiên Tri (`usePreFetchSuccessor`)
 * Khi sinh viên xem Tab 1 của Node hiện tại được quá **5 giây**:
@@ -150,4 +155,12 @@ stateDiagram-v2
 
 ### 4.5. Chế độ Demo Offline (`Ctrl + Shift + D`)
 * Nạp `public/demo/mock_repo_shop.json` (kiểu `OfflineMockBundle`, **ghi lại từ output thật của engine**) vào Zustand Store, đặt `is_offline_mode = true`.
-* Hiển thị nhãn **"Chế độ Offline — dữ liệu ghi lại"** trên header trong suốt thời gian dùng, để nói rõ với BGK đây không phải lời gọi trực tiếp.
+* Hiển thị nhãn **"Chế độ Offline — dữ liệu ghi lại, không lưu tiến độ"** trên header trong suốt thời gian dùng, để nói rõ với BGK đây không phải lời gọi trực tiếp.
+* Ở chế độ này BKT/FSM chạy bằng `bkt-engine.ts` ngay trên trình duyệt và **không** ghi Postgres.
+
+### 4.6. Thanh tài khoản & "Tiếp tục học" (Tầng lưu trữ)
+Đặc tả dữ liệu và API: [`00_CORE_SPEC/04_LUU_TRU_VA_DONG_BO.md`](../00_CORE_SPEC/04_LUU_TRU_VA_DONG_BO.md).
+* **Góc phải header:** huy hiệu "Khách" + nút **"Lưu tiến độ bằng GitHub"** khi `is_guest = true`; avatar GitHub khi đã liên kết. Menu tài khoản có mục "Xóa tài khoản và dữ liệu".
+* **Màn hình trống (chưa quét repo):** dưới ô nhập link hiện danh sách **"Tiếp tục học"** từ `GET /api/sessions`: tên repo, nhãn branch + 7 ký tự đầu của commit SHA, tiến độ `completed_count / total_nodes`. Phiên có `can_resume = false` hiện nút "Kéo thả lại file .zip" thay cho nút mở.
+* **Nhãn đồng bộ:** có `pending_receipts` ⇒ chấm vàng "Chưa đồng bộ" cạnh avatar, tự gửi lại khi kết nối lại; không chặn người học đi tiếp.
+* **Lỗi tầng lưu trữ:** ánh xạ đủ `PersistenceErrorCode` (contract Mục 4) sang thông điệp; riêng `ERR_ATTEMPT_OUT_OF_SYNC` thì im lặng tải lại trạng thái node rồi báo "Bài này vừa được nộp ở tab khác".

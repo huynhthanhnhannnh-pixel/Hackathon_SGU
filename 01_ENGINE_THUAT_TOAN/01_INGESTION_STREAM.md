@@ -97,7 +97,7 @@ Toàn bộ dữ liệu được lưu trữ trong 3 bảng băm trên RAM:
 | **`STREAM_TIMEOUT_MS`** | `5,000 ms` | Một `AbortController` phủ **toàn bộ** vòng đời stream (kết nối + tải + giải nén). |
 | **`PREFLIGHT_TIMEOUT_MS`** | `300 ms` | Ngưỡng HEAD probe. Quá ngưỡng ⇒ `TIMEOUT` (lỗi mạng), **không** kết luận repo không tồn tại. |
 | **`MAX_CONCURRENT_INGESTIONS`** | `4` | Semaphore toàn server; request thứ 5 vào hàng đợi FIFO. Trần heap lý thuyết: $4 \times (15 + 8)\text{ MB} \approx 92\text{ MB}$. |
-| **`INGESTION_CACHE_TTL`** | `10 phút` | LRU cache kết quả theo khóa `owner/repo@ref` — demo nạp lại cùng repo không tải lại. |
+| **`INGESTION_CACHE_TTL`** | `10 phút` | LRU cache 2 tầng: **alias** `owner/repo@ref/subdir ➔ snapshot_id` (vì commit SHA chỉ biết sau khi tải) và **kết quả** `snapshot_id + subdir ➔ StaticEngineResult` (Bước 4 Thao tác 2b). Demo nạp lại cùng link trúng alias, không tải lại; mở lại phiên bằng `session_id` đã biết SHA nên tra thẳng tầng kết quả. Hết hạn thì tầng lưu trữ tải lại theo commit SHA (`00_CORE_SPEC/04_LUU_TRU_VA_DONG_BO.md` Mục 7.2). |
 
 ---
 
@@ -117,7 +117,7 @@ Mỗi bước dưới đây được chuẩn hóa theo cấu trúc 4 trụ cột
 * **Thao tác 1:** `POST /api/ingest` dạng `multipart/form-data` (trường `archive`). Đọc body bằng stream có `ByteCountingTransform` như Bước 4 Thao tác 2; vượt `MAX_STREAM_BYTES` (15MB) ⇒ `ERR_STREAM_QUOTA_EXCEEDED`. Không ghi file tạm ra đĩa.
 * **Thao tác 2:** `unzipper.Open.buffer(buf)` lỗi chữ ký ⇒ `ERR_STREAM_CORRUPTED`.
 * **Thao tác 3 (Thư mục gốc):** zip do người dùng nén có thể **không** có thư mục bọc ngoài như zip của GitHub. Chỉ cắt segment đầu tiên khi **mọi** entry cùng chung segment đó; ngược lại giữ nguyên đường dẫn.
-* **Thao tác 4:** `repo_name` = tên file zip bỏ đuôi; cache LRU theo hash SHA-256 của buffer thay cho `owner/repo@ref`.
+* **Thao tác 4:** `repo_name` = tên file zip bỏ đuôi; `snapshot_id` = SHA-256 của buffer (`snapshot_id_kind = "ARCHIVE_HASH"`), dùng làm khóa cache LRU và khóa phiên học.
 
 ---
 
@@ -266,6 +266,12 @@ interface ResolvedRef {
   * Ở Central-Directory-First, buffer chưa đủ thì không đọc được mục lục ⇒ chuyển sang **Streaming Mode** trên phần byte đã nhận (các entry hoàn chỉnh đầu tiên vẫn dùng được), gắn `ingestion_report.truncated = true`.
   * Nếu không thu được file code nào ⇒ `ERR_STREAM_QUOTA_EXCEEDED`.
   * Mọi stream được nối bằng `stream.pipeline()` để lỗi ở bất kỳ mắt xích nào cũng hủy toàn bộ chuỗi.
+* **Thao tác 2b (Lấy commit SHA làm `snapshot_id` — 0 request thêm):**
+  Zip của codeload được sinh bằng `git archive`, công cụ này ghi **commit SHA vào comment của zip** (bản ghi End of Central Directory, APPNOTE §4.3.16). Central-Directory-First vốn đã đọc EOCD nên đọc thêm trường comment (`directory.comment` của `unzipper` — *cần kiểm chứng tên trường*; không có thì tự đọc từ cuối buffer).
+  * Ref người dùng nhập đã là SHA 40 ký tự ⇒ dùng luôn.
+  * Comment khớp `/^[0-9a-f]{40}$/` ⇒ `snapshot_id = comment`, `snapshot_id_kind = "COMMIT_SHA"`.
+  * Không khớp, hoặc đang ở Streaming Mode do bị cắt cụt (không đọc được EOCD) ⇒ `snapshot_id = SHA-256(buffer)`, `snapshot_id_kind = "ARCHIVE_HASH"`.
+  * Mục đích: tầng lưu trữ mở lại đúng phiên bản code bằng `codeload.../zip/<sha>` mà không cần lưu code (`00_CORE_SPEC/04_LUU_TRU_VA_DONG_BO.md` Mục 3). Cache kết quả dùng khóa `snapshot_id` + `subdir`; alias `owner/repo@ref` chỉ trỏ tới `snapshot_id` và hết hạn sau 10 phút như cũ (§2.2).
 * **Thao tác 3 (Chuẩn hóa đường dẫn — chống Path Traversal & va chạm khóa):**
   1. Đổi `\` thành `/`.
   2. Cắt thư mục gốc GitHub tạo (`react-main/src/...` ⇒ `src/...`) bằng `p.substring(p.indexOf('/') + 1)`.

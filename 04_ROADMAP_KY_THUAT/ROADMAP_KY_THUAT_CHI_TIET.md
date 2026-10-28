@@ -31,7 +31,7 @@
 
 | # | Hiện tại (theo spec) | Vấn đề | Hướng nâng cấp |
 | :-: | :--- | :--- | :--- |
-| G1 | Mọi trạng thái ở Zustand client | Không có dữ liệu tập trung → không làm được dashboard, không fit BKT, không đo KPI | Postgres + event log bất biến |
+| G1 | MVP đã có Postgres cho từng người học (`skill_states`, `learning_sessions`, `node_progress`, `feynman_attempts` — `00_CORE_SPEC/04_LUU_TRU_VA_DONG_BO.md`) | Chưa có lớp học / giảng viên → không làm được dashboard cả lớp, chưa đủ trường để fit BKT, không đo KPI | Mở rộng lược đồ MVP: lớp học, event log đầy đủ trường, `llm_calls` |
 | G2 | BKT tham số đặt tay ($P(L_0)=0.25$, $P(T\mid\text{Correct})=0.08$, $P(T\mid\text{Incorrect})=0.03$, $P(G)=0.25$, $P(S)=0.12$), ngưỡng `core_accuracy >= 70` | Tham số "đoán" có lý do sư phạm; nhiễu của bộ chấm LLM bị coi là nhãn chắc chắn | Fit EM bằng `pyBKT`; logistic hiệu chuẩn nhãn 0/1 |
 | G3 | Nối hàm bằng Two-Pass heuristic | Sai với dynamic dispatch, DI, alias, re-export; ngôn ngữ tier `STRUCTURAL` chỉ có Universal Resolver (cạnh `INFERRED`) + Relaxed Gate | Resolver chính xác hơn (LSP/SCIP) + độ tin cậy trên cạnh |
 | G4 | "Slicing" thực chất là call-chain + Nominal Event Bridge | Không phải program slicing theo nghĩa Weiser (PDG) | Đổi tên đúng bản chất; tăng độ mịn best-effort, đo thay vì hứa |
@@ -47,8 +47,8 @@
 **Bản chất:** biến prototype thành hệ thống nhiều người dùng và **thu thập dữ liệu sạch** cho Giai đoạn 2. Chưa cần thuật toán mới lớn.
 
 ### 2.1. Nâng cấp công nghệ
-- **Persistence & Auth:** Postgres (Supabase/Neon) + Drizzle/Prisma; đăng nhập OIDC (Google Workspace `@sgu.edu.vn`) bằng Auth.js. Bảng cốt lõi: `users, courses, enrollments, repos(commit_sha), graphs(json, sha), node_attempts, skill_states, llm_calls`.
-- **Event log append-only** cho mọi lần nộp Feynman: `{student, node, skill_ids, answer_hash, core_accuracy, simplicity, latency_ms, paste_events, tier, rubric_version, model_version, ts}`. Đây là tập dữ liệu để fit BKT ở Giai đoạn 2, **phải thiết kế ngay từ bây giờ**.
+- **Persistence & Auth:** giữ Supabase Postgres + Auth của MVP, thêm provider Google Workspace `@sgu.edu.vn`. Bảng mới thêm vào lược đồ MVP: `courses, enrollments, llm_calls`. Đồ thị vẫn chỉ lưu khung không chứa code (`learning_sessions.graph_skeleton`), không lưu `StaticEngineResult` đầy đủ, để giữ cam kết Zero-Disk với mã nguồn.
+- **Event log append-only** (mở rộng bảng `feynman_attempts` của MVP) cho mọi lần nộp Feynman: `{student, node, skill_ids, answer_hash, core_accuracy, simplicity, latency_ms, paste_events, tier, rubric_version, model_version, ts}`. Đây là tập dữ liệu để fit BKT ở Giai đoạn 2, **phải thiết kế ngay từ bây giờ**.
 - **Ingestion in-process (quyết định D1):** lúc cao điểm chỉ ~5–10 lượt nạp đồng thời (lớp thực hành ≤40 máy), mỗi lượt <15MB. Chạy trên runtime Node dài hạn, route timeout 60–120s, RAM 1–2GB. Bổ sung hai thứ rẻ tiền: (1) **semaphore ~4** (`p-limit`) với hàng chờ trong bộ nhớ, UI hiển thị "đang xếp hàng"; (2) hủy sớm khi vượt 50 file/15MB. Giữ Zero-Disk.
 - **Redis chỉ cho 2 việc:** cache `graph:{repo}@{commit_sha}` (200 SV nộp chung template → parse một lần) và token-bucket rate limit. Nếu chạy 1 instance, bước đầu có thể dùng LRU trong tiến trình + bảng Postgres.
 - **Ngưỡng tách worker (quyết định ở GĐ3 dựa trên log):** p95 thời gian ingest > 8s, hoặc RAM đỉnh > 70%, hoặc > 30 lượt nạp đồng thời, hoặc cần chạy > 1 instance web.
@@ -206,7 +206,7 @@ Telemetry **opt-in**, ẩn danh; theo dõi retention D7/D30 chứ không chỉ l
 
 | Giai đoạn | Công nghệ mới | Thuật toán mới | Mức ưu tiên |
 | :---: | :--- | :--- | :--- |
-| **1** | Postgres, Auth.js, Redis (cache đồ thị + rate limit + response cache), ingestion in-process có semaphore | Greedy submodular + MMR chọn đề; phát hiện gian lận hành vi; chống prompt-injection | **Cao** — không có dữ liệu thì GĐ2 không làm được |
+| **1** | Mở rộng Postgres của MVP (lớp học, `llm_calls`), đăng nhập Google SGU, Redis (cache đồ thị + rate limit + response cache), ingestion in-process có semaphore | Greedy submodular + MMR chọn đề; phát hiện gian lận hành vi; chống prompt-injection | **Cao** — không có dữ liệu thì GĐ2 không làm được |
 | **2** | `pyBKT`, công cụ ghi thí nghiệm (MLflow/Langfuse) | EM-BKT, BKT+Forgetting, logistic hiệu chuẩn nhãn 0/1, HLR, κ/QWK, ANCOVA, lát cắt bám biến best-effort, edge confidence | **Cao nhất** — nền cho paper và mọi bước sau |
 | **3A** | XState, STT mạnh hơn, PayOS/Stripe | CAT bằng expected information gain | Trung bình |
 | **3B** | Docker/Helm, vLLM/Ollama, `jsonrepair`+zod, SSO | Leiden, hotspot churn×complexity, bus factor, knapsack lộ trình, Selective Masking | Cao nếu theo đuổi B2B |

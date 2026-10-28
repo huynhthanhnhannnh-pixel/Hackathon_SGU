@@ -223,7 +223,7 @@
 * **Trạng thái:** 🟡 **XỬ LÝ DỞ / CÒN LỖ HỔNG**
 * **Cách hệ thống hiện tại đang xử lý:** Hạn mức chỉ tính cho 1 request.
 * **Điểm yếu / Lỗ hổng thực tế:** Cả phòng demo cùng dán link ⇒ heap = $N \times$ (15MB nén + byte giải nén); demo nạp lại cùng repo tải lại từ đầu.
-* **Giải pháp khắc phục:** Semaphore `MAX_CONCURRENT_INGESTIONS = 4` + hàng đợi FIFO; LRU cache theo `owner/repo@ref`, TTL 10 phút.
+* **Giải pháp khắc phục:** Semaphore `MAX_CONCURRENT_INGESTIONS = 4` + hàng đợi FIFO; LRU cache 2 tầng (alias `owner/repo@ref` ➔ `snapshot_id`, rồi `snapshot_id` + `subdir` ➔ kết quả), TTL 10 phút.
 * **Đặc tả xử lý:** `01_INGESTION_STREAM.md` §2.2, Bước 4 Thao tác 9.
 
 ---
@@ -431,6 +431,15 @@
 
 ---
 
+### Case 1.38: Đặt tên node — chưa có nguồn tên, tên trùng, tên lộ đề
+* **Trạng thái:** 🔴 **CHƯA XỬ LÝ / TỬ HUYỆT**
+* **Cách hệ thống hiện tại đang xử lý:** `HybridArchitecturalNode.title` chỉ có ví dụ `"Order Checkout Flow"`; không thuật toán nào ở Tầng 1–2 sinh tên, còn AI chỉ chạy khi click node nên không thể đặt tên lúc dựng DAG.
+* **Điểm yếu / Lỗ hổng thực tế:** Canvas không có tên để hiển thị (hoặc phải hiện tên file, sai bất biến "1 Node = 1 lát cắt"); gọi AI đặt tên cho 6–8 node lúc cold-start phá mục tiêu DAG < 1.5s, 0 token; hai lát cắt cùng tên gây nhầm; tên SuperNode chứa chữ "cycle" làm lộ thử thách `CIRCULAR_DEPENDENCY` ở Pha 1; route chứa token ngẫu nhiên có thể lọt secret vào tên.
+* **Giải pháp khắc phục:** Thang ưu tiên 5 bậc tất định (Route ➔ tên hàm entry ➔ từ khóa miền TF-IDF ➔ thư mục ➔ tên file), tên Virtual Node/Root cố định theo mẫu, khử trùng theo method ➔ thư mục ➔ số thứ tự; không đọc `hidden_challenge`; lọc đoạn route theo ký tự và entropy; ghi `title_source` + `title_evidence` để UI đánh dấu `~` cho tên suy ra.
+* **Đặc tả xử lý:** `02_AST_SLICING_GRAPH.md` Thuật toán 8; contract `NodeTitleSource` trong `02_DATA_CONTRACTS.md`.
+
+---
+
 # PHẦN 2: NHÓM EDGE CASES VỀ HẠ TẦNG, MẠNG & DỊCH VỤ NGOÀI
 
 ### Case 2.1: Giới hạn Rate Limit của GitHub Public API (60 requests/giờ cho mỗi IP)
@@ -450,6 +459,7 @@
   * Phím tắt `Ctrl + Shift + D` nạp ngay file `public/demo/mock_repo_shop.json` — dữ liệu **ghi lại từ output thật** của engine và AI, giao diện hiện nhãn "Chế độ Offline" (UI Mục 4.5).
   * Tầng phân tích tĩnh và Zustand Store chạy 100% trên Client / Localhost, không cần kết nối mạng.
   * AI Gateway tự động chuyển sang đọc dữ liệu mock nếu phát hiện `navigator.onLine === false` hoặc fetch trả về `Failed to fetch`.
+  * Ở chế độ này **không ghi Postgres**: hồ sơ chỉ nằm trong RAM trình duyệt, nhãn ghi rõ "không lưu tiến độ". Nếu chỉ Postgres lỗi (còn mạng, AI vẫn chạy) thì dùng biên nhận đã ký `SyncReceipt` (`04_LUU_TRU_VA_DONG_BO.md` Mục 7.1), không cần vào chế độ Offline.
 
 ---
 

@@ -50,9 +50,11 @@ flowchart TD
 
     AlgUncleBob --> AlgBudget["9. Display Budget 6–8 Node<br/>PageRank + Critical Path"]
 
-    AlgBudget --> AlgDagre["10. Dagre Hierarchical Layout<br/>Tọa độ (x, y), mọi root = AVAILABLE"]
+    AlgBudget --> AlgNaming["10. Deterministic Node Naming<br/>Route ➔ Tên hàm ➔ Từ khóa miền ➔ Thư mục ➔ Tên file"]
 
-    AlgDagre --> RenderOutput["11. BÀN GIAO CHO NGƯỜI 1 (Canvas Cột 1) & NGƯỜI 3 (AI Cột 3)"]
+    AlgNaming --> AlgDagre["11. Dagre Hierarchical Layout<br/>Tọa độ (x, y), mọi root = AVAILABLE"]
+
+    AlgDagre --> RenderOutput["12. BÀN GIAO CHO NGƯỜI 1 (Canvas Cột 1) & NGƯỜI 3 (AI Cột 3)"]
 ```
 
 ---
@@ -455,7 +457,7 @@ function linkCallEdges(file: string, tree: Tree, ctx: LinkContext) {
   Khởi tạo `const g = new dagre.graphlib.Graph()`.  
   Cấu hình đồ thị: `rankdir: 'TB'` (Top to Bottom), khoảng cách hàng `ranksep: 100`, khoảng cách cột `nodesep: 80`.
 * **Thao tác 2 (Thêm kích thước node):**
-  Duyệt qua danh sách node (theo id đã sort), gán kích thước cố định cho mỗi hộp: `g.setNode(node.id, { width: 240, height: 90 })`. Tiêu đề dài hơn 32 ký tự được cắt và thêm `…` (tooltip hiện đủ).
+  Duyệt qua danh sách node (theo id đã sort), gán kích thước cố định cho mỗi hộp: `g.setNode(node.id, { width: 240, height: 90 })`. Tiêu đề (do Thuật toán 8 sinh, chạy ngay trước thao tác này) dài hơn 32 ký tự được cắt và thêm `…` (tooltip hiện đủ).
 * **Thao tác 3 (Thêm cạnh nối):**
   Duyệt qua danh sách cạnh: `g.setEdge(edge.source, edge.target)`.
 * **Thao tác 4 (Tính toán Sugiyama):**
@@ -465,6 +467,102 @@ function linkCallEdges(file: string, tree: Tree, ctx: LinkContext) {
   Lấy tọa độ góc trên bên trái: `position: { x: pos.x - 120, y: pos.y - 45 }`.
 * **Thao tác 6 (Trạng thái khởi đầu):**
   **Mọi** node có in-degree = 0 (root) ⇒ `AVAILABLE` (màu Vàng `#F59E0B`); các node còn lại ⇒ `LOCKED`. Không có khái niệm "Node 1" duy nhất — repo có 2 router độc lập thì cả 2 root đều mở.
+
+---
+
+### THUẬT TOÁN 8: ĐẶT TÊN NODE TẤT ĐỊNH (DETERMINISTIC NODE NAMING — < 5ms, 0 Token)
+
+> **Vị trí chạy:** sau Thuật toán 7 **Thao tác 0** (Display Budget đã chốt tập node và `files` của từng node), **trước** Thao tác 1 (Dagre). Chỉ dùng dữ liệu đã có từ Pass 1–2 và Thuật toán 3, không parse lại file.
+
+#### 1. Tại sao cần bước này & Vai trò của nó?
+* **Vấn đề thực tế:** Tên node là thứ đầu tiên người học đọc trên Canvas, và `HybridArchitecturalNode.title` phải có **ngay khi DAG hiện ra** — trước mọi lời gọi AI (AI chỉ chạy JIT khi click node). Để AI đặt tên thì phải gọi AI cho cả 6–8 node lúc cold-start, phá mục tiêu DAG < 1.5s và 0 token của Tầng 0–2. Hiển thị tên file (`order.controller.ts`) thì sai bất biến "1 Node = 1 lát cắt xuyên file".
+* **Vai trò:** "Người viết biển chỉ đường", đặt cho mỗi lát cắt một tên ngắn, đọc được, rút ra từ chính code (route, tên hàm, từ khóa miền), kèm **nguồn** (`title_source`) và **bằng chứng** (`title_evidence`) để UI phân biệt tên chắc chắn với tên chỉ là suy ra.
+
+#### 2. Cơ chế kỹ thuật:
+* **Thang ưu tiên nguồn 5 bậc (Source Priority Ladder):** thử lần lượt từ nguồn chắc nhất; bậc đầu tiên cho ra tên hợp lệ thì dừng. Bậc cuối luôn thành công nên node nào cũng có tên.
+* Chuẩn hóa định danh (tách camelCase/snake_case, bỏ từ kỹ thuật, số ít hóa), xếp hạng từ khóa miền bằng TF-IDF trên `SymbolTable`, rồi khử trùng tên tất định.
+* Không AI, không regex trên văn bản thô: route lấy từ Pass 2 Thao tác 5, Ingress từ Thuật toán 3 Thao tác 4, định danh từ Pass 1.
+* **Ngôn ngữ của tên:** nhãn tiếng Anh ghép từ định danh trong code (VD: "Order Checkout"). Hệ thống **không dịch** sang tiếng Việt, vì dịch cần từ điển hoặc AI và dễ sai nghĩa; phần giải thích tiếng Việt nằm ở Tab X-Ray.
+
+#### 3. Làm thế nào để cơ chế đó thực hiện được? (Từng thao tác cụ thể):
+* **Thao tác 0 (Đầu vào của mỗi node):**
+  * `entry`: hàm mở đầu lát cắt = hàm của `trace_steps[0]` (Ingress handler, hàm VIP, hoặc hàm gốc của Virtual Node).
+  * `binding`: điểm đăng ký của `entry` nếu có — route HTTP (`ROUTE_REGISTRARS` và decorator route ở Pass 2 Thao tác 5), route trang frontend, tên screen mobile, tên lệnh CLI (bảng `INGRESS_PATTERNS`, Thuật toán 3 Thao tác 4).
+  * `files`, `node_type`, `ingestion_report.degraded_mode`.
+  * **Không đọc** `hidden_challenge`, smell hay `uncle_bob.diagnosis` (chống lộ đề — xem Thao tác 7, 8).
+
+* **Thao tác 1 (Chuẩn hóa định danh — hàm `normalizeTokens`, dùng chung cho mọi bậc):**
+  1. Tách token theo camelCase/PascalCase (`postCheckout` → `post`, `checkout`; `HTTPServer` → `http`, `server`), `snake_case`, `kebab-case`, dấu `.` và `/`.
+  2. Bỏ `TECH_TOKENS` = `controller|ctrl|service|svc|repository|repo|dao|model|entity|dto|schema|handler|handle|impl|manager|helper|util|utils|router|route|routes|view|views|api|endpoint|module|index|main|base|abstract|interface|default|async|sync` và các đoạn phiên bản `v1`, `v2`...; bỏ tiền tố `I` của interface (`IOrderService` → `OrderService`) khi ký tự thứ 2 viết hoa.
+  3. Bỏ token toàn số và token ≤ 2 ký tự, trừ `ACRONYMS` = `id|ui|ai|io|os|qr`.
+  4. Số ít hóa token tiếng Anh bằng 3 luật: `-ies → -y`, `-sses → -ss`, `-s → ""`; không áp cho token ≤ 3 ký tự hoặc kết thúc bằng `ss|us|is`. Luật gần đúng, cố ý không dùng từ điển.
+  5. Viết hoa chữ cái đầu mỗi token (Title Case); token thuộc `ACRONYMS` hoặc viết toàn chữ hoa trong code (`JWT`, `URL`, `SQL`) giữ in hoa.
+  6. Định danh không phải ASCII (VD: tên biến tiếng Việt) chỉ tách token, không số ít hóa, không dịch.
+
+* **Thao tác 2 (Bậc 1 — `ROUTE`: điểm đăng ký của entry):**
+  * **HTTP:** ghép tiền tố với đường dẫn khi phân giải được trên AST (`@Controller('orders')` + `@Post('checkout')`; `app.use('/api/orders', router)` + `router.post('/checkout')`; `@RequestMapping("/orders")` + `@PostMapping("/checkout")`). Bỏ đoạn `api`, `v\d+` và tham số đường dẫn (`:id`, `{id}`, `<int:id>`, `[id]`), giữ ghi nhớ vị trí tham số. Còn lại danh sách đoạn tĩnh $S$:
+
+    | Điều kiện | Mẫu tên | Ví dụ |
+    | :--- | :--- | :--- |
+    | $\lvert S \rvert \ge 2$, hai đoạn cuối liền nhau (không có tham số xen giữa) | `Singular(S[-2])` + `S[-1]` — đoạn cuối là hành động | `POST /orders/checkout` → "Order Checkout"; `POST /auth/login` → "Auth Login" |
+    | $\lvert S \rvert \ge 2$, có tham số xen giữa (tài nguyên lồng) | áp mẫu 1 đoạn bên dưới cho `S[-1]`, thêm `Singular(S[-2])` làm chủ sở hữu | `GET /users/:id/orders` → "List User Orders" |
+    | $\lvert S \rvert = 1$, `POST` | `Create` + `Singular(S[0])` | `POST /orders` → "Create Order" |
+    | $\lvert S \rvert = 1$, `GET`, có tham số ở cuối | `Get` + `Singular(S[0])` | `GET /orders/:id` → "Get Order" |
+    | $\lvert S \rvert = 1$, `GET`, không tham số | `List` + `S[0]` (giữ số nhiều) | `GET /orders` → "List Orders" |
+    | $\lvert S \rvert = 1$, `PUT`/`PATCH` / `DELETE` | `Update` / `Delete` + `Singular(S[0])` | `DELETE /orders/:id` → "Delete Order" |
+    | $\lvert S \rvert = 0$ (route `/`) hoặc route đăng ký động (vòng lặp, biến) | bỏ bậc này | — |
+
+  * **Trang frontend** (`pages/orders/[id].tsx`, `app/cart/page.tsx`, `<Route path="/cart">`): đường dẫn trang → `normalizeTokens` + hậu tố `Page` → "Cart Page".
+  * **Mobile:** tên đăng ký screen (`Stack.Screen name="Cart"`, `GoRoute(path: '/cart')`) → "Cart Screen".
+  * **CLI:** tên lệnh (`program.command('deploy')`, `@app.command()` trên `def deploy`) → "Deploy Command".
+  * **Lọc đoạn đường dẫn:** chỉ nhận ký tự `[A-Za-z0-9_-]`, dài ≤ 30 ký tự; đoạn trông như mã ngẫu nhiên (dài ≥ 16 và entropy Shannon > 3.5 bit/ký tự) bị bỏ, để token/secret nhúng trong URL không lọt vào tên.
+  * `title_evidence` = route gốc sau lọc, VD `"POST /orders/checkout"`.
+
+* **Thao tác 3 (Bậc 2 — `ENTRY_SYMBOL`: tên hàm mở đầu):**
+  * Lấy tên `entry` (`OrderController.postCheckout`, `findShortestRoute`) và chạy `normalizeTokens`. Token đầu là `post|put|patch` thì bỏ (động từ HTTP, không mang nghĩa nghiệp vụ); các động từ `get|list|create|update|delete|find|fetch|build|calc|compute`... giữ nguyên.
+  * Còn đúng 1 token ⇒ ghép thêm tài nguyên lấy từ tên class chứa hàm (đã bỏ `TECH_TOKENS`): `OrderController.create` → "Create Order".
+  * Tên rỗng sau chuẩn hóa, hoặc toàn bộ thuộc `GENERIC_NAMES` = `main|run|start|init|handler|callback|cb|fn|func|process|execute|exec|test|tmp|temp|foo|bar|<module>|default|anonymous` ⇒ bỏ bậc này.
+  * `title_evidence` = khóa symbol, VD `"OrderController.postCheckout"`.
+
+* **Thao tác 4 (Bậc 3 — `DOMAIN_TERMS`: từ khóa miền chung của lát cắt):**
+  * Thu token (đã chuẩn hóa, bỏ thêm `GENERIC_NAMES`) từ tên class, hàm, interface/DTO được định nghĩa trong các file thuộc `files` của node.
+  * Điểm: $\text{score}(t) = \text{tf}_{\text{node}}(t) \times \left(\ln\frac{1 + N}{1 + \text{df}(t)} + 1\right)$, với $N$ = số file code, $\text{df}(t)$ = số file có định danh chứa $t$ (đếm một lần sau Pass 1). Từ xuất hiện khắp repo (`app`, `data`) bị hạ điểm; từ đặc trưng lát cắt (`order`, `inventory`) được nâng.
+  * Chọn tối đa 2 token điểm cao nhất (hòa ⇒ thứ tự từ điển) có $\text{tf} \ge 2$, ghép bằng `" / "`: "Order / Inventory". Không token nào đạt ⇒ bỏ bậc.
+  * `title_evidence` = token kèm tần suất, VD `"order×6, inventory×3"`.
+
+* **Thao tác 5 (Bậc 4 — `DIRECTORY`):** đi ngược từ thư mục của `files[0]` lên gốc, lấy thư mục đầu tiên **không** thuộc `GENERIC_DIRS` = `src|lib|app|internal|pkg|cmd|main|java|kotlin|com|org|net|controllers|services|repositories|repos|routes|handlers|api|modules|core|common|shared|utils|components|pages|views|features|domain|infra|infrastructure`, rồi `normalizeTokens`: `src/modules/payment/payment.controller.ts` → "Payment". `title_evidence` = đường dẫn thư mục.
+
+* **Thao tác 6 (Bậc 5 — `FILE_BASENAME`, luôn thành công):** basename của `files[0]`, bỏ đuôi và hậu tố vai trò (`.controller`, `.service`, `_handler`, `Controller`...), rồi `normalizeTokens`; vẫn rỗng thì dùng nguyên basename. `title_evidence` = path của `files[0]`.
+
+* **Thao tác 7 (Node đặc biệt):**
+  * **Virtual Root** `vroot-algorithms` (§3.8.2): tên cố định "Algorithm Collection", `title_source = "VIRTUAL"`.
+  * **Virtual Node** PROCEDURAL `vnode-<basename>-<k>` (§3.8.1): `<Tên gốc>: <Chặng>`; tên gốc chạy bậc 2→5 trên hàm/file gốc, chặng ∈ `Input` / `Validation` / `Compute & Output` / `Data Access` theo bảng §3.8.1. VD "Checkout: Validation", `title_source = "VIRTUAL"`.
+  * **Node hàm** (PROCEDURAL Bước 1, `ALGORITHMIC_CORE`): chạy thang bình thường, thường dừng ở bậc 2 (tên hàm): `findShortestRoute` → "Find Shortest Route".
+  * **SuperNode** (Tarjan): chạy thang trên toàn bộ file của cụm, `entry` lấy theo `files[0]` (Thuật toán 2 Thao tác 5). **Không** thêm chữ "cycle"/"vòng" vào tên — chu trình là ứng viên `hidden_challenge` Mức 2, ghi vào tên là lộ đề ở Pha 1.
+
+* **Thao tác 8 (Giới hạn độ dài & ràng buộc an toàn):**
+  * Tối đa 4 token (giữ 4 token đầu, không tính phần khử trùng ở Thao tác 9). Ký tự cho phép: chữ, số, khoảng trắng và `/ & : - ( ) #`. Trần hiển thị 32 ký tự vẫn do Thuật toán 7 Thao tác 2 cắt bằng `…`.
+  * Tên chỉ ghép từ định danh và đoạn đường dẫn đã lọc, không lấy câu văn tự do trong comment/string ⇒ không thành kênh prompt-injection khi đưa vào `macro_context.node_title`.
+
+* **Thao tác 9 (Khử trùng tên tất định):** sau khi mọi node có tên, duyệt theo `id` đã sort và gom các node trùng `title` (không phân biệt hoa thường):
+  1. Cùng nguồn `ROUTE` nhưng khác method HTTP ⇒ thêm method: "Order (GET)" / "Order (POST)".
+  2. Còn trùng ⇒ thêm thư mục gần nhất khác nhau của `files[0]`: "Checkout (cart)" / "Checkout (payment)".
+  3. Còn trùng ⇒ thêm số thứ tự theo `id`: "Checkout #2", "Checkout #3".
+
+* **Thao tác 10 (Ghi kết quả):** gán `title`, `title_source`, `title_evidence` cho `HybridArchitecturalNode`. Nhóm **tên chắc** = `ROUTE`, `ENTRY_SYMBOL`, `VIRTUAL`; nhóm **tên suy ra** = `DOMAIN_TERMS`, `DIRECTORY`, `FILE_BASENAME` ⇒ UI thêm tiền tố `~` (xem `03_UI_VA_KICH_BAN/01_UI_TRI_PANE_FSM.md`).
+
+* **AI không đổi tên node:** `node_title` chỉ là đầu vào của `macro_context`; `EnrichedSliceResponse` không có trường tên. Cùng repo + cùng ref ⇒ cùng tên (Quy tắc Deterministic §2).
+
+* **Giới hạn đã biết:** luật "đoạn cuối là hành động" có thể đoán nhầm vai trò đoạn (`/orders/history` → "Order History" đúng, nhưng `/reports/orders` → "Report Order" chưa tự nhiên); luật số ít hóa gần đúng (`news` → "New"); định danh viết tắt hoặc đặt tùy tiện (`procOrd`, `h2`) cho tên kém; tên không được dịch. Các trường hợp này rơi vào nhóm có bằng chứng ở tooltip, không bịa tên đẹp hơn.
+
+#### 4. Bảng trace chạy tay (dữ liệu mẫu theo `cockpit_demo.html`):
+
+| Node | Bậc 1 `ROUTE` | Bậc 2 `ENTRY_SYMBOL` | Bậc 3 `DOMAIN_TERMS` | Kết quả |
+| :--- | :--- | :--- | :--- | :--- |
+| Lát cắt checkout | `@Controller('orders')` + `@Post('checkout')` ⇒ $S$ = [orders, checkout] ⇒ **"Order Checkout"** | — | — | `ROUTE`, evidence `"POST /orders/checkout"` |
+| VIP `findShortestRoute` (`src/shipping/route-planner.ts`) | Không có route | `find`, `shortest`, `route` ⇒ **"Find Shortest Route"** | — | `ENTRY_SYMBOL` |
+| Script Python `crawler/run.py`, hàm `main()` | Không có route | `main` ∈ `GENERIC_NAMES` ⇒ bỏ | `crawler`×4, `page`×3 ⇒ **"Crawler / Page"** | `DOMAIN_TERMS` ⇒ UI hiện `~Crawler / Page` |
+| Hai lát cắt `cart/checkout.ts` và `payment/checkout.ts` | Không có route | Đều ra "Checkout" | — | Thao tác 9 bước 2 ⇒ "Checkout (cart)", "Checkout (payment)" |
 
 ---
 
@@ -531,6 +629,9 @@ Sau mọi fallback mà danh sách node vẫn rỗng (VD: toàn bộ file bị lo
 
 7. DISPLAY BUDGET & DAGRE:
    • 3 node nghiệp vụ ≤ 8 ---> giữ toàn bộ; root duy nhất order.controller.ts ---> AVAILABLE.
+
+8. NODE NAMING (chạy giữa Display Budget và Dagre):
+   • Lát cắt checkout: route POST /orders/checkout ---> "Order Checkout" (title_source = ROUTE).
 ========================================================================================
 ```
 
@@ -579,7 +680,7 @@ Tầng 1 & 2 của Engine đóng vai trò là **"nguồn cấp dữ liệu chu�
 Kết thúc Tầng 1 và Tầng 2 (< 0.25 giây), kết quả trả về đúng hợp đồng dữ liệu `StaticEngineResult`:
 
 1. **Bàn giao cho NGƯỜI 1 (Frontend Lead - Cột 1 ReactFlow Canvas):**
-   * Mảng `nodes: HybridArchitecturalNode[]` (6–8 node) đã có sẵn tọa độ `position: { x, y }`, tên nhãn, và trạng thái màu ban đầu (mọi root = `AVAILABLE` màu Vàng, các node sau = `LOCKED` màu Xám). `files[0]` là file Monaco mở mặc định. Mỗi node có `languages` và `support_tier` (tier thấp nhất trong các file của lát cắt) để Cổng gác chọn Strict/Relaxed Mode, và `hidden_challenge` (nếu phát hiện) — trường này chỉ server dùng, không hiển thị ở Tab 1.
+   * Mảng `nodes: HybridArchitecturalNode[]` (6–8 node) đã có sẵn tọa độ `position: { x, y }`, tên node (`title`, `title_source`, `title_evidence` — Thuật toán 8), và trạng thái màu ban đầu (mọi root = `AVAILABLE` màu Vàng, các node sau = `LOCKED` màu Xám). `files[0]` là file Monaco mở mặc định. Mỗi node có `languages` và `support_tier` (tier thấp nhất trong các file của lát cắt) để Cổng gác chọn Strict/Relaxed Mode, và `hidden_challenge` (nếu phát hiện) — trường này chỉ server dùng, không hiển thị ở Tab 1.
    * Mảng `edges` nối các Node theo trật tự phân nhánh (cạnh `ambiguous` vẽ nét đứt).
    * `ingestion_report.warnings` để hiển thị thông báo cắt giảm / chế độ suy biến.
 2. **Bàn giao cho NGƯỜI 3 (AI Architect - Cột 3 Sát Hạch Feynman):**
@@ -612,3 +713,4 @@ Kết thúc Tầng 1 và Tầng 2 (< 0.25 giây), kết quả trả về đúng 
 | 1.35 | Nhiều root, đồ thị rỗng, quá nhiều node, không deterministic | §2 Quy tắc Deterministic, Thuật toán 7 Thao tác 0, 6, §3.8.3 |
 | 1.36 | Ngân sách thời gian, warm-up grammar | §3.0 |
 | 1.37 | `symbol_whitelist` thiếu biến/field/tham số | Thuật toán 1 Thao tác 1, §5 Quy tắc dựng whitelist |
+| 1.38 | Node chưa có tên / tên trùng / tên lộ đề | Thuật toán 8 |

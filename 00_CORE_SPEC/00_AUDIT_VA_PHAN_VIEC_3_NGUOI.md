@@ -107,14 +107,14 @@
 
 #### FILE 4: `01_ENGINE_THUAT_TOAN/02_AST_SLICING_GRAPH.md`
 1. **Tóm tắt nội dung hiện có (Đạt 90%):**
-   - Đã định nghĩa chuẩn Two-Pass Symbol Resolution, Tarjan SCC, PageRank, Cognitive Complexity, Uncle Bob Scope Slicing và Dagre Layout.
+   - Đã định nghĩa chuẩn Two-Pass Symbol Resolution, Tarjan SCC, PageRank, Cognitive Complexity, Uncle Bob Scope Slicing, Dagre Layout và đặt tên node tất định (Thuật toán 8).
 2. **Những điểm còn mơ hồ, rườm rà hoặc mâu thuẫn:**
    - Cần mô tả thuật toán **Utility Sink Filtering** bằng các bước code cụ thể: lọc các node có $\text{Out-degree} = 0$ thuộc danh sách tên file rác (`logger`, `db`, `config`, `util`) trước khi nhân ma trận PageRank.
 3. **Những phần đang thiếu thốn cần bổ sung gấp:**
    - Bảng quy tắc Regex phát hiện endpoint của các framework phổ biến (Express, NestJS, Spring Boot, FastAPI, Gin).
 4. **Checklist giao việc cụ thể cho NGƯỜI 2 (Khuôn chuẩn 5 Mục):**
    - [ ] **Input:** `Map<string, string>` từ Tầng 0.
-   - [ ] **Logic:** Quét `tags.scm` lập 3 bảng băm $\to$ Chạy Tarjan Condensation $\to$ Chạy PageRank Sink Filter lấy Top Hubs $\to$ Rút Scoped Slicing 3 hàm $\to$ Chạy Dagre Layout tính $(x, y)$.
+   - [ ] **Logic:** Quét `tags.scm` lập 3 bảng băm $\to$ Chạy Tarjan Condensation $\to$ Chạy PageRank Sink Filter lấy Top Hubs $\to$ Rút Scoped Slicing 3 hàm $\to$ Display Budget $\to$ Đặt tên node (Thuật toán 8) $\to$ Chạy Dagre Layout tính $(x, y)$.
    - [ ] **Fallback:** Nếu đồ thị rời rạc không có Controller $\to$ dùng Cognitive Complexity cấp Vé VIP cho file thuật toán làm node chính.
    - [ ] **Output JSON:** Cấu trúc `StaticEngineResult` chuẩn theo `02_DATA_CONTRACTS.md`.
    - [ ] **SLA:** Toàn bộ hoàn thành trong $< 0.25$ giây trên CPU.
@@ -123,6 +123,7 @@
    - [ ] **🔴 Đa ngôn ngữ theo tầng (Person 2 chính, Person 1 sửa contract, Person 3 gắn Relaxed Gate theo tier):** `LanguageRegistry` (adapter `{extensions, wasmGrammar, queryFile, importResolver?, ingressPatterns?, abstractionKinds?}`); tier `RESOLVED` (có `importResolver`) vs `STRUCTURAL` (Universal Resolver, Thao tác 2b, cạnh `INFERRED`); `ProjectFingerprint` thêm `language_breakdown`, `graph_confidence`; `edges[].confidence`; bỏ enum đóng `primary_language`; `ERR_UNSUPPORTED_LANGUAGE` chỉ cho ngôn ngữ không có grammar; UI vẽ cạnh `INFERRED` nét đứt + huy hiệu độ tin cậy đồ thị.
    - [ ] **🔴** Phân nhánh 0 cạnh theo số file: `PROCEDURAL` vs `ALGORITHM_COLLECTION` (1.31, 1.1, 1.4); `DATA_SINK_PATTERNS` + control dependence + trần dòng/token (1.33).
    - [ ] **🟡** Tỉ lệ node `ERROR` (1.22), khóa `file#symbol` + arrow/default export (1.27), SCC khổng lồ (1.28), PageRank dangling + basename match (1.29), `INGRESS_PATTERNS` đa framework (1.30), nesting theo AST cho Python (1.32), Uncle Bob mẫu số 0 / JS thuần (1.34), Display Budget + mọi root AVAILABLE + deterministic (1.35), warm-up grammar + `ENGINE_BUDGET_MS` (1.36), whitelist có field/tham số (1.37).
+   - [ ] **🔴 Đặt tên node (Case 1.38 — Person 2 chính, Person 1 sửa contract + UI):** Thuật toán 8 (thang 5 bậc `ROUTE` ➔ `ENTRY_SYMBOL` ➔ `DOMAIN_TERMS` ➔ `DIRECTORY` ➔ `FILE_BASENAME`, tên `VIRTUAL`, khử trùng, lọc route theo entropy); ghi `title_source` + `title_evidence`; kiểm thử trên 3–5 repo mẫu và ghi lại các tên chưa tự nhiên.
 
 ---
 
@@ -158,7 +159,8 @@
    - [ ] **Logic:** Tính $\text{Obs}$ $\to$ Cập nhật $P(L_{t-1} \mid \text{Obs})$ theo công thức Bayes $\to$ Tính bước tiếp thu $P(T)$ $\to$ Cập nhật đồng thời các kỹ năng bật cờ trong $q_j$.
    - [ ] **Fallback:** Chống tràn số hoặc chia cho 0 khi xác suất chạm cận $0.0$ hoặc $1.0$ (kẹp giá trị trong khoảng $[0.01, 0.99]$).
    - [ ] **Output JSON:** `LearnerCognitiveProfile` mới.
-   - [ ] **SLA:** Thực thi $< 0.002$ giây trên trình duyệt client.
+   - [ ] **SLA:** Thực thi $< 0.002$ giây.
+   - [ ] **Rà soát 2026-10-28 (tầng lưu trữ):** BKT chuyển lên server. `src/lib/bkt-engine.ts` giữ nguyên hàm thuần, dùng chung client/server; chỉ server gọi `updateBKTState` trong transaction `evaluate-feynman`; viết `applyUnlocksAndFastTrack` và `deriveNodeStates` (`04_LUU_TRU_VA_DONG_BO.md` Mục 4, 6.2).
 
 ---
 
@@ -174,13 +176,14 @@
 4. **Checklist giao việc cụ thể cho NGƯỜI 1:**
    - [ ] Định nghĩa bảng mã màu CSS tokens trong file: `#0F172A` (Nền), `#F59E0B` (Vàng Available), `#10B981` (Xanh Completed), `#EF4444` (Đỏ Failed).
    - [ ] Ráp Zustand Store quản lý trạng thái chọn Node đồng bộ cả 3 cột.
-   - [ ] **Rà soát 2026-10-28:** Hiển thị `ingestion_report.warnings` (repo bị cắt bớt, chế độ suy biến); cho chọn lại thư mục phân tích khi phát hiện nhiều backend (Case 1.7); Monaco mở `files[0]` khi click SuperNode (Case 1.6); vẽ nét đứt cho cạnh `ambiguous` (Case 1.24); mọi node root đều `AVAILABLE` (Case 1.35); ánh xạ đủ các mã `IngestionErrorCode` sang thông điệp UI.
+   - [ ] **Rà soát 2026-10-28:** Hiển thị `ingestion_report.warnings` (repo bị cắt bớt, chế độ suy biến); cho chọn lại thư mục phân tích khi phát hiện nhiều backend (Case 1.7); Monaco mở `files[0]` khi click SuperNode (Case 1.6); vẽ nét đứt cho cạnh `ambiguous` (Case 1.24); mọi node root đều `AVAILABLE` (Case 1.35); ánh xạ đủ các mã `IngestionErrorCode` sang thông điệp UI; tiền tố `~` + tooltip `title_evidence` cho tên node (Case 1.38).
+   - [ ] **Tầng lưu trữ (`04_LUU_TRU_VA_DONG_BO.md` Mục 9):** tạo project Supabase cùng vùng với server; 5 bảng + RLS; đăng nhập khách + nút "Lưu tiến độ bằng GitHub" (`linkIdentity`); `GET /api/me`, `GET /api/sessions` + danh sách "Tiếp tục học"; mở lại phiên bằng `session_id`; nhãn "Chưa đồng bộ"; tài khoản demo riêng cho từng persona. Người 2 thêm Thao tác 2b (đọc commit SHA từ comment zip) và **kiểm chứng thực nghiệm** trên zip thật của codeload.
 
 ---
 
 #### FILE 8: `03_UI_VA_KICH_BAN/02_KICH_BAN_PITCH_DEMO.md`
 1. **Tóm tắt nội dung hiện có (Đạt 95%):**
-   - Có kịch bản từng phút cho 5 phút thuyết trình và 8 câu hỏi bẫy kèm câu trả lời.
+   - Có kịch bản từng phút cho 5 phút thuyết trình và 9 câu hỏi bẫy kèm câu trả lời (Q9 về lưu trữ thêm ngày 2026-10-28).
 2. **Những điểm còn mơ hồ, rườm rà hoặc mâu thuẫn:**
    - Đã sửa (2026-10-28): bỏ cảnh hiện lỗi N+1 ở Tab 1; bỏ các khẳng định "100%", "an toàn tuyệt đối"; Q3 (PageRank), Q6 (chống chép), Q7 (offline là dữ liệu ghi lại), Q8 (Nominal Event Bridge thuộc lộ trình).
    - Còn mở: thời lượng mỗi đội chưa có trong thể lệ — cần hỏi BTC.

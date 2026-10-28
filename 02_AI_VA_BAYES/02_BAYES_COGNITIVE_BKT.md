@@ -8,7 +8,7 @@
 | **Tài liệu** | `02_AI_VA_BAYES/02_BAYES_COGNITIVE_BKT.md` |
 | **Người phụ trách** | **NGƯỜI 3 (AI & COGNITIVE ENGINEER)** |
 | **Nền tảng lý thuyết** | **Bayesian Knowledge Tracing (Corbett & Anderson, 1995)**, **Ebbinghaus Decay (1885)** |
-| **Môi trường thực thi** | **Client Store (Zustand)** • Thời gian tính toán: **< 0.002s** • Chi phí: **0 Token AI** |
+| **Môi trường thực thi** | **Server** (trong transaction `evaluate-feynman`, lưu Postgres) • Client dùng chung hàm thuần chỉ để vẽ decay • Thời gian tính toán: **< 0.002s** • Chi phí: **0 Token AI** |
 | **Mục tiêu kỹ thuật** | Mô hình hóa năng lực người học, phân phối độ khó 3-Tier, tự động miễn thi Fast-Track |
 
 ---
@@ -44,14 +44,16 @@ Hệ thống định lượng trình độ người học trên không gian véc
 * **Bản chất vấn đề:** Nếu phải chờ Gemini Flash phân tích ở `/api/enrich-node` mới có danh sách kỹ năng, hệ thống buộc phải tiêu tốn token và chịu độ trễ $1.5\text{s}$ trước khi biết người học có đủ điều kiện miễn thi hay không.
 * **Giải pháp Kỹ thuật:**
   1. Tại **Tầng 2 (Static AST Parsing - 0 Token, < 1.5s)**: Parser tự động đối sánh mã nguồn Node với bảng heuristics ở trên để gán mảng `preliminary_skills: SWESkill[]` (từ 1 đến 3 kỹ năng) vào metadata của từng Node trên đồ thị DAG.
-  2. Ngay khi Node **đủ điều kiện mở khóa** (mọi node cha đã COMPLETED hoặc FAILED): Client Zustand Store kiểm tra điều kiện Auto-Pass ($\ge 0.92$, tính trên điểm **đã decay**) với `preliminary_skills`. Nếu thỏa mãn (và node không bị Capstone Lock, Mục 3.3), Node chuyển thẳng sang `COMPLETED` với `is_auto_mastered = true` mà **hoàn toàn không cần gọi API AI**; ngược lại chuyển sang `AVAILABLE`.
+  2. Ngay khi Node **đủ điều kiện mở khóa** (mọi node cha đã COMPLETED hoặc FAILED): server (hàm `applyUnlocksAndFastTrack` trong cùng transaction, `00_CORE_SPEC/04_LUU_TRU_VA_DONG_BO.md` Mục 6.2) kiểm tra điều kiện Auto-Pass ($\ge 0.92$, tính trên điểm **đã decay**) với `preliminary_skills`. Nếu thỏa mãn (và node không bị Capstone Lock, Mục 3.3), Node chuyển thẳng sang `COMPLETED` với `is_auto_mastered = true` mà **hoàn toàn không cần gọi API AI**; ngược lại chuyển sang `AVAILABLE`.
   3. AI chỉ được chọn `target_skills` **trong** `preliminary_skills` (Cổng gác kiểm tra, xem `01_LLM_PIPELINE_GUARDRAIL.md` Mục 3), để BKT cập nhật đúng tập kỹ năng mà Fast-Track xét.
 
 ---
 
-### 1.3. Cấu trúc Dữ liệu Lưu trữ `LearnerCognitiveProfile` (localStorage / Zustand)
+### 1.3. Cấu trúc Dữ liệu Lưu trữ `LearnerCognitiveProfile` (Postgres, bản sao ở Zustand)
 
 Kiểu dữ liệu định nghĩa duy nhất trong [`00_CORE_SPEC/02_DATA_CONTRACTS.md`](../00_CORE_SPEC/02_DATA_CONTRACTS.md) Mục 3: `SWESkill`, `CognitiveSkillState`, `NodeProgressRecord`, `LearnerCognitiveProfile`. Quy tắc quan trọng: `p_mastery` là giá trị **gốc** sau lần cập nhật BKT gần nhất; giá trị đã decay **không được lưu**, chỉ tính khi đọc (Mục 2.4).
+
+Hồ sơ được lưu ở Postgres: `skills` ⇔ bảng `skill_states` (đi theo người học, dùng chung mọi repo), `node_history` ⇔ bảng `node_progress` của **phiên học đang mở** (xem [`00_CORE_SPEC/04_LUU_TRU_VA_DONG_BO.md`](../00_CORE_SPEC/04_LUU_TRU_VA_DONG_BO.md) Mục 4). JSON dưới đây là hình dạng server trả về cho client.
 
 ```json
 {
@@ -191,7 +193,7 @@ Trong mỗi đồ thị, node có `cognitive_complexity` cao nhất (hòa ⇒ no
 
 # 4. ĐẶC TẢ GIAO DIỆN HÀM (MODULE INTERFACE CHO NGƯỜI 3 CODE)
 
-Toàn bộ logic toán học của Tầng 5 được đóng gói thành các hàm thuần túy (Pure Functions) trong file `src/lib/bkt-engine.ts`:
+Toàn bộ logic toán học của Tầng 5 được đóng gói thành các hàm thuần túy (Pure Functions) trong file `src/lib/bkt-engine.ts`. File này **dùng chung** hai phía: server gọi cả 3 hàm (là nơi **duy nhất** gọi `updateBKTState` và ghi kết quả vào Postgres); client chỉ gọi `getDecayedMastery` / `evaluateNodeTierAndAutoPass` để vẽ viền cam và nhãn Tier. Hàm không đổi khi chuyển từ client lên server vì không đọc/ghi store nào.
 
 ```typescript
 import { SWESkill, CognitiveSkillState, LearnerCognitiveProfile } from "./types"; // từ 02_DATA_CONTRACTS.md

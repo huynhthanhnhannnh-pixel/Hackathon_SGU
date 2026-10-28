@@ -35,7 +35,7 @@
 │               │   không tốn một đồng tiền AI nào."                                     │
 ├───────────────┼────────────────────────────────────────────────────────────────────────┤
 │ 02:00 - 03:00 │ PHA 1 — ĐỌC HIỂU:                                                      │
-│ (Demo Cột 2&3)│ • Thao tác: Click vào Node màu Vàng 'Order Checkout Flow'.             │
+│ (Demo Cột 2&3)│ • Thao tác: Click vào Node màu Vàng 'Order Checkout'.                  │
 │               │ • Màn hình: Cột 2 mở đoạn code thật của từng bước (≤ 30 dòng/bước);    │
 │               │   Cột 3 Tab 1 chỉ cho thấy luồng chạy và Điểm Hay của thiết kế.        │
 │               │ • Lời thoại: "Ở Pha 1, hệ thống chưa hỏi gì và cũng không lộ chỗ lỗi.  │
@@ -60,7 +60,7 @@
 
 ---
 
-# 2. CẨM NANG PHẢN BIỆN 8 CÂU HỎI BẪY CỦA HỘI ĐỒNG BAN GIÁM KHẢO SGU
+# 2. CẨM NANG PHẢN BIỆN 9 CÂU HỎI BẪY CỦA HỘI ĐỒNG BAN GIÁM KHẢO SGU
 
 1. **BGK hỏi:** *"Làm sao bóc tách Call-Graph cho cả Java, Go, Python mà không cần cài JVM hay Compiler nặng?"*
    > **Đáp:** *"Dạ thưa Thầy, chúng em dùng cơ chế **Two-Pass Global Symbol Resolution** chạy trên Tree-sitter WASM. Chặng 1 quét cây cú pháp, lập các bảng băm tra cứu ký hiệu trên RAM. Chặng 2 đối chiếu lời gọi hàm qua bảng băm để liên kết mà không cần bất kỳ trình biên dịch nào. Với ngôn ngữ đã có bộ phân giải import riêng (TypeScript/JavaScript, Python... nhóm đã kiểm chứng), độ chính xác cạnh cao. Với hơn 100 ngôn ngữ còn lại có Tree-sitter, hệ thống vẫn vẽ được đồ thị bằng bộ phân giải phổ quát, nhưng cạnh được gắn nhãn 'suy luận' (nét đứt) vì không đảm bảo 100%, chúng em không giấu điều đó!"*
@@ -88,3 +88,8 @@
    > • **Monorepo:** Bộ quét Multi-Manifest nhận diện cặp thư mục `client/` và `server/`, ưu tiên phân tích Backend và cho phép chọn lại thư mục trên giao diện.  
    > • **Mobile / Frontend:** hệ thống nhận diện hình thái dự án (6 archetype) và đổi nhãn các tầng (Màn hình ➔ ViewModel/BLoC ➔ API Client). Riêng luồng đứt tại `dispatch(Event)` của BLoC/Redux thì cầu nối sự kiện (Nominal Event Bridge) **nằm trong lộ trình sau cuộc thi**; hiện tại các luồng đó có thể bị thiếu một mắt xích.  
    > • **Chống báo lỗi giả:** Hệ thống **miễn trừ chỉ số Uncle Bob** cho màn hình UI và chỉ đo trên tầng logic để không kết tội oan đồ án của sinh viên."*
+
+9. **BGK hỏi:** *"Các em nói không lưu code, vậy làm sao hệ thống nhớ được sinh viên đã học tới đâu? Mở máy khác là mất hết à? Và các em có giữ code đồ án của sinh viên không?"*
+   > **Đáp:** *"Dạ, chúng em **lưu tiến trình học, không lưu code**. Cơ sở dữ liệu Postgres chỉ giữ điểm 16 kỹ năng, tiến độ từng trạm và câu trả lời của sinh viên, kèm **mã commit** của repo. Vì engine của chúng em là tất định, khi sinh viên quay lại (trên bất kỳ máy nào, sau khi đăng nhập GitHub), hệ thống tải lại đúng commit đó và dựng lại y hệt bản đồ trong chưa tới 1.5 giây, rồi ghép tiến độ cũ vào. Điểm kỹ năng do **server** tính và ghi, trình duyệt không sửa được, nên sinh viên cũng không tự nâng điểm hay mở đáp án sớm được. Mã nguồn chỉ nằm trong RAM lúc phân tích rồi được giải phóng."*
+   >
+   > *Demo gợi ý (15 giây):* mở trang trên máy thứ hai đã đăng nhập cùng tài khoản ⇒ danh sách "Tiếp tục học" ⇒ bấm vào repo vừa học ⇒ các trạm xanh vẫn còn.

@@ -32,20 +32,23 @@
 │   ➔ trả câu hỏi + challenge_token (đáp án mã hóa, client không đọc được)                              │
 │ • POST /api/evaluate-feynman: giải mã challenge_token ➔ Gemini Rubric Judge ➔ Obs (Correct/Incorrect)│
 │ • POST /api/reveal: mở đáp án khi bấm "Bỏ qua node" (không gọi AI)                                    │
+│ • BKT + đếm lần thử + mở khóa chạy ở server, ghi Postgres trong 1 transaction                         │
 └───────────────────────────────────────────────────▲────────────────────────────────────────────────────┘
-                                                    │ In-Memory RAM
+                                                    │ In-Memory RAM + Postgres
 ┌───────────────────────────────────────────────────▼────────────────────────────────────────────────────┐
 │ 💾 TẦNG LƯU TRỮ & DỮ LIỆU                                                                              │
 │ 1. RAMCodeStore + ManifestStore (Zero-Disk): ≤ 50 file code, ≤ 15MB nén; LRU cache 10 phút.           │
-│ 2. Response Cache ở tầng ứng dụng (lộ trình) — KHÔNG dùng Explicit Context Caching (Roadmap D5).      │
-│ 3. Client Zustand Store + localStorage: node_cache, LearnerCognitiveProfile (BKT 16 kỹ năng).          │
-│ 4. Demo Offline: public/demo/mock_repo_shop.json (OfflineMockBundle, ghi lại từ output thật).         │
+│ 2. Postgres (Supabase): skill_states, learning_sessions (commit SHA + khung đồ thị), node_progress,   │
+│    feynman_attempts. KHÔNG lưu code. Đăng nhập khách hoặc GitHub. (04_LUU_TRU_VA_DONG_BO.md)          │
+│ 3. Client Zustand Store: node_cache + bản sao chỉ đọc của LearnerCognitiveProfile do server trả về.   │
+│ 4. Response Cache ở tầng ứng dụng (lộ trình) — KHÔNG dùng Explicit Context Caching (Roadmap D5).      │
+│ 5. Demo Offline: public/demo/mock_repo_shop.json (OfflineMockBundle, ghi lại từ output thật).         │
 └────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-# PHẦN 2: BẢNG MA TRẬN 14 THUẬT TOÁN KỸ THUẬT TRONG TOÀN BỘ HỆ THỐNG
+# PHẦN 2: BẢNG MA TRẬN 15 THUẬT TOÁN KỸ THUẬT TRONG TOÀN BỘ HỆ THỐNG
 
 Thời gian lấy từ bảng số liệu chuẩn (`01_TONG_QUAN_KIEN_TRUC.md` Mục 5) — đều là mục tiêu/ước lượng, chưa đo trên code thật.
 
@@ -59,12 +62,13 @@ Thời gian lấy từ bảng số liệu chuẩn (`01_TONG_QUAN_KIEN_TRUC.md` M
 | **6** | **Scoped Call-Chain Slicing (Def-Use + Control)** | Từ mỗi Hub/VIP | Backend Tầng 2 | $\sim 0.015\text{s}$ | 0 Token | Lần theo dữ liệu & điều khiển tới DATA_SINK, ghép Controller ➔ Middleware ➔ Service ➔ Repository | AST Thuật toán 5 |
 | **7** | **Elision & Hard Clamp** | Khi lát cắt vượt trần | Backend Tầng 2 | $\sim 0.005\text{s}$ | 0 Token | Giữ code đọc được, ≤ 30 dòng/step, ≤ 100 dòng/node, ≤ 1,500 token | AST Thuật toán 5 Thao tác 5–6 |
 | **8** | **Display Budget (6–8 Node)** | Trước khi gửi về Frontend | Backend Tầng 2 | $\sim 0.002\text{s}$ | 0 Token | Critical Path + Rank Score giữ 6–8 node, chống biến đồ thị thành "mạng nhện" | AST Thuật toán 7 Thao tác 0 |
-| **9** | **Dagre Hierarchical Layout** | Sắp xếp đồ thị trên Canvas | Backend Tầng 2 | $\sim 0.01\text{s}$ | 0 Token | Tính tọa độ $(x, y)$ phân nhánh và hội tụ; mọi root = AVAILABLE | AST Thuật toán 7 |
-| **10**| **Single-Pass Contrastive CoT** | Sinh viên click Node | Backend Tầng 4 | $1.2\text{s} – 1.8\text{s}$ | ≤ 2,000 vào / ≤ 900 ra | Gemini nhẩm 3 hướng câu hỏi trong `_internal_reasoning`, chọn 1 câu bám code | Guardrail Mục 2 |
-| **11**| **Cổng Gác Nhị Phân 2 Chốt (v2)** | Ngay khi nhận Output từ AI | Backend Tầng 4 | $0.001\text{s}$ | 0 Token | Chặn bịa tên hàm/biến (Chốt 1) và công nghệ ngoài repo (Chốt 2) | Guardrail Mục 3 |
-| **12**| **Speculative Pre-fetching** | Đọc Tab 1 quá 5 giây | Client + Backend | Chạy ngầm | Như dòng 10 (1 lần) | Nạp trước 1 Node con vào `node_cache`; trúng cache thì mở ngay không skeleton | Guardrail Mục 1.3 |
-| **13**| **Triple-Defense Guardrail** | Bấm nút [Nộp Bài] | Frontend + API | $\sim 0\text{ms}$ | 0 Token | Vòng 1: Debounce 3s, ≥ 15 ký tự, trùng ≥ 80%; Vòng 2: tối đa 3 lần thử; Vòng 3: quota 50,000 token/phiên ở server | Guardrail Mục 1.2 |
-| **14**| **Bayes BKT + Ebbinghaus Decay** | Sau khi AI chấm xong | Client Zustand | $< 0.002\text{s}$ | 0 Token | Cập nhật $P(L_t)$ trên 16 kỹ năng SWE, xét **Fast-Track ⚡**, tính viền cam khi đọc | BKT Mục 2–4 |
+| **9** | **Deterministic Node Naming** | Sau Display Budget, trước Dagre | Backend Tầng 2 | $\sim 0.005\text{s}$ | 0 Token | Đặt tên node theo thang 5 bậc: Route ➔ tên hàm entry ➔ từ khóa miền TF-IDF ➔ thư mục ➔ tên file; khử trùng tên; tên suy ra có dấu `~` | AST Thuật toán 8 |
+| **10** | **Dagre Hierarchical Layout** | Sắp xếp đồ thị trên Canvas | Backend Tầng 2 | $\sim 0.01\text{s}$ | 0 Token | Tính tọa độ $(x, y)$ phân nhánh và hội tụ; mọi root = AVAILABLE | AST Thuật toán 7 |
+| **11**| **Single-Pass Contrastive CoT** | Sinh viên click Node | Backend Tầng 4 | $1.2\text{s} – 1.8\text{s}$ | ≤ 2,000 vào / ≤ 900 ra | Gemini nhẩm 3 hướng câu hỏi trong `_internal_reasoning`, chọn 1 câu bám code | Guardrail Mục 2 |
+| **12**| **Cổng Gác Nhị Phân 2 Chốt (v2)** | Ngay khi nhận Output từ AI | Backend Tầng 4 | $0.001\text{s}$ | 0 Token | Chặn bịa tên hàm/biến (Chốt 1) và công nghệ ngoài repo (Chốt 2) | Guardrail Mục 3 |
+| **13**| **Speculative Pre-fetching** | Đọc Tab 1 quá 5 giây | Client + Backend | Chạy ngầm | Như dòng 11 (1 lần) | Nạp trước 1 Node con vào `node_cache`; trúng cache thì mở ngay không skeleton | Guardrail Mục 1.3 |
+| **14**| **Triple-Defense Guardrail** | Bấm nút [Nộp Bài] | Frontend + API | $\sim 0\text{ms}$ | 0 Token | Vòng 1: Debounce 3s, ≥ 15 ký tự, trùng ≥ 80%; Vòng 2: tối đa 3 lần thử; Vòng 3: quota 50,000 token/phiên ở server | Guardrail Mục 1.2 |
+| **15**| **Bayes BKT + Ebbinghaus Decay** | Sau khi AI chấm xong | Backend (ghi Postgres) | $< 0.002\text{s}$ | 0 Token | Cập nhật $P(L_t)$ trên 16 kỹ năng SWE, xét **Fast-Track ⚡**, tính viền cam khi đọc | BKT Mục 2–4 |
 
 ---
 
@@ -110,19 +114,20 @@ Thời gian lấy từ bảng số liệu chuẩn (`01_TONG_QUAN_KIEN_TRUC.md` M
 11. **Cognitive Complexity (AST Thuật toán 4):** tính theo độ sâu node AST (đúng cho cả Python); hàm $> 15$ điểm được **Vé VIP** (`ALGORITHMIC_CORE`), không có hàm nào vượt ngưỡng thì lấy Top-K tương đối.
 12. **Scoped Call-Chain Slicing + Elision & Hard Clamp (AST Thuật toán 5):** từ mỗi gốc, lần ngược chuỗi dữ liệu và điều khiển tới điểm đích (DATA_SINK), ghép `ENTRY_POINT ➔ MIDDLEWARE ➔ BUSINESS_LOGIC ➔ DATA_ACCESS`, ép trần ≤ 30 dòng/step, ≤ 100 dòng/node.
 13. **Uncle Bob (AST Thuật toán 6):** đo $I, A, D$ trên cụm lát cắt; miễn trừ cho UI Screen, JS thuần, mẫu số 0.
-14. **Display Budget 6–8 node + Dagre (AST Thuật toán 7):** giữ node trên Critical Path rồi bổ sung theo Rank Score/VIP; node bị cắt gộp file vào node kề; Dagre tính tọa độ; **mọi** node có in-degree = 0 là `AVAILABLE`.
+14. **Display Budget 6–8 node + Đặt tên + Dagre (AST Thuật toán 7, 8):** giữ node trên Critical Path rồi bổ sung theo Rank Score/VIP; node bị cắt gộp file vào node kề; đặt tên node tất định (route ➔ tên hàm ➔ từ khóa miền ➔ thư mục ➔ tên file, kèm `title_source`/`title_evidence`); Dagre tính tọa độ; **mọi** node có in-degree = 0 là `AVAILABLE`.
 
 #### C. Database / Lưu trữ dữ liệu
-* **RAM Máy chủ:** `RAMCodeStore`, `ManifestStore`, `SourceMapStore` — giải phóng ngay sau khi xử lý; kết quả cache LRU 10 phút theo `owner/repo@ref` (hoặc hash file zip).
-* **Kết quả trả về:** JSON `StaticEngineResult` (chứa `fingerprint: ProjectFingerprint`, `nodes`, `edges` có `confidence`, `symbol_whitelist`, `ingestion_report`) theo `00_CORE_SPEC/02_DATA_CONTRACTS.md`.
-* **Client Store (Zustand):** nhận `nodes` và `edges`, khởi tạo `node_history` từ trạng thái ban đầu (mọi root `AVAILABLE`, còn lại `LOCKED`). Render lên ReactFlow Canvas Cột 1.
+* **RAM Máy chủ:** `RAMCodeStore`, `ManifestStore`, `SourceMapStore` — giải phóng ngay sau khi xử lý; kết quả cache LRU 10 phút theo `snapshot_id` (commit SHA đọc từ comment zip, hoặc SHA-256 file zip) + `subdir`.
+* **Postgres:** upsert `learning_sessions` với commit SHA và khung đồ thị (không có code); xét Fast-Track cho các root bằng `skill_states` của người học (`04_LUU_TRU_VA_DONG_BO.md`).
+* **Kết quả trả về:** `IngestResponse { result: StaticEngineResult, session_id, profile }` (`StaticEngineResult` chứa `snapshot`, `fingerprint`, `nodes`, `edges` có `confidence`, `symbol_whitelist`, `ingestion_report`) theo `00_CORE_SPEC/02_DATA_CONTRACTS.md`.
+* **Client Store (Zustand):** nhận `nodes`, `edges` và `profile.node_history` do server ghép sẵn (mở lại phiên cũ thì các trạm đã học vẫn giữ màu). Render lên ReactFlow Canvas Cột 1.
 
 ---
 
 ## [USE CASE 2] ĐỌC HIỂU LÁT CẮT & NẠP NGẦM TIÊN TRI (PHASE 1: X-RAY & PRE-FETCH)
 
 ### 2.1. Trải nghiệm Người dùng
-* **Hành động của người học:** Bạn click vào trạm màu Vàng: **"Quy trình Đặt hàng (Order Checkout Flow)"**.
+* **Hành động của người học:** Bạn click vào trạm màu Vàng: **"Order Checkout"** (tên do Engine rút từ route `POST /orders/checkout`, tooltip hiện route này).
 * **Những gì hiện lên màn hình:** 
   * **Cột 2 (Kính lúp soi code):** Tự động mở đúng file code và chiếu sáng đoạn code của bước đang chọn (≤ 30 dòng).
   * **Cột 3 (Tab 1 - Phim X-Quang):**
@@ -221,8 +226,8 @@ Thời gian lấy từ bảng số liệu chuẩn (`01_TONG_QUAN_KIEN_TRUC.md` M
 
 ### 4.2. Phía dưới chạy như thế nào? (Under The Hood) — đồng bộ từ `02_BAYES_COGNITIVE_BKT.md`
 
-#### A. Frontend & Động cơ Bayesian Knowledge Tracing (Tầng 5 - Client Store)
-Toàn bộ thuật toán BKT chạy trên trình duyệt qua Zustand Store trong **$< 0.002\text{ giây}$ (0 Token)**:
+#### A. Động cơ Bayesian Knowledge Tracing (Tầng 5 - Server + Postgres)
+Toàn bộ thuật toán BKT chạy ở server trong transaction của `evaluate-feynman`, **$< 0.002\text{ giây}$ (0 Token)**, rồi ghi `skill_states` và `node_progress` vào Postgres. Trình duyệt chỉ nhận hồ sơ mới và đổi màu:
 1. **Ánh xạ Quan sát nhị phân:**
    $$\text{Obs} = \begin{cases} \text{Correct} & \text{nếu } \text{is\_passed} = \text{true}\ (\text{core\_accuracy} \ge 70) \\ \text{Incorrect} & \text{ngược lại} \end{cases}$$
 2. **Kích hoạt vector kỹ năng $q_j$ (16 chiều):** bài Checkout dùng `target_skills` = $k_6$ (`DB_OPTIMIZATION`) và $k_7$ (`ASYNC_CONCURRENCY`) — luôn là tập con của `preliminary_skills` của node.
@@ -268,14 +273,14 @@ Toàn bộ thuật toán BKT chạy trên trình duyệt qua Zustand Store trong
 ---
 
 ### 6.2. Phía dưới chạy như thế nào? (Under The Hood)
-1. **Bộ Giả Lập Persona Simulator** (`PersonaConfig` trong contract): menu Persona trên Header cập nhật `user_profile` trong Zustand Store:
+1. **Bộ Giả Lập Persona Simulator** (`PersonaConfig` trong contract): menu Persona trên Header gọi `POST /api/demo/persona` (chỉ bật khi `DEMO_MODE=true`), ghi đè `skill_states` của tài khoản demo đang đăng nhập:
    * *NEWBIE:* `initial_p_mastery = 0.25` $\implies$ câu hỏi Tier 1 (Truy vết dữ liệu).
    * *MID_LEVEL:* `initial_p_mastery = 0.65` $\implies$ câu hỏi Tier 2 (Bắt lỗi thiết kế).
    * *SENIOR_RUSTY:* `initial_p_mastery = 0.95`, `simulated_days_idle = 30` $\implies$ đẩy `last_practiced_at` lùi 30 ngày, hàm decay cho thấy viền cam ngay.
 2. **Chế độ Demo Offline** (UI Mục 4.5):
    * `Ctrl + Shift + D` $\implies$ Event Listener ở Frontend đặt `is_offline_mode = true`.
    * Nạp `public/demo/mock_repo_shop.json` (kiểu `OfflineMockBundle`, **ghi lại từ output thật** của engine và AI) vào Zustand Store.
-   * Đổi màu Node, hiển thị code Monaco và chấm điểm Feynman đều dùng bộ dữ liệu này, không cần mạng.
+   * Đổi màu Node, hiển thị code Monaco và chấm điểm Feynman đều dùng bộ dữ liệu này, không cần mạng. Chế độ này **không ghi Postgres** (nhãn ghi rõ "không lưu tiến độ").
    * Nhóm vẫn chuẩn bị thêm video demo quay từ bản chạy thật.
 
 ---
@@ -292,7 +297,7 @@ sequenceDiagram
     participant API as ⚙️ Next.js Backend APIs
     participant Static as 🧮 Tầng 0-2: Static Engine (0 Token)
     participant AI as 🤖 Tầng 4: Gemini 2.5 Flash
-    participant Bayes as 🧠 Tầng 5: Bayes BKT & FSM
+    participant Bayes as 🧠 Tầng 5: Bayes BKT & FSM (server + Postgres)
 
     %% Giai đoạn Ingestion
     Note over User, Static: [UC01] INGESTION & DỰNG KHUNG XƯƠNG (0 TOKEN, mục tiêu < 1.5s)
@@ -323,13 +328,13 @@ sequenceDiagram
     C3-->>User: Hiển thị câu hỏi bám dòng code
     User->>C3: Nhập câu trả lời & bấm [Nộp Bài]
     C3->>C3: Triple-Defense: Debounce 3s + ≥ 15 ký tự + tối đa 3 lần thử
-    C3->>API: POST /api/evaluate-feynman { challenge_token, student_answer, attempt_number }
+    C3->>API: POST /api/evaluate-feynman { session_id, node_id, challenge_token, student_answer, attempt_number }
     API->>AI: Rubric Judge (câu hỏi + đáp án tham chiếu + code + câu trả lời)
     AI-->>API: core_accuracy 92, simplicity 95 ➔ is_passed = true (tính lại ở server)
-    API-->>C3: FeynmanEvaluationResult + smell_reveal (Điểm Dở)
-    C3->>Bayes: Cập nhật P(Lt) cho target_skills
-    Bayes->>Bayes: Công thức BKT (< 0.002s trên Zustand)
-    Bayes->>C1: Đổi node sang XANH LÁ (COMPLETED)
+    API->>Bayes: Cập nhật P(Lt) cho target_skills
+    Bayes->>Bayes: Công thức BKT (< 0.002s, ở server) ➔ ghi Postgres trong 1 transaction
+    API-->>C3: EvaluateFeynmanResponse + smell_reveal (Điểm Dở) + profile mới
+    C3->>C1: Đổi node sang XANH LÁ (COMPLETED)
     
     %% Fast-Track & cache
     Note over C1, C3: [UC02 & UC04] FAST-TRACK & CACHE

@@ -8,7 +8,7 @@
 | :--- | :--- |
 | **Phân hệ** | `00_CORE_SPEC/02_DATA_CONTRACTS.md` |
 | **Người phụ trách** | **NGƯỜI 1 (LEAD ARCHITECT)** |
-| **Mục đích** | Đảm bảo tính nhất quán dữ liệu giữa Code Thuần (Tầng 0-2), AI Gemini (Tầng 4) và Client Store (Tầng 3, 5) |
+| **Mục đích** | Đảm bảo tính nhất quán dữ liệu giữa Code Thuần (Tầng 0-2), AI Gemini (Tầng 4), Động cơ BKT (Tầng 5), Client Store và Tầng Lưu trữ Postgres (Mục 4) |
 | **Nguyên tắc** | Strict Typing 100%, không dùng `any`, có đầy đủ guard-types và định nghĩa trường |
 | **Quy tắc tham chiếu** | Đây là **nguồn chân lý duy nhất** về kiểu dữ liệu. Các file khác **không chép lại** interface; chỉ ghi tên kiểu và trỏ về file này |
 
@@ -89,6 +89,16 @@ export interface LayerDisplayMeta {
   color_badge: string;
 }
 
+// Nguồn sinh tên node (Thuật toán 8 — 02_AST_SLICING_GRAPH.md), xếp theo thứ tự ưu tiên.
+// Tên chắc: ROUTE, ENTRY_SYMBOL, VIRTUAL. Tên suy ra: DOMAIN_TERMS, DIRECTORY, FILE_BASENAME ➔ UI thêm tiền tố "~".
+export type NodeTitleSource =
+  | "ROUTE"          // Route HTTP / trang frontend / screen mobile / lệnh CLI đăng ký hàm entry
+  | "ENTRY_SYMBOL"   // Tên hàm mở đầu lát cắt (kèm tên class nếu tên hàm chỉ có 1 token)
+  | "DOMAIN_TERMS"   // Tối đa 2 từ khóa miền có điểm TF-IDF cao nhất trong các file của lát cắt
+  | "DIRECTORY"      // Thư mục gần nhất không phải thư mục chung (src, services...)
+  | "FILE_BASENAME"  // Tên file files[0] đã bỏ hậu tố vai trò — bậc cuối, luôn thành công
+  | "VIRTUAL";       // Virtual Root / Virtual Node của chế độ suy biến
+
 export interface ExecutionTraceStep {
   step_number: number;
   layer: ArchitecturalLayer;
@@ -132,7 +142,9 @@ export interface HiddenChallenge {
 // ==========================================
 export interface HybridArchitecturalNode {
   id: string;                    // VD: "slice-order-checkout"
-  title: string;                 // VD: "Order Checkout Flow"
+  title: string;                 // VD: "Order Checkout" — sinh tất định bởi Thuật toán 8 (0 token, không do AI đặt)
+  title_source: NodeTitleSource; // Nguồn của tên; UI hiện tiền tố "~" khi nguồn thuộc nhóm suy ra
+  title_evidence: string;        // Bằng chứng gốc cho tooltip, VD: "POST /orders/checkout", "OrderController.postCheckout"
   node_type: "ARCHITECTURAL_DATA_FLOW" | "ALGORITHMIC_CORE"; // Phân loại luồng dữ liệu vs thuật toán
   status: NodeStatus;            // Trạng thái KHỞI TẠO do Engine tính (mọi root = AVAILABLE, còn lại LOCKED);
                                  // khi chạy, trạng thái thật lấy từ LearnerCognitiveProfile.node_history
@@ -156,6 +168,7 @@ export interface HybridArchitecturalNode {
 // ==========================================
 export interface StaticEngineResult {
   repo_name: string;
+  snapshot: RepoSnapshotKey;       // Định danh phiên bản code (commit SHA / SHA-256 zip) — xem Mục 4
   fingerprint: ProjectFingerprint; // Định danh hình thái dự án bóc tách từ Tầng 0
   total_files: number;
   nodes: HybridArchitecturalNode[]; // 6–8 node theo Display Budget (xem 02_AST_SLICING_GRAPH.md Thuật toán 7)
@@ -224,7 +237,7 @@ export interface ContextSandwichPayload {
     is_monorepo: boolean;
     tech_stack: string[];        // Trích xuất từ mọi manifest trong ManifestStore (package.json, requirements.txt, pom.xml, go.mod, pubspec.yaml...)
     node_id: string;
-    node_title: string;
+    node_title: string;          // = HybridArchitecturalNode.title; chỉ đọc — AI không đổi tên node
     node_type: "ARCHITECTURAL_DATA_FLOW" | "ALGORITHMIC_CORE";
     degraded_mode?: "PROCEDURAL" | "ALGORITHM_COLLECTION"; // Có giá trị ⇒ Mode B
     dag_predecessors: string[];  // Node đứng trước
@@ -298,17 +311,25 @@ export interface EnrichNodeClientResponse {
   is_fallback: boolean;                    // true nếu Cổng gác REJECT và đây là câu hỏi AST tĩnh
 }
 
+export interface EnrichNodeRequest {        // POST /api/enrich-node
+  session_id: string;                      // Server tra learning_sessions ⇒ snapshot ⇒ StaticEngineResult (cache hoặc dựng lại)
+  node_id: string;
+  // KHÔNG gửi learner_persona_tier: server tự tính từ skill_states đã decay (04_LUU_TRU_VA_DONG_BO.md Mục 6.1)
+}
+
 // ==========================================
 // 4. Nộp bài Feynman & mở đáp án
 // ==========================================
 export interface EvaluateFeynmanRequest {   // POST /api/evaluate-feynman
+  session_id: string;
   node_id: string;
   challenge_token: string;                 // Server giải mã để lấy câu hỏi, đáp án tham chiếu, target_skills, snippet
   student_answer: string;
-  attempt_number: 1 | 2 | 3;
+  attempt_number: 1 | 2 | 3;               // Chỉ để đối chiếu: server tự đếm từ node_progress.retry_count, lệch ⇒ ERR_ATTEMPT_OUT_OF_SYNC
 }
 
 export interface RevealRequest {           // POST /api/reveal — khi người học bấm "Bỏ qua node này"
+  session_id: string;
   node_id: string;
   challenge_token: string;
 }
@@ -368,7 +389,9 @@ export const SWE_SKILLS = [
 export type SWESkill = typeof SWE_SKILLS[number];
 
 // ==========================================
-// 2. Trạng thái Bộ nhớ Nhận thức BKT trên Client Store (Zustand + localStorage)
+// 2. Trạng thái Bộ nhớ Nhận thức BKT
+//    Nguồn chân lý: Postgres (bảng skill_states, node_progress — 04_LUU_TRU_VA_DONG_BO.md Mục 4), CHỈ server ghi.
+//    Zustand ở client giữ bản sao chỉ đọc do server trả về; client không tự gọi updateBKTState.
 // ==========================================
 export interface CognitiveSkillState {
   skill: SWESkill;
@@ -383,17 +406,17 @@ export interface NodeProgressRecord {
   node_id: string;
   status: NodeStatus;
   is_auto_mastered: boolean;
-  has_warning: boolean;        // true nếu node được mở khóa khi có node cha FAILED (soft-bypass) — UI hiện tam giác vàng
+  has_warning: boolean;        // true nếu node được mở khóa khi có node cha FAILED (soft-bypass) — UI hiện tam giác vàng. Không lưu DB: suy ra khi đọc
   retry_count: number;         // Số lần trả lời sai (0–3); = 3 ⇒ FAILED
   last_attempt_at: number;
 }
 
 export interface LearnerCognitiveProfile {
-  user_id: string;
+  user_id: string;             // = auth.users.id của Supabase (khách ẩn danh cũng có)
   overall_tier: "NOVICE" | "PRACTITIONER" | "ARCHITECT";
   last_updated_at: number;
-  skills: Record<SWESkill, CognitiveSkillState>;
-  node_history: Record<string, NodeProgressRecord>; // Theo node_id — nguồn chân lý về trạng thái node khi chạy
+  skills: Record<SWESkill, CognitiveSkillState>; // Đi theo NGƯỜI HỌC, dùng chung mọi repo
+  node_history: Record<string, NodeProgressRecord>; // Theo node_id, CHỈ của phiên học đang mở (node_id chỉ duy nhất trong 1 snapshot)
 }
 
 // ==========================================
@@ -417,7 +440,97 @@ export interface ClientWorkbenchState {
   active_tab: "XRAY_WALKTHROUGH" | "FEYNMAN_CHALLENGE";
   node_cache: Record<string, EnrichNodeClientResponse>; // Cache nạp ngầm; trúng cache ⇒ hiển thị ngay, không skeleton
   is_prefetching: boolean;
-  is_offline_mode: boolean;    // true khi đã bấm Ctrl + Shift + D (nạp OfflineMockBundle)
+  is_offline_mode: boolean;    // true khi đã bấm Ctrl + Shift + D (nạp OfflineMockBundle) — không ghi Postgres
   user_profile: LearnerCognitiveProfile;
+  session_id: string | null;   // Phiên học đang mở (learning_sessions.id); null trước khi quét repo
+  pending_receipts: SyncReceipt[]; // Biên nhận chờ đồng bộ khi Postgres lỗi (Mục 4) — bản duy nhất giữ ở localStorage
 }
+```
+
+---
+
+# 4. HỢP ĐỒNG DỮ LIỆU TẦNG LƯU TRỮ & ĐỒNG BỘ (POSTGRES)
+
+Bảng, luồng ghi và quy tắc: [`04_LUU_TRU_VA_DONG_BO.md`](04_LUU_TRU_VA_DONG_BO.md). Postgres **không** lưu mã nguồn hay snippet.
+
+```typescript
+// ==========================================
+// 1. Định danh phiên bản code
+// ==========================================
+export interface RepoSnapshotKey {
+  source: "GITHUB" | "ZIP";
+  repo_key: string;              // "owner/repo" hoặc tên file zip
+  snapshot_id: string;           // Commit SHA 40 ký tự (đọc từ comment zip) hoặc SHA-256 buffer zip
+  snapshot_id_kind: "COMMIT_SHA" | "ARCHIVE_HASH"; // ARCHIVE_HASH ⇒ không tự mở lại được, phải upload lại
+  subdir: string;                // "" khi phân tích cả repo
+  ref_label?: string;            // Branch/tag người dùng nhập — chỉ để hiển thị
+}
+
+// ==========================================
+// 2. Khung đồ thị lưu DB (KHÔNG chứa code)
+// ==========================================
+export interface GraphSkeletonNode {
+  node_id: string;
+  title: string;
+  prerequisites: string[];
+  preliminary_skills: SWESkill[];
+  is_capstone: boolean;          // Capstone Lock (02_BAYES_COGNITIVE_BKT.md Mục 3.3) — server cần khi xét Fast-Track
+}
+
+// ==========================================
+// 3. Phiên học
+// ==========================================
+export interface LearningSessionSummary {   // GET /api/sessions
+  session_id: string;
+  snapshot: RepoSnapshotKey;
+  repo_name: string;
+  created_at: number;
+  last_active_at: number;
+  completed_count: number;
+  failed_count: number;
+  total_nodes: number;
+  can_resume: boolean;           // false nếu snapshot_id_kind = "ARCHIVE_HASH" hoặc nguồn ZIP (phải upload lại)
+}
+
+export type IngestRequest =                 // POST /api/ingest
+  | { repoUrl: string }                     // Quét mới (JSON); upload zip dùng multipart trường "archive"
+  | { session_id: string };                 // Mở lại phiên cũ: server tải lại đúng commit SHA
+
+export interface IngestResponse {
+  result: StaticEngineResult;
+  session_id: string;
+  profile: LearnerCognitiveProfile;         // node_history đã ghép từ node_progress của phiên này
+}
+
+// ==========================================
+// 4. Phản hồi sau mỗi lần ghi tiến độ
+// ==========================================
+export interface EvaluateFeynmanResponse extends FeynmanEvaluationResult {
+  profile: LearnerCognitiveProfile;         // Bản mới sau BKT — client thay thế toàn bộ, không tự tính
+  unlocked_node_ids: string[];              // Node vừa mở (kể cả Fast-Track)
+  sync_receipt?: SyncReceipt;               // Chỉ có khi Postgres lỗi (04_LUU_TRU_VA_DONG_BO.md Mục 7.1)
+}
+
+export interface SyncReceipt {              // Server ký HMAC-SHA256; client chỉ giữ hộ và gửi lại qua POST /api/sync/replay
+  receipt_id: string;
+  user_id: string;
+  session_id: string;
+  node_id: string;
+  kind: "EVALUATE" | "REVEAL" | "REVIEW";
+  payload: string;                          // JSON đã chuẩn hóa của QUAN SÁT (attempt_number, is_passed, target_skills, điểm, câu trả lời) — server tính lại BKT khi replay, không tin giá trị điểm kỹ năng
+                                            // receipt_id đã ghi (cột unique feynman_attempts.receipt_id) ⇒ replay lần 2 bị bỏ qua
+  issued_at: number;
+  signature: string;
+}
+
+// ==========================================
+// 5. Mã lỗi tầng lưu trữ
+// ==========================================
+export type PersistenceErrorCode =
+  | "ERR_UNAUTHENTICATED"          // Thiếu phiên Supabase (khách cũng phải có phiên ẩn danh)
+  | "ERR_SESSION_NOT_FOUND"        // session_id không tồn tại hoặc không thuộc người dùng
+  | "ERR_SESSION_SOURCE_EXPIRED"   // Cache hết hạn và không tải lại được (nguồn ZIP / ARCHIVE_HASH / commit đã bị xóa) ⇒ mời upload lại
+  | "ERR_ATTEMPT_OUT_OF_SYNC"      // attempt_number lệch retry_count trên server (thường do 2 tab)
+  | "ERR_NODE_NOT_AVAILABLE"       // Nộp bài cho node LOCKED / COMPLETED / FAILED
+  | "ERR_PERSISTENCE_UNAVAILABLE"; // Postgres lỗi sau 2 lần thử lại và không phát được sync_receipt
 ```
