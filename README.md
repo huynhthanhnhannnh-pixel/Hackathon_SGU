@@ -1,81 +1,46 @@
-# BẢN ĐỒ PHÂN CHIA THƯ MỤC THEO TẦNG KIẾN TRÚC (MASTER DIRECTORY MAP)
-## DỰ ÁN: SIMPLIFEY V2 PRO — CODEBASE COGNITIVE TWIN
-### *Hệ Thống Bản Sao Nhận Thức Mã Nguồn Dành Cho Sinh Viên CNTT (Hackathon SGU 2026 - 2027)*
+# SimpliFey V2 Pro — Codebase Cognitive Twin
+
+> Hackathon SGU 2026–2027 · Repo **tài liệu** (đặc tả để code + tài liệu thuyết trình). Code sản phẩm viết trong vòng thử thách 21 giờ (12g00 31/10 → 09g00 01/11/2026) ở một repo thi riêng, trống lúc bắt đầu.
+
+**Sản phẩm:** dán link repo GitHub (hoặc kéo thả `.zip`) ⇒ trong < 1.5 s có bản đồ 6–8 node. Mỗi node là một lát cắt nghiệp vụ xuyên file, dựng bằng code thuần, 0 token. Sau đó AI làm 3 việc:
+- phân tích điểm hay / điểm dở của từng node;
+- đặt câu hỏi Feynman cho đúng kỹ năng người học còn yếu;
+- chấm bài và gợi ý 3 nấc.
+
+Mô hình BKT ghi nhận năng lực 16 kỹ năng lâu dài: phần đã vững được miễn thi (Fast-Track), và hệ thống nhắc ôn khi trí nhớ phai.
+
+**Trạng thái:** spec đóng băng ngày **30/10**. Câu hỏi còn mở và quyết định nằm ở [`spec/00_QUYET_DINH.md`](spec/00_QUYET_DINH.md).
 
 ---
 
-> 🎯 **DÀNH CHO THÀNH VIÊN VÀ CÁC CON AI ANTIGRAVITY:**  
-> Bảng dưới đây quy định chính xác **từng thư mục tương ứng với Tầng nào** trong kiến trúc 6 tầng của hệ thống, ai chịu trách nhiệm và nhiệm vụ kỹ thuật cụ thể là gì để anh em mở ra code không bao giờ bị dẫm chân lên nhau!
+## Đọc theo thứ tự nào
 
----
+| Ai | Đọc |
+| :-- | :-- |
+| **Cả nhóm (bắt buộc)** | [`00_QUYET_DINH`](spec/00_QUYET_DINH.md) → [`01_KIEN_TRUC_VA_LUONG`](spec/01_KIEN_TRUC_VA_LUONG.md) → [`02_CONTRACTS`](spec/02_CONTRACTS.md) → [`03_API_VA_LUU_TRU`](spec/03_API_VA_LUU_TRU.md) → [`40_KE_HOACH_21H`](spec/40_KE_HOACH_21H.md) |
+| **Người 1 — Lead, UI, DB** | + [`30_UI`](spec/30_UI.md), [`50_TEST_VA_FIXTURE`](spec/50_TEST_VA_FIXTURE.md) |
+| **Người 2 — Engine** | + [`10_ENGINE_INGEST`](spec/10_ENGINE_INGEST.md), [`11_ENGINE_DO_THI`](spec/11_ENGINE_DO_THI.md) |
+| **Người 3 — AI, BKT** | + [`20_AI_GOI_VA_PROMPT`](spec/20_AI_GOI_VA_PROMPT.md), [`21_AI_KIEM_VA_DUYET`](spec/21_AI_KIEM_VA_DUYET.md), [`22_BKT_VA_KE_HOACH_CAU_HOI`](spec/22_BKT_VA_KE_HOACH_CAU_HOI.md) |
+| **Thuyết trình / người mới** | [`pitch/LUONG_DE_HIEU`](pitch/LUONG_DE_HIEU.md) → [`pitch/KICH_BAN_DEMO`](pitch/KICH_BAN_DEMO.md) → [`pitch/PHAN_BIEN_BGK`](pitch/PHAN_BIEN_BGK.md) |
+| **Trợ lý AI khi code** | `CLAUDE.md` + đúng các file của module đang làm (mỗi file ≤ ~40 KB, đọc trọn) |
 
-# 1. BẢNG ÁNH XẠ TOÀN DIỆN: THƯ MỤC $\Longleftrightarrow$ TẦNG HỆ THỐNG
+## Thư mục
 
-| Thư mục | Tầng Kiến Trúc Tương Ứng | Thành Viên Phụ Trách | Tài Liệu Quy Định Chi Tiết | Trọng Tâm Kỹ Thuật |
-| :--- | :--- | :---: | :--- | :--- |
-| **`00_CORE_SPEC/`** | **TẦNG QUẢN TRỊ KIẾN TRÚC & DATA CONTRACTS** *(Chi phối toàn bộ Tầng 0 đến Tầng 5)* | 👑 **NGƯỜI 1**<br/>*(Lead Architect)* | • `00_AUDIT_VA_PHAN_VIEC_3_NGUOI.md`<br/>• `01_TONG_QUAN_KIEN_TRUC.md` (Mục 5 = bảng số liệu chuẩn)<br/>• `02_DATA_CONTRACTS.md` (nguồn chân lý về kiểu)<br/>• `03_SYSTEM_EDGE_CASES_AUDIT.md`<br/>• `04_LUU_TRU_VA_DONG_BO.md` (Postgres, đăng nhập, mở lại phiên)<br/>• `Kich_Ban_UseCase.md` (file tổng hợp, chỉ đồng bộ từ file nguồn) | • Khóa bộ Hợp đồng Dữ liệu TypeScript bất biến.<br/>• Quản lý ngân sách độ trễ (Latency Budget).<br/>• Tầng lưu trữ: lưu tiến trình học, không lưu mã nguồn.<br/>• Duy trì tính toàn vẹn kiến trúc toàn dự án. |
-| **`01_ENGINE_THUAT_TOAN/`** | **TẦNG 0, TẦNG 1 & TẦNG 2**<br/>*(Động cơ Phân tích Tĩnh 0 Token, < 1.5s)* | ⚙️ **NGƯỜI 2**<br/>*(Static Engine Dev)* | • `01_INGESTION_STREAM.md`<br/>• `02_AST_SLICING_GRAPH.md` | • **TẦNG 0:** Tải zip stream vào RAM + TreePruner lọc rác.<br/>• **TẦNG 1:** Tree-sitter WASM bóc hàm + Tarjan khử chu trình (100% DAG).<br/>• **TẦNG 2:** PageRank Sink Filter bầu file sếp + Scoped Def-Use Slicing + Uncle Bob + đặt tên node tất định + Dagre Layout $(x, y)$. |
-| **`02_AI_VA_BAYES/`** | **TẦNG 3, TẦNG 4 & TẦNG 5**<br/>*(AI Phản Biện Feynman & Động cơ Nhận thức Bayes)* | 🧠 **NGƯỜI 3**<br/>*(AI & Cognitive Dev)* | • `01_LLM_PIPELINE_GUARDRAIL.md`<br/>• `02_BAYES_COGNITIVE_BKT.md` | • **TẦNG 3:** Đóng gói Context Sandwich (≤ 30 dòng/step, ≤ 100 dòng/node).<br/>• **TẦNG 4:** Gemini Flash CoT Structured JSON + Cổng Gác Nhị Phân 2 Chốt.<br/>• **TẦNG 5:** Bayesian Knowledge Tracing (BKT) + $q$-Matrix 16 chiều + Half-Life Decay. |
-| **`03_UI_VA_KICH_BAN/`** | **TẦNG GIAO DIỆN & BUỒNG LÁI NHẬN THỨC** *(Tri-Pane Cockpit & Demo)* | 👑 **NGƯỜI 1**<br/>*(Fullstack & UI)* | • `01_UI_TRI_PANE_FSM.md`<br/>• `02_KICH_BAN_PITCH_DEMO.md` | • Cột 1: ReactFlow Branched DAG Canvas 4 màu.<br/>• Cột 2: Monaco Interactive Code Viewer.<br/>• Cột 3: Buồng lái 2 Pha (Tab X-Ray & Tab Feynman).<br/>• Kịch bản Pitching 5 phút & Persona Simulator. |
-| **`04_ROADMAP_KY_THUAT/`** | **LỘ TRÌNH KỸ THUẬT 4 GIAI ĐOẠN PHÁT TRIỂN** *(Sau Hackathon)* | 👥 **CẢ 3 NGƯỜI** | • `ROADMAP_KY_THUAT_CHI_TIET.md` | • Nâng cấp công nghệ, thuật toán bổ sung và cách đo cho từng giai đoạn Pilot → ĐATN → Thương mại hóa → DevTool. |
-| **`references/`** | **TÀI LIỆU NỀN TẢNG & GIÁO TRÌNH HỌC THUẬT TOÁN** | 👥 **CẢ 3 NGƯỜI** | • `GIAO_TRINH_THUAT_TOAN_CHUAN.md`<br/>• `thele.md` | • Giáo trình chạy tay bằng số (Dry-run) 7 thuật toán cốt lõi.<br/>• Thể lệ cuộc thi Hackathon SGU 2026-2027. |
-| **Thư mục gốc** | **ĐỊNH VỊ, THẨM ĐỊNH & PROTOTYPE** | 👥 **CẢ 3 NGƯỜI** | • `BAO_CAO_LUONG_HE_THONG.md` (**đọc đầu tiên**: luồng hệ thống từng bước, dễ hiểu + kỹ thuật)<br/>• `KyVong45.md`<br/>• `BAO_CAO_THAM_DINH_GIAM_KHAO.md`<br/>• `index.html`, `cockpit_demo.html`<br/>• `CLAUDE.md` | • Báo cáo tổng hợp luồng hệ thống (file tổng hợp, file đặc tả gốc đúng khi lệch).<br/>• Định vị cạnh tranh & cẩm nang phản biện BGK.<br/>• Thẩm định giả lập kèm bảng trạng thái xử lý.<br/>• Prototype giao diện dữ liệu giả (chỉ tham chiếu thiết kế, **không** chép vào repo thi).<br/>• Hướng dẫn cho trợ lý AI. |
-| **`archive/`** | **KHO LƯU TRỮ TÀI LIỆU CŨ & BẢN NHÁP SƠ KHAI** | 🗄️ *Hệ thống* | • `docchoi.md`, `enterprise_arch.md`, `atp.md`, `SYSTEM_SPEC...` | Lưu trữ lịch sử thảo luận, **không** dùng làm căn cứ. |
+| Thư mục | Nội dung | Có phải nguồn chuẩn? |
+| :-- | :-- | :-- |
+| `spec/` | Đặc tả để code: quyết định, kiến trúc, contract + `CONFIG`, API/DB, engine, AI, BKT, UI, kế hoạch 21 giờ, test | **Có — nguồn duy nhất** |
+| `pitch/` | Kịch bản demo, phản biện BGK, giải thích dễ hiểu, roadmap sau cuộc thi | Không (lệch thì `spec/` đúng) |
+| `references/` | Thể lệ cuộc thi (`thele.md`), giáo trình thuật toán minh họa | Thể lệ là ràng buộc ngoài |
+| `prototype/` | `cockpit_demo.html` — mẫu giao diện cũ, chỉ tham khảo thiết kế | Không |
+| `archive/` | Tài liệu cũ, gồm toàn bộ bản trước hợp nhất (`2026-10-28_truoc-hop-nhat/`) | Không |
 
----
+## Luật giữ tài liệu không rối lại
 
-# 2. SƠ ĐỒ DÒNG DỮ LIỆU LIÊN THÔNG GIỮA CÁC THƯ MỤC
-
-```mermaid
-flowchart TD
-    subgraph S0 ["00_CORE_SPEC (NGƯỜI 1 - LEAD)"]
-        Contracts["02_DATA_CONTRACTS.md<br/>(Định nghĩa Types & Schemas chuẩn)"]
-    end
-
-    subgraph S1 ["01_ENGINE_THUAT_TOAN (NGƯỜI 2 - STATIC ENGINE)"]
-        direction TB
-        T0["TẦNG 0: 01_INGESTION_STREAM.md<br/>(Stream RAM Unzip & TreePruner)"] --> T1["TẦNG 1: 02_AST_SLICING_GRAPH.md<br/>(Tree-sitter WASM & Tarjan SCC)"]
-        T1 --> T2["TẦNG 2: 02_AST_SLICING_GRAPH.md<br/>(PageRank Sink Filter, Uncle Bob, Dagre)"]
-    end
-
-    subgraph S3 ["03_UI_VA_KICH_BAN (NGƯỜI 1 - LEAD)"]
-        direction TB
-        UI1["CỘT 1: ReactFlow Canvas 4 Màu<br/>(Nhận tọa độ x,y từ Tầng 2)"]
-        UI2["CỘT 2: Monaco Code Viewer<br/>(Nhận code hạt nhân từ Tầng 3)"]
-        UI3["CỘT 3: Buồng Lái Nhận Thức 2 Pha<br/>(Tab 1 X-Ray & Tab 2 Feynman)"]
-    end
-
-    subgraph S2 ["02_AI_VA_BAYES (NGƯỜI 3 - AI & COGNITIVE)"]
-        direction TB
-        T3["TẦNG 3: 01_LLM_PIPELINE_GUARDRAIL.md<br/>(Context Sandwich ≤ 100 dòng / ≤ 1,500 token)"]
-        T4["TẦNG 4: 01_LLM_PIPELINE_GUARDRAIL.md<br/>(Gemini Flash CoT + Cổng Gác Nhị Phân)"]
-        T5["TẦNG 5: 02_BAYES_COGNITIVE_BKT.md<br/>(Động cơ BKT + q-Matrix + Half-Life Decay)"]
-    end
-
-    Contracts -.->|"Ép kiểu dữ liệu"| S1
-    Contracts -.->|"Ép kiểu dữ liệu"| S2
-    Contracts -.->|"Ép kiểu dữ liệu"| S3
-
-    T2 ==>|"Xuất đồ thị DAG & Lát cắt"| UI1
-    UI1 -->|"Click Node Vàng"| T3
-    T3 -->|"Nạp code hạt nhân"| UI2
-    T3 -->|"Gửi Payload Sandwich"| T4
-    T4 -->|"Xuất X-Ray & Câu hỏi Socratic"| UI3
-    UI3 -->|"Nộp bài giải thích"| T5
-    T5 ==>|"Đổi Node sang XANH & Mở khóa"| UI1
-```
-
----
-
-# 3. QUY TRÌNH PHỐI HỢP KHI BẮT ĐẦU CODE (CODE IMPLEMENTATION PROTOCOL)
-
-1. **BƯỚC 1 (Đọc kỹ hợp đồng dữ liệu):**  
-   Mọi thành viên mở file [`00_CORE_SPEC/02_DATA_CONTRACTS.md`](00_CORE_SPEC/02_DATA_CONTRACTS.md) để đọc cấu trúc JSON và Type mà mình phải nhận vào / trả ra, và bảng số liệu chuẩn ở [`00_CORE_SPEC/01_TONG_QUAN_KIEN_TRUC.md`](00_CORE_SPEC/01_TONG_QUAN_KIEN_TRUC.md) Mục 5.
-2. **BƯỚC 2 (Người 2 triển khai Tầng 0, 1, 2):**  
-   Mở thư mục `01_ENGINE_THUAT_TOAN/`, code theo đúng 5 mục: *Input $\to$ Logic $\to$ Fallback $\to$ Output $\to$ SLA < 0.25s*.
-3. **BƯỚC 3 (Người 3 triển khai Tầng 3, 4, 5):**  
-   Mở thư mục `02_AI_VA_BAYES/`, code Prompt Gemini Flash JSON Schema, Cổng Gác Nhị Phân 2 Chốt và Động cơ Bayes BKT.
-4. **BƯỚC 4 (Người 1 dựng Giao diện Cockpit 3 Cột):**  
-   Mở thư mục `03_UI_VA_KICH_BAN/`, gắn ReactFlow, Monaco Editor và kết nối Zustand Store để đổi màu Node và chạy Demo 5 phút.
-5. **NẾU CẦN ÔN LẠI THUẬT TOÁN:**  
-   Mở ngay [`references/GIAO_TRINH_THUAT_TOAN_CHUAN.md`](references/GIAO_TRINH_THUAT_TOAN_CHUAN.md) để xem ví dụ chạy tay bằng số (Dry-run trace) minh bạch!
+1. **Mỗi sự thật chỉ ở một chỗ.**
+   - Kiểu dữ liệu và hằng số nằm ở `spec/02_CONTRACTS.md`.
+   - Nơi khác chỉ nhắc tên: `CONFIG.X`, tên type, mã luật (`ENG-12`, `BKT-03`…).
+2. **Đổi quyết định** ⇒ sửa dòng D-xx trong `00_QUYET_DINH.md` trước, rồi mới sửa file đích.
+3. **Không viết thêm file tổng hợp mới vào `spec/`.**
+   - Bản dễ hiểu đặt ở `pitch/`.
+   - Lịch sử đặt ở `archive/`.
+4. **Số liệu độ trễ / token / chi phí là mục tiêu** cho tới khi đo trên code thật.

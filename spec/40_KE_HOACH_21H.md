@@ -143,7 +143,7 @@ Không bao giờ cắt: bản đồ tất định, Tab 1, câu hỏi + chấm + 
 - [ ] Cùng link chạy 2 lần ⇒ cùng `node_id`, cùng tọa độ (INV-10).
 - [ ] Repo private / sai link / repo rỗng / quá lớn ⇒ đúng mã lỗi và thông điệp của `30`.
 - [ ] Mọi node xong phân tích; Tab 1 có điểm hay + điểm dở "Nhận định của AI"; không có tên bịa (kiểm tay 3 node).
-- [ ] Persona `NEWBIE`: trả lời sai ⇒ gợi ý `CONCEPT` ⇒ đúng ⇒ `PASS_AFTER_HINT`, P 0.25 → 0.4202; node xanh, node con mở.
+- [ ] Persona `NEWBIE`: chạy đúng kịch bản A của `50` (A3 → A7): sai ⇒ gợi ý `CONCEPT` ⇒ đúng ⇒ `PASS_AFTER_HINT`, điểm kỹ năng khớp bảng; node xanh, node con mở.
 - [ ] "Bỏ qua câu này" ⇒ câu ❌, hiện đáp án; node đỏ khi run xong, node con mở kèm tam giác.
 - [ ] Persona `SENIOR_ACTIVE` ⇒ node không phải Capstone Fast-Track ⚡; Capstone vẫn hỏi 1 câu.
 - [ ] Persona `SENIOR_RUSTY` ⇒ node xanh có viền cam; "Ôn bài" chạy, không đổi màu node.

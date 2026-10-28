@@ -4,46 +4,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository state
 
-This is a **documentation-only repository** (Vietnamese) for the SimpliFey V2 Pro hackathon project (SGU 2026–2027, "Codebase Cognitive Twin"). There is no source code, build system, linter, or test suite — no commands to run. The only runnable artifact is `index.html`, a static landing/demo page (Tailwind + Lucide via CDN, inline script) you open directly in a browser.
+This is a **documentation repository** (Vietnamese) for the SimpliFey V2 Pro hackathon project (SGU 2026–2027, "Codebase Cognitive Twin"). There is no source code, build system or test suite here. The product is coded during the 21-hour challenge round (12:00 31/10 → 09:00 01/11/2026) in a **separate, initially empty** competition repo, by following `spec/`. Competition rules (`references/thele.md`): only commits made during the round count, no bulk commit of pre-written code, every member must commit. So: do not scaffold the implementation in this repo, and do not paste large code blocks from `spec/` into the competition repo in one commit.
 
-The specs say "Documentation Phase — never generate code" (`00_CORE_SPEC/01_TONG_QUAN_KIEN_TRUC.md`). Treat the Markdown as the product: edit specs, keep them consistent, don't scaffold an implementation unless asked.
+Spec freeze: 30/10/2026. After that, spec changes go through `spec/00_QUYET_DINH.md`.
 
 ## Project in one paragraph
 
-A pipeline that turns a public GitHub repo (or an uploaded `.zip`) into an interactive DAG of cross-file "architectural slices" and then quizzes the student Feynman-style. Principle: **pure code first (0 tokens, < 1.5s), AI second (JIT Gemini 2.5 Flash, enrich 1.2–1.8s with ≤ 2,000 input / ≤ 900 output tokens, ≈ $0.03/session estimated)**. Planned stack: Next.js 15, ReactFlow, Monaco, Tree-sitter WASM, Zustand, Supabase (Postgres + Auth) for learner progress.
+Turns a public GitHub repo (or uploaded `.zip`) into a deterministic map of 6–8 cross-file architectural slices (pure code, 0 tokens, target < 1.5 s), then uses Gemini at **4 calls** — `analyze-node` (skills + strengths + weak points, shared cache), `analyze-overview`, `enrich-node` (questions per weak skill), `evaluate-feynman` (grading + 3-level hints) — and a server-side BKT learner model over 16 skills stored in Supabase Postgres. Stack: Next.js 15, ReactFlow, Monaco, Tree-sitter WASM, Zustand, Supabase.
 
-## Directory map (folder ⇔ architecture tier ⇔ owner)
+## Directory map
 
-`README.md` is the master map. Folders are numbered by tier ownership:
+- `spec/` — **the only normative source.** Read `README.md` for the per-role reading order.
+  - `00_QUYET_DINH.md` — decisions (D-xx), defaults awaiting confirmation, open questions (Q-xx). The only place that may say "proposed / pending".
+  - `01_KIEN_TRUC_VA_LUONG.md` — invariants INV-01..13, components, flows, node & question lifecycles, where data lives.
+  - `02_CONTRACTS.md` — **all** TypeScript types, every API request/response, all error codes, and the single `CONFIG` constants table.
+  - `03_API_VA_LUU_TRU.md` — endpoints, Postgres schema, RLS, transactions, state derivation, Fast-Track.
+  - `10_ENGINE_INGEST.md`, `11_ENGINE_DO_THI.md` — Tiers 0–2 (Person 2).
+  - `20_AI_GOI_VA_PROMPT.md`, `21_AI_KIEM_VA_DUYET.md`, `22_BKT_VA_KE_HOACH_CAU_HOI.md` — AI calls, guardrails, BKT & question planning (Person 3).
+  - `30_UI.md` — UI (Person 1). `40_KE_HOACH_21H.md` — 21-hour build plan. `50_TEST_VA_FIXTURE.md` — fixtures and end-to-end scenarios.
+- `pitch/` — demo script, judge Q&A, plain-language walkthrough, roadmap. **Not used for coding**; when it disagrees with `spec/`, `spec/` wins.
+- `references/` — competition rules (`thele.md`) and an algorithm textbook (illustrative only).
+- `prototype/cockpit_demo.html` — stale visual prototype; design reference only, its data and logic are outdated.
+- `archive/` — superseded documents (including everything before the 2026-10-28 consolidation in `archive/2026-10-28_truoc-hop-nhat/`). **Not authoritative**; don't cite or "fix" them.
 
-- `00_CORE_SPEC/` — Person 1 (Lead). Architecture overview (`01_TONG_QUAN_KIEN_TRUC.md` §5 is the **single canonical numbers table**), `02_DATA_CONTRACTS.md` (TypeScript interfaces that bind all tiers — the source of truth for types; other files reference types, never copy them), `03_SYSTEM_EDGE_CASES_AUDIT.md`, `04_LUU_TRU_VA_DONG_BO.md` (Supabase Postgres + Auth persistence layer: tables, RLS, server-side BKT transaction, resume-by-commit-SHA), `00_AUDIT_VA_PHAN_VIEC_3_NGUOI.md` (per-file audit + task checklists), and `Kich_Ban_UseCase.md` — a **derived summary**: never use it as a source; when it disagrees with another spec, update it from that spec.
-- `01_ENGINE_THUAT_TOAN/` — Person 2. Tiers 0–2: stream unzip into RAM + TreePruner → Tree-sitter symbol tables + Tarjan SCC (forces a DAG) → PageRank with utility-sink filter, Cognitive Complexity "VIP" nodes, scoped slicing, Uncle Bob metrics, deterministic node naming (Algorithm 8: route → entry symbol → TF-IDF domain terms → directory → file name; never AI), Dagre layout.
-- `02_AI_VA_BAYES/` — Person 3. Tiers 3–5: context-sandwich packing → single-pass contrastive CoT Gemini call + two-gate binary guardrail (symbol whitelist ∩ AST, regex blacklist) → BKT with 16-skill q-Matrix and half-life decay.
-- `03_UI_VA_KICH_BAN/` — Person 1. Tri-pane cockpit FSM (ReactFlow 4-colour nodes / Monaco / X-Ray + Feynman tabs) and the 5-minute pitch/demo script.
-- `04_ROADMAP_KY_THUAT/` — post-hackathon 4-phase roadmap.
-- `references/` — algorithm textbook with hand-traced examples and competition rules (`thele.md`).
-- `archive/` — superseded drafts and old specs; **not authoritative**. Don't cite or "fix" these to match current specs.
-- `BAO_CAO_LUONG_HE_THONG.md` — end-to-end walkthrough of the system (plain-language + technical per step); a **derived summary** like `Kich_Ban_UseCase.md`: update it from the specs, never the reverse. Its Part 7 lists what the specs still leave undefined.
-- `KyVong45.md` — competitive-positioning / defense cheat sheet for the judges. `BAO_CAO_THAM_DINH_GIAM_KHAO.md` — mock judge review with a status table of which findings are fixed.
+## Rules when editing specs
 
-## Invariants to preserve when editing specs
-
-- 1 Node = 1 cross-file architectural slice (Controller → Middleware → Service → Repository), never a single file.
-- 2-phase loop: Phase 1 X-Ray walkthrough (flow + design strengths only — never show the smell/bug), Phase 2 Feynman assessment. The answer (`smell_reveal_after_attempt`) stays server-side inside `challenge_token` until pass, 3rd failed attempt, or skip.
-- Zero-Trust / Zero-Disk: no `git clone`, no executing user code; static analysis only; stream from `codeload.github.com` with a pre-flight HEAD probe. Zero-Disk covers the user's **source code**: code, snippets and the full `StaticEngineResult` never reach disk or the database.
-- Persistence: Postgres (Supabase) stores learner data only — `skill_states`, `learning_sessions` (commit SHA + code-free graph skeleton), `node_progress`, `feynman_attempts`. The server is the only writer: BKT updates, retry counting, unlocks/Fast-Track and the reveal decision all run server-side in one transaction; the client holds a read-only copy. Sessions resume by re-ingesting the stored commit SHA (engine is deterministic). `localStorage` holds only signed `SyncReceipt`s and UI prefs, never the learner profile.
-- One LLM call per node (not Actor-Critic multi-turn), and AI only at 2 JIT points (`enrich-node`, `evaluate-feynman`) — no Intent Router; AI output must pass the two-gate guardrail before display, with an AST-syntax fallback question on rejection. Don't claim the gate kills 100% of hallucinations: it blocks invented symbols and out-of-repo tech, not wrong semantics.
-- Language support is tiered via a Language Registry, not a hard-coded list: `RESOLVED` (has its own `ImportResolver`: TS/JS, Python, Java, Go, Dart → accurate edges) vs `STRUCTURAL` (any language with a Tree-sitter grammar → Universal Resolver, edges `confidence: INFERRED`, not guaranteed 100%). Only languages with no grammar are `UNSUPPORTED` (`ERR_UNSUPPORTED_LANGUAGE`). Never claim "100+ languages verified" — only TS/JS and Python are verified for the hackathon MVP. No regex fallback, no LLM-based graph extraction.
-- Node states/colours: `#F59E0B` available, `#10B981` completed, `#EF4444` failed (3rd wrong attempt or skip; still unlocks children via soft-bypass), plus locked; background `#0F172A`. Fast-Track (≥ 0.92), warning triangle and decay (orange border, `0.25 + (P−0.25)·2^(-Δt/14) < 0.45`, only when P > 0.25, computed on read) are display layers, not FSM states.
-- Latency/cost numbers (cold-start DAG < 1.5s target, JIT enrich 1.2–1.8s / evaluate 0.8–1.2s, ≈ $0.03/session estimated, ≤ 100 lines / ≤ 1,500 tokens of code per node) live in `01_TONG_QUAN_KIEN_TRUC.md` §5 — change that table first, then every file that cites it.
-- Positioning: never claim to have invented Compound AI, BKT, PageRank, or Tree-sitter repo-maps (Aider prior art); frame as novel *combination/application* (see `KyVong45.md`).
-- Type names (`HybridArchitecturalNode`, `ContextSandwichPayload`, `EnrichedSliceResponse`, `StaticEngineResult`, `LearnerCognitiveProfile`, …) must match `02_DATA_CONTRACTS.md` wherever they are referenced.
-
-## Known doc debt (from the audit file)
-
-The 2026-10-28 sync removed `isomorphic-git`, "0.4s / Actor-Critic", the Intent Router, "~400 tokens" / "< $0.002" cost claims and absolute `file:///` links. Still open: `index.html` / `cockpit_demo.html` mock data predates the sync (`index.html` shows the N+1 smell up front); per-team pitch duration is not in `thele.md`; no measured latency/token numbers yet. Prefer relative links in new edits.
+- One fact, one place: types live only in `spec/02_CONTRACTS.md`; numbers only in its `CONFIG` table (and in "Test bắt buộc" sections / `50`). Other files refer by name (`CONFIG.FAST_TRACK_MIN`, `HybridArchitecturalNode`, rule IDs like `ENG-12`).
+- To change a decision: edit the D-xx row in `spec/00_QUYET_DINH.md` first, then the files it points to.
+- Preserve the invariants in `spec/01_KIEN_TRUC_VA_LUONG.md` §2 (INV-01..13). Key ones: 1 node = 1 cross-file slice; Zero-Trust / Zero-Disk for source code; server is the only writer of learning progress; Tab 1 shows strengths and AI-labelled weak points, answers revealed only when a question finishes; every AI text passes the guardrail (it blocks invented names / out-of-repo tech, not wrong meaning — never claim 100%); no AST fallback question; only TS/JS and Python are verified languages; deterministic engine; never claim to have invented BKT / PageRank / Compound AI / Tree-sitter repo-maps.
+- Spec files are normative: no rationale essays, metaphors, pitch text or history inside `spec/` (those go to `pitch/` or `archive/`). Keep each spec file ≤ ~40 KB.
+- All latency / token / cost numbers are targets or estimates until measured (`spec/02_CONTRACTS.md` §1.1).
 
 ## Working conventions
 
-- Docs are written in Vietnamese with Mermaid diagrams and LaTeX math; keep that language and style.
+- Docs are written in Vietnamese with Mermaid diagrams and occasional LaTeX; keep that language and style. Prefer relative links.
 - Edit in the main working directory; do not create git worktrees (stray copies exist under `.claude/worktrees/`, ignore them).

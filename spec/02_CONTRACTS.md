@@ -136,8 +136,8 @@ export const CONFIG = {
   TIER_ARCHITECT_MIN: 0.75,
   FAST_TRACK_MIN: 0.92,
   DECAY_WARNING_BELOW: 0.45,          // Viền cam: điểm gốc ≥ ngưỡng VÀ điểm đã decay < ngưỡng (D-03 #19)
-  NOVICE_SECOND_QUESTION: false,      // CẤN #27 — bật sau khi đo token
-  GAP_TARGETING: false,               // CẤN #28
+  NOVICE_SECOND_QUESTION: false,      // 00 Mục 4 dòng #27 — bật sau khi đo token
+  GAP_TARGETING: false,               // 00 Mục 4 dòng #28
 
   // ---------- Lưu trữ (03_API_VA_LUU_TRU) ----------
   DB_RETRY_DELAYS_MS: [100, 300],     // Thử lại tối đa 2 lần
