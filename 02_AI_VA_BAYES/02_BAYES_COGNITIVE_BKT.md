@@ -108,17 +108,21 @@ export interface UserCognitiveState {
 | Tham số | Ký hiệu | Giá trị Chuẩn | Ý nghĩa Sư phạm Kỹ thuật |
 | :--- | :---: | :---: | :--- |
 | **Prior** | $P(L_0)$ | **$0.25$** | Xác suất tiên nghiệm người học đã làm chủ kỹ năng trước khi vào bài. |
-| **Transit (Correct)** | $P(T \mid \text{Correct})$ | **$0.20$** | Tỷ lệ tiếp thu tri thức sâu sắc sau khi người học giải thích đúng. |
-| **Transit (Incorrect)** | $P(T \mid \text{Incorrect})$ | **$0.02$** | Tỷ lệ tiếp thu rất nhỏ từ gợi ý hệ thống khi người học trả lời sai. |
-| **Guess** | $P(G)$ | **$0.15$** | Xác suất chưa hiểu sâu nhưng diễn đạt ăn may trúng tiêu chí rubric. |
-| **Slip** | $P(S)$ | **$0.05$** | Xác suất đã làm chủ nhưng sơ suất gõ thiếu ý dẫn đến không đạt. |
+| **Transit (Correct)** | $P(T \mid \text{Correct})$ | **$0.08$** | Tỷ lệ tiếp thu tri thức sau khi người học giải thích đúng. Giữ nhỏ để mỗi lần đúng chỉ nâng 1 bậc Tier. |
+| **Transit (Incorrect)** | $P(T \mid \text{Incorrect})$ | **$0.03$** | Tỷ lệ tiếp thu nhỏ từ câu hỏi gợi mở và đáp án được mở khi người học trả lời sai. |
+| **Guess** | $P(G)$ | **$0.25$** | Xác suất chưa hiểu sâu nhưng vẫn đạt: ăn may trúng rubric, hoặc nhờ AI khác trả lời hộ (rủi ro thực tế với nhóm người dùng vibecoder). |
+| **Slip** | $P(S)$ | **$0.12$** | Xác suất đã làm chủ nhưng không đạt: gõ thiếu ý, hoặc bộ chấm LLM chấm nhiễu. Nằm trong dải $0.10 - 0.15$ để một lần sơ suất không xóa sạch thành tích. |
+
+> [!NOTE]
+> **Vì sao chọn bộ tham số này (thay cho bộ cũ $P(T)=0.20, P(G)=0.15, P(S)=0.05$):** Bộ cũ cho $0.25 \to 0.7429 \to 0.9585$, tức là 2 lần đúng đã vượt ngưỡng Fast-Track $0.92$, nên người học **không bao giờ gặp Tier 3 (ARCHITECT)**. Đồng thời, đang ở $0.90$ mà trượt 1 lần thì tụt về $0.36$. Bộ mới đảm bảo **mỗi lần đúng leo đúng 1 bậc** (Tier 1 → 2 → 3 → Fast-Track, xem Mục 2.3), còn một lần sơ suất ở $0.90$ chỉ tụt về $0.60$. Đây vẫn là tham số **đặt tay có lý do**; Giai đoạn 2 sẽ fit lại bằng dữ liệu thật (xem Roadmap).
 
 ---
 
 ### 2.2. Hệ thống Công thức Cập nhật Hậu nghiệm & Chuyển trạng thái
 
 1. **Quy tắc Ánh xạ Quan sát ($\text{Obs}$):**
-   $$\text{Obs} = \begin{cases} \text{Correct} & \text{nếu } (\text{core\_accuracy} \ge 70 \land \text{simplicity} \ge 70) \\ \text{Incorrect} & \text{ngược lại} \end{cases}$$
+   $$\text{Obs} = \begin{cases} \text{Correct} & \text{nếu } \text{core\_accuracy} \ge 70 \\ \text{Incorrect} & \text{ngược lại} \end{cases}$$
+   * `core_accuracy` đo việc người học **hiểu đúng vì sao code được viết như vậy và bám đúng code thật** (nhắc đúng hàm, biến, luồng). `simplicity` (dùng ẩn dụ đời thường) **chỉ là điểm cộng**, không tham gia quyết định Đạt/Trượt (xem `01_LLM_PIPELINE_GUARDRAIL.md` Mục 4.2).
 
 2. **Cập nhật Hậu nghiệm Bayes (Posterior Step):**
    * Khi trả lời **ĐÚNG** ($\text{Obs} = \text{Correct}$):
@@ -133,22 +137,34 @@ export interface UserCognitiveState {
 
 ### 2.3. Ví dụ Chạy Tay Bằng Số (Dry-Run Proof)
 
-Khởi tạo kỹ năng với $P(L_0) = 0.25$, các tham số $P(G) = 0.15$, $P(S) = 0.05$:
+Khởi tạo kỹ năng với $P(L_0) = 0.25$, các tham số $P(G) = 0.25$, $P(S) = 0.12$, $P(T \mid \text{Correct}) = 0.08$, $P(T \mid \text{Incorrect}) = 0.03$:
 
 #### Trường hợp 1: Người học trả lời ĐÚNG ($\text{Obs} = \text{Correct}$)
 1. Tính xác suất hậu nghiệm:
-   $$P(L_0 \mid \text{Correct}) = \frac{0.25 \times (1 - 0.05)}{0.25 \times 0.95 + (1 - 0.25) \times 0.15} = \frac{0.2375}{0.2375 + 0.1125} = \frac{0.2375}{0.3500} \approx 0.6786$$
-2. Áp dụng chuyển trạng thái với $P(T \mid \text{Correct}) = 0.20$:
-   $$P(L_1) = 0.6786 + (1 - 0.6786) \times 0.20 = 0.6786 + 0.3214 \times 0.20 = 0.6786 + 0.0643 = \mathbf{0.7429}$$
-* **Kết quả:** $P(L_t)$ **tăng vọt từ $0.25 \to 0.7429$** ($+49.3\%$).
+   $$P(L_0 \mid \text{Correct}) = \frac{0.25 \times (1 - 0.12)}{0.25 \times 0.88 + (1 - 0.25) \times 0.25} = \frac{0.2200}{0.2200 + 0.1875} = \frac{0.2200}{0.4075} \approx 0.5399$$
+2. Áp dụng chuyển trạng thái với $P(T \mid \text{Correct}) = 0.08$:
+   $$P(L_1) = 0.5399 + (1 - 0.5399) \times 0.08 = 0.5399 + 0.4601 \times 0.08 = 0.5399 + 0.0368 = \mathbf{0.5767}$$
+* **Kết quả:** $P(L_t)$ **tăng từ $0.25 \to 0.5767$** ($+32.7$ điểm phần trăm), lên đúng **Tier 2 (PRACTITIONER)**.
 
 #### Trường hợp 2: Người học trả lời SAI ($\text{Obs} = \text{Incorrect}$)
 1. Tính xác suất hậu nghiệm:
-   $$P(L_0 \mid \text{Incorrect}) = \frac{0.25 \times 0.05}{0.25 \times 0.05 + (1 - 0.25) \times (1 - 0.15)} = \frac{0.0125}{0.0125 + 0.75 \times 0.85} = \frac{0.0125}{0.6500} \approx 0.0192$$
-2. Áp dụng chuyển trạng thái với $P(T \mid \text{Incorrect}) = 0.02$:
-   $$P(L_1) = 0.0192 + (1 - 0.0192) \times 0.02 = 0.0192 + 0.9808 \times 0.02 = 0.0192 + 0.0196 = \mathbf{0.0388}$$
-* **Kết quả:** $P(L_t)$ **giảm mạnh từ $0.25 \to 0.0388$** ($-21.1\%$).
-* **Khẳng định tính đúng đắn:** Triệt tiêu hoàn toàn nghịch lý của mô hình cũ ($P(T)=0.20$ cố định làm $P(L_1) = 0.2116 > 0.20$ khi trả lời sai).
+   $$P(L_0 \mid \text{Incorrect}) = \frac{0.25 \times 0.12}{0.25 \times 0.12 + (1 - 0.25) \times (1 - 0.25)} = \frac{0.0300}{0.0300 + 0.5625} = \frac{0.0300}{0.5925} \approx 0.0506$$
+2. Áp dụng chuyển trạng thái với $P(T \mid \text{Incorrect}) = 0.03$:
+   $$P(L_1) = 0.0506 + (1 - 0.0506) \times 0.03 = 0.0506 + 0.9494 \times 0.03 = 0.0506 + 0.0285 = \mathbf{0.0791}$$
+* **Kết quả:** $P(L_t)$ **giảm từ $0.25 \to 0.0791$** ($-17.1$ điểm phần trăm).
+* **Khẳng định tính đúng đắn:** Trả lời sai luôn làm $P(L_t)$ giảm, không lặp lại nghịch lý của mô hình cũ ($P(T)=0.20$ cố định làm $P(L_1) = 0.2116 > 0.20$ khi trả lời sai).
+
+#### Trường hợp 3: Hành trình qua đủ 3 Tier (kiểm chứng không nhảy cóc)
+
+| Sự kiện | $P(L_t)$ | Tier tương ứng (Mục 3.2) |
+| :--- | :---: | :--- |
+| Bắt đầu | $0.2500$ | Tier 1: NOVICE |
+| Đúng lần 1 | $0.5767$ | Tier 2: PRACTITIONER |
+| Đúng lần 2 | $0.8413$ | Tier 3: ARCHITECT |
+| Đúng lần 3 | $0.9532$ | FAST-TRACK ($\ge 0.92$) |
+| *Đang ở $0.90$, sơ suất trượt 1 lần* | $0.6025$ | Tụt 1 bậc về Tier 2, không về sàn |
+
+* Người học phải trả lời đúng **3 lần** cho cùng một kỹ năng, mỗi lần ở một Tier khó hơn, mới được miễn thi kỹ năng đó ở các Node sau.
 
 ---
 
@@ -160,8 +176,8 @@ $$P(L_{\text{current}}) = P(L_{\text{last}}) \times 2^{-\frac{\Delta t}{h}}$$
 
 * $\Delta t$: Thời gian trôi qua kể từ lần thực hành gần nhất (tính theo ngày).
 * $h = 14\text{ ngày}$: Chu kỳ bán rã trí nhớ chuẩn.
-* **Cảnh báo Trí nhớ Bào mòn:** Nếu một Node từng đạt `COMPLETED` ($P \ge 0.75$) nhưng sau thời gian không ôn tập bị tụt xuống dưới ngưỡng $0.45$:
-  $$0.95 \times 2^{-\frac{30}{14}} \approx 0.95 \times 0.226 = 0.215 < 0.45$$
+* **Cảnh báo Trí nhớ Bào mòn:** Nếu một kỹ năng đã được làm chủ (VD: $0.9532$ sau 3 lần đúng, Mục 2.3) nhưng sau thời gian không ôn tập bị tụt xuống dưới ngưỡng $0.45$:
+  $$0.9532 \times 2^{-\frac{30}{14}} \approx 0.9532 \times 0.226 = 0.215 < 0.45$$
   Node tự động chuyển sang viền **VÀNG CAM (Decay Warning)** và AI kích hoạt câu hỏi ôn tập điểm mù khi người học click vào.
 
 ---
@@ -182,7 +198,7 @@ $$P_{\text{node}}(u) = \min_{k \in \mathcal{K}_u} P(L_t, k)$$
 | Cấp độ Nhận thức | Ngưỡng Năng lực Toán học | Trọng tâm Câu hỏi Socratic Feynman | Hành vi Hệ thống |
 | :--- | :---: | :--- | :--- |
 | **Tier 1: NOVICE** | $P_{\text{node}} < 0.45$ | **Data-Flow Tracing:** Truy vết luồng di chuyển của biến số, kiểu dữ liệu DTO, tham số giữa các hàm. | Kích hoạt bộ gợi ý định vị dòng code cơ bản. |
-| **Tier 2: PRACTITIONER** | $0.45 \le P_{\text{node}} < 0.75$ | **Design Critique & AI Smells:** Bắt bệnh N+1 Query, thiếu giao dịch Database, vi phạm phân tầng. | Yêu cầu dùng ẩn dụ đời thường phân tích tác động hệ thống. |
+| **Tier 2: PRACTITIONER** | $0.45 \le P_{\text{node}} < 0.75$ | **Design Critique & AI Smells:** Bắt bệnh N+1 Query, thiếu giao dịch Database, vi phạm phân tầng. | Yêu cầu phân tích tác động hệ thống; khuyến khích (không bắt buộc) dùng ẩn dụ đời thường. |
 | **Tier 3: ARCHITECT** | $0.75 \le P_{\text{node}} < 0.92$ | **Deep Invariants & Concurrency Edge:** Xoáy sâu vào Race Condition, Deadlock, phá vỡ toàn vẹn dữ liệu đa luồng. | Thử thách phản biện đa chiều ở mức kỹ sư trưởng. |
 | **FAST-TRACK AUTO-PASS** | $\forall k \in \mathcal{K}_u, P(L_t, k) \ge 0.92$ | **Miễn thi hoàn toàn (Exempt):** Không cần làm bài tập. | Gắn cờ `is_auto_mastered = true`, đổi màu **XANH LÁ NHẠT**, mở khóa nhánh tiếp theo ($0\text{ Token}, 0\text{ms}$). |
 
@@ -292,10 +308,10 @@ export function updateBKTState(
   currentTimestamp: number = Date.now()
 ): UserCognitiveState {
   const BKT_PARAMS = {
-    P_G: 0.15,
-    P_S: 0.05,
-    P_T_CORRECT: 0.20,
-    P_T_INCORRECT: 0.02
+    P_G: 0.25,
+    P_S: 0.12,
+    P_T_CORRECT: 0.08,
+    P_T_INCORRECT: 0.03
   };
 
   const updatedSkills = { ...state.skills };

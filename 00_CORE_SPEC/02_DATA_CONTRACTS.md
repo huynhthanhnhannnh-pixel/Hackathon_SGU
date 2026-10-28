@@ -253,11 +253,11 @@ export interface EnrichedSliceResponse {
 // 3. Kết quả Chấm điểm Phản biện Feynman
 // ==========================================
 export interface FeynmanEvaluationResult {
-  core_accuracy: number;         // Độ chính xác bản chất kỹ thuật (0 - 100)
-  simplicity: number;            // Độ bình dân, không nói vẹt thuật ngữ (0 - 100)
-  is_passed: boolean;            // true nếu core_accuracy >= 70 && simplicity >= 70
+  core_accuracy: number;         // Hiểu đúng vì sao code viết như vậy + bám đúng code thật (0 - 100). Tiêu chí duy nhất quyết định Đạt
+  simplicity: number;            // Điểm cộng: diễn đạt dễ hiểu / có ẩn dụ đời thường (0 - 100). Không ảnh hưởng Đạt/Trượt
+  is_passed: boolean;            // true nếu core_accuracy >= 70 (backend tự tính lại, không tin giá trị model trả về)
   feedback: string;              // Nhận xét phản hồi 2 câu từ AI Co-Architect
-  detected_jargons: string[];    // Các thuật ngữ bị dùng vẹt nếu có
+  detected_jargons: string[];    // Thuật ngữ chuyên ngành xuất hiện trong câu trả lời, chỉ để gợi ý giải nghĩa, không trừ điểm
 }
 ```
 
