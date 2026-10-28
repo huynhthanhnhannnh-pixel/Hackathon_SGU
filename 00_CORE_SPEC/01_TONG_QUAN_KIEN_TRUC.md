@@ -75,7 +75,7 @@ flowchart TD
         A5 --> B5["Gemini Flash chấm điểm Rubric (core_accuracy quyết định Đạt; simplicity là điểm cộng)"]
         B5 --> C5["Động cơ BKT: Cập nhật Xác suất Năng lực P(Mastery) qua q-Matrix"]
         C5 --> D5["Thang Tiến Hóa 3 Bậc (Novice ➔ Practitioner ➔ Architect)"]
-        D5 --> E5["Hàm suy giảm Trí nhớ Ebbinghaus: max(0.25, P·2^(-Δt/14))"]
+        D5 --> E5["Hàm suy giảm Trí nhớ Ebbinghaus: 0.25 + (P−0.25)·2^(-Δt/14)"]
         C5 --> F5["Đổi Node sang XANH (GREEN) ➔ Mở khóa Node phân nhánh kế tiếp!"]
         C5 --> G5[("🗄️ Postgres: skill_states + node_progress<br/>(server ghi trong 1 transaction, KHÔNG lưu code)")]
     end
@@ -155,7 +155,7 @@ flowchart TD
 | BKT: $P(L_0), P(T\mid C), P(T\mid I), P(G), P(S)$ | 0.25, 0.08, 0.03, 0.25, 0.12 | `02_BAYES_COGNITIVE_BKT.md` Mục 2.1 |
 | Tier NOVICE / PRACTITIONER / ARCHITECT | < 0.45 / [0.45, 0.75) / [0.75, 0.92) | `02_BAYES_COGNITIVE_BKT.md` Mục 3.2 |
 | Fast-Track Auto-Pass | **≥ 0.92** mọi kỹ năng (trừ node Capstone) | `02_BAYES_COGNITIVE_BKT.md` Mục 3.2–3.3 |
-| Decay | $\max(0.25,\, P \cdot 2^{-\Delta t/14})$, cảnh báo viền cam khi $P_{\text{node}} < 0.45$ | `02_BAYES_COGNITIVE_BKT.md` Mục 2.4 |
+| Decay | $0.25 + (P - 0.25) \cdot 2^{-\Delta t/14}$ (chỉ khi $P > 0.25$; dưới sàn thì giữ nguyên), cảnh báo viền cam khi $P_{\text{node}} < 0.45$ | `02_BAYES_COGNITIVE_BKT.md` Mục 2.4 |
 | Prefetch | Đọc Tab 1 > 5 giây, 1 node con | `01_LLM_PIPELINE_GUARDRAIL.md` Mục 1.3 |
 | Debounce / trùng lặp / tối thiểu | 3 giây / ≥ 80% / < 15 ký tự | `01_LLM_PIPELINE_GUARDRAIL.md` Mục 1.2 |
 | Giới hạn Tầng 0 | 15MB nén, 8MB giải nén, 50 file code, 1MB/file | `01_INGESTION_STREAM.md` §2.2 |

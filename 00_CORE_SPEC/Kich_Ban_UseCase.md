@@ -257,8 +257,8 @@ Toàn bộ thuật toán BKT chạy ở server trong transaction của `evaluate
 
 ### 5.2. Phía dưới chạy như thế nào? (Under The Hood) — đồng bộ từ BKT Mục 2.4
 1. **Thuật toán Suy giảm Trí nhớ Ebbinghaus**, tính **khi đọc**, không ghi đè `p_mastery` gốc:
-   $$\Delta t = \frac{\text{Date.now()} - \text{last\_practiced\_at}}{86,400,000 \text{ ms}}, \qquad P(L_{\text{current}}) = \max\Big(0.25,\; P(L_{\text{last}}) \times 2^{-\frac{\Delta t}{14}}\Big)$$
-2. Khi $\Delta t = 30\text{ ngày}$: $\max(0.25,\; 0.9532 \times 2^{-30/14}) = \max(0.25,\; 0.216) = 0.25 < 0.45$.
+   $$\Delta t = \frac{\text{Date.now()} - \text{last\_practiced\_at}}{86,400,000 \text{ ms}}, \qquad P(L_{\text{current}}) = 0.25 + \Big(P(L_{\text{last}}) - 0.25\Big) \times 2^{-\frac{\Delta t}{14}} \quad (\text{chỉ khi } P(L_{\text{last}}) > 0.25)$$
+2. Khi $\Delta t = 30\text{ ngày}$: $0.25 + (0.9532 - 0.25) \times 2^{-30/14} = 0.25 + 0.7032 \times 0.2264 = 0.4092 < 0.45$.
 3. Node vẫn `COMPLETED`, UI chỉ đổi viền **Vàng Cam (Decay Warning)** khi $P_{\text{node}}$ đã decay < 0.45.
 4. Khi người dùng click vào, `enrich-node` được gọi với `learner_persona_tier` tính từ điểm đã decay của kỹ năng yếu nhất, để ôn lại đúng chỗ hổng.
 
