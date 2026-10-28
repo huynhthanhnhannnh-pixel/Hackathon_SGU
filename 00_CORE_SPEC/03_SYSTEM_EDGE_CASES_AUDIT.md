@@ -488,7 +488,7 @@
 * **Cách hệ thống hiện tại đang xử lý:**
   * Dùng **Structured Outputs JSON Schema**: Ép mô hình tuân thủ cấu trúc dữ liệu schema, không sinh văn bản tự do.
   * **Đóng khung dữ liệu (Input Sandboxing):** Câu trả lời của sinh viên được bọc nghiêm ngặt trong thẻ dữ liệu `<student_answer>...</student_answer>`.
-  * **Cổng Gác Nhị Phân hậu kiểm:** Backend kiểm tra độc lập `core_accuracy >= 70 && simplicity >= 70` bằng code máy chủ, không cho phép chuỗi text điều khiển logic.
+  * **Cổng Gác Nhị Phân hậu kiểm:** Backend kiểm tra độc lập `core_accuracy >= 70` bằng code máy chủ, không cho phép chuỗi text điều khiển logic (`simplicity` chỉ là điểm cộng, không quyết định Đạt/Trượt).
 
 ---
 
@@ -529,9 +529,10 @@
 ### Case 3.7: Học viên copy paste nguyên văn câu trả lời từ sách giáo khoa / ChatGPT (Jargon Regurgitation)
 * **Trạng thái:** 🟢 **XỬ LÝ TỐT (ROBUST)**
 * **Cách hệ thống hiện tại đang xử lý:**
-  Tiêu chí `simplicity (0 - 100)` trong Rubric có luật phạt rõ ràng:
-  * Nếu nói vẹt thuật ngữ sách giáo khoa mà không dùng ví dụ đời thường (quán ăn, đi chợ, giao thông) $\implies$ Điểm `simplicity < 60`.
-  * Quy tắc đạt yêu cầu cả 2 tiêu chí: `core_accuracy >= 70 && simplicity >= 70`. Sinh viên học vẹt sẽ bị trượt bài sát hạch Feynman!
+  Chống học vẹt bằng tiêu chí **bám code** trong `core_accuracy`, KHÔNG bằng cách phạt thuật ngữ:
+  * Nếu học viên chỉ đọc thuộc lòng/copy định nghĩa sách giáo khoa hoặc ChatGPT mà không chỉ ra được cơ chế đó nằm ở hàm, biến hay luồng xử lý nào trong đoạn snippet code $\implies$ Điểm `core_accuracy < 60` (Trượt bài sát hạch).
+  * Dùng thuật ngữ chuyên ngành không bị trừ điểm (`detected_jargons` chỉ dùng để hiển thị gợi ý giải nghĩa cho người học).
+  * Tiêu chuẩn Đạt khi và chỉ khi `core_accuracy >= 70` (hiểu đúng vì sao code viết như vậy VÀ bám sát code thật).
 
 ---
 
@@ -559,7 +560,7 @@
 ### Case 4.3: Điểm BKT của học viên giỏi bị trượt oan do click nhầm (Slip Outlier)
 * **Trạng thái:** 🟢 **XỬ LÝ TỐT (ROBUST)**
 * **Cách hệ thống hiện tại đang xử lý:**
-  Tham số trượt chân (Slip) đã được cố định ở mức $P(S) = 0.05$. Công thức Bayes có trọng số bảo toàn: Nếu một kỹ năng đang có $P(L_t) = 0.90$ mà lỡ trả lời sai 1 lần, điểm chỉ tụt về khoảng $0.65$ chứ không bao giờ rơi thẳng về $0.0$. Học viên chỉ cần trả lời đúng 1 câu tiếp theo là khôi phục lại phong độ.
+  Tham số sơ suất (Slip) được chuẩn hóa ở mức $P(S) = 0.12$ (kết hợp $P(G) = 0.25$). Công thức Bayes có tính bảo toàn: Nếu một kỹ năng đang có $P(L_t) = 0.90$ mà lỡ trả lời sai 1 lần, điểm chỉ tụt về **0.6025** (vẫn ở Tier 2: Practitioner) chứ không bao giờ rơi thẳng về 0 hay về sàn. Học viên chỉ cần trả lời đúng 1 câu tiếp theo là khôi phục lại phong độ.
 
 ---
 
@@ -636,9 +637,9 @@
 ### Case 6.1: Học viên yếu / không hiểu bản chất, trả lời sai liên tiếp ở Tab 2
 * **Trạng thái:** 🟢 **XỬ LÝ TỐT (ROBUST)** *(Khôi phục và nâng cấp từ bản thiết kế cũ)*
 * **Cách hệ thống xử lý qua Giàn giáo 3 Nấc (3-Tier Socratic Hint Ladder):**
-  * **Lần thử 1 trượt (`retry_count = 1`):** Giữ Node màu VÀNG. Bóc tách `detected_jargons` (các từ học vẹt).
-    * *Hành động Sư phạm:* Tung **Câu hỏi mồi Cấp 1 (Metaphor Anchor Hint)**: Chỉ ra chỗ chưa gãy gọn và mớm một bối cảnh đời thường cụ thể.
-    * *Ví dụ:* *"Bạn đang dùng cụm từ 'nghẽn I/O Database' mà chưa chỉ ra bản chất. Hãy tưởng tượng Database như nhà bếp của một quán ăn và bạn là người bồi bàn..."*
+  * **Lần thử 1 trượt (`retry_count = 1`):** Giữ Node màu VÀNG. Bóc tách `detected_jargons` để hỗ trợ giải nghĩa thuật ngữ (không trừ điểm) và rà soát độ bám code.
+    * *Hành động Sư phạm:* Tung **Câu hỏi mồi Cấp 1 (Code Grounding Hint)**: Chỉ ra chỗ chưa bám code hoặc chưa giải thích vì sao code viết như vậy (có thể gợi ý ví dụ đời thường làm điểm cộng).
+    * *Ví dụ:* *"Bạn đã nêu đúng cơ chế nghẽn I/O Database nhưng chưa chỉ ra nó xảy ra ở dòng code hay hàm nào trong snippet. Hãy đối chiếu vòng lặp gọi hàm và giải thích vì sao đoạn code này gây nghẽn (có thể liên hệ ví dụ quán ăn)..."*
   * **Lần thử 2 trượt (`retry_count = 2`):** Giữ Node màu VÀNG.
     * *Hành động Sư phạm:* Tung **Câu hỏi mồi Cấp 2 (Guided Completion Scaffold)**: Cung cấp sẵn khung tư duy, chỉ yêu cầu học viên điền vào mắt xích logic còn thiếu.
     * *Ví dụ:* *"Khi 50 khách cùng gọi món, nếu bồi bàn chạy vào bếp từng món một (50 lần) thay vì gom đơn thì bếp sẽ... Hãy hoàn thiện câu: 'Lệnh này lặp trong vòng lặp làm hệ thống... giống như người bồi bàn...' "*.
@@ -687,8 +688,8 @@
 
 ### Case 8.1: Học viên "Học vẹt sách giáo khoa" (The Academic Regurgitator)
 * **Trạng thái:** 🟢 **XỬ LÝ TỐT (ROBUST)**
-* **Hiện tượng:** Gõ toàn thuật ngữ đao to búa lớn (*"Loose coupling, High cohesion, Inversion of Control, Polymorphism"*) nhưng không hiểu bản chất thực tiễn.
-* **Cách xử lý:** Bộ lọc `detected_jargons` bắt các từ khóa này. Nếu không có ẩn dụ đời thường đi kèm $\implies$ Điểm `simplicity < 60`, từ chối cho Pass, yêu cầu giải thích lại như đang nói chuyện với một người ngoại đạo.
+* **Hiện tượng:** Gõ toàn thuật ngữ đao to búa lớn (*"Loose coupling, High cohesion, Inversion of Control, Polymorphism"*) nhưng chỉ đọc thuộc định nghĩa chung chung mà không liên hệ được vào đoạn code đang xét.
+* **Cách xử lý:** Hệ thống không phạt việc dùng thuật ngữ chuyên ngành (`detected_jargons` chỉ để gợi ý giải nghĩa). Thay vào đó, tiêu chí `core_accuracy` đánh giá mức độ **bám code thật**: Nếu học viên chỉ đọc thuộc định nghĩa lý thuyết mà không chỉ ra được cơ chế đó thể hiện ở hàm, biến hay luồng tương tác nào trong snippet code $\implies$ Điểm `core_accuracy < 60`, không đạt chuẩn Đạt (cần $\ge 70$), yêu cầu chỉ rõ cách thức hoạt động ngay trên đoạn code thật.
 
 ---
 
@@ -702,7 +703,7 @@
 ### Case 8.3: Học viên "Tự tin thái quá / Dunning-Kruger" (The Overconfident Minimalist)
 * **Trạng thái:** 🟢 **XỬ LÝ TỐT (ROBUST)**
 * **Hiện tượng:** Tự đắc nghĩ mình biết tuốt, chỉ gõ cụt lủn: *"N+1 query, thêm eager loading là xong"*.
-* **Cách xử lý:** Client Pre-validation chặn câu trả lời $< 15$ ký tự. Prompt ép buộc phải có cấu trúc ẩn dụ Feynman mới đủ điều kiện chấm `simplicity`.
+* **Cách xử lý:** Client Pre-validation chặn câu trả lời $< 15$ ký tự. Đồng thời, tiêu chí `core_accuracy` yêu cầu giải thích **vì sao** code viết như vậy và bám vào các hàm/biến cụ thể trong snippet (như `updateStock` trong vòng lặp), chứ không chỉ nêu tên giải pháp chung chung; nếu thiếu phần giải thích bản chất bám code $\implies$ `core_accuracy` không đạt ngưỡng 70.
 
 ---
 

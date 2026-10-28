@@ -78,8 +78,8 @@ Hệ thống **SimpliFey V2 Pro** đã có khung kiến trúc kỹ thuật rất
   Sinh viên nhìn thấy trọn vẹn sự biến đổi của đối tượng dữ liệu (DTO) xuyên qua 4 tầng kiến trúc chỉ trong một lát cắt 20 dòng.
 
 #### Luận điểm 3: Chuyển giao Miền Nhận thức — "BKT cho Kiến trúc Phần mềm qua Lăng kính Feynman"
-* **Giải quyết bài toán đánh giá năng lực thực chất:** Thay vì trắc nghiệm lý thuyết suông, hệ thống yêu cầu: *"Hãy dùng một ẩn dụ đời thường để giải thích tại sao dòng code này cần dùng Mutex Lock thay vì biến đếm thông thường"*.
-* **Cơ chế Cầu nối (Sensor Bridge):** LLM Structured Output ($T=0.1$) đóng vai trò bộ cảm biến nhị phân đo lường 2 tiêu chí (`accuracy` & `simplicity`). Kết quả nhị phân $u_t \in \{0, 1\}$ được đưa vào mô hình BKT toán học chạy trên Client để cập nhật xác suất $P(L_t)$, hoàn toàn minh bạch và loại bỏ thiên kiến ảo giác.
+* **Giải quyết bài toán đánh giá năng lực thực chất:** Thay vì trắc nghiệm lý thuyết suông, hệ thống yêu cầu: *"Hãy giải thích vì sao dòng code này cần dùng Mutex Lock thay vì biến đếm thông thường (có thể dùng ví dụ đời thường)"*.
+* **Cơ chế Cầu nối (Sensor Bridge):** LLM Structured Output ($T=0.1$) đóng vai trò bộ cảm biến: tiêu chí `core_accuracy` (hiểu đúng bản chất vì sao code viết như vậy VÀ bám sát code thật) quyết định Đạt/Trượt ($\ge 70$), trong khi `simplicity` (ẩn dụ đời thường) là điểm cộng. Kết quả nhị phân $u_t \in \{0, 1\}$ được đưa vào mô hình BKT toán học chạy trên Client để cập nhật xác suất $P(L_t)$, hoàn toàn minh bạch và loại bỏ thiên kiến ảo giác.
 
 ---
 

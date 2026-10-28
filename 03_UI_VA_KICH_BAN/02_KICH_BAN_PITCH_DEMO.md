@@ -43,7 +43,8 @@
 ├───────────────┼────────────────────────────────────────────────────────────────────────┤
 │ 03:00 - 04:00 │ SÁT HẠCH FEYNMAN & ĐỔI MÀU NODE SANG XANH (PASS BKT):                  │
 │ (Demo AI & BKT│ • Thao tác: Bấm nút 'Bắt đầu Sát hạch' ➔ Sang Tab 2. AI Gemini Flash   │
-│               │   đưa câu hỏi tình huống: 'Dùng ẩn dụ đời thường giải thích dòng 45'.  │
+│               │   đưa câu hỏi: 'Giải thích vì sao dòng 45 lại viết như vậy (có thể     │
+│               │   dùng ví dụ đời thường)'.                                             │
 │               │ • Thao tác: Nhập câu trả lời bằng ví dụ 'gọi món quán ăn' ➔ Bấm Nộp.   │
 │               │ • Màn hình: Gemini chấm Pass (90/95) ➔ Mạng Bayes cập nhật năng lực ➔ │
 │               │   Node lập tức chuyển sang XANH NGỌC và mở khóa các Node kế tiếp!      │

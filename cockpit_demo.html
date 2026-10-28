@@ -1815,7 +1815,7 @@ function renderDock() {
   } else if (S.dock === "gate") {
     const g = S.lastGate;
     body.innerHTML = `<div class="cols">
-      <div><p style="margin:0 0 4px"><b>Chốt 1 — AST Symbol Whitelist</b> (Set Intersection) · Chế độ: <span class="b green">Strict</span> (TypeScript · Tree-sitter WASM). Dart/Java dùng Heuristic Regex ➔ <span class="b">Relaxed Whitelist</span> chỉ cần ≥ 1 Class/Method khớp.</p>
+      <div><p style="margin:0 0 4px"><b>Chốt 1 — AST Symbol Whitelist</b> (Set Intersection) · Chế độ: <span class="b green">Strict</span> (TypeScript · Tree-sitter WASM). Ngôn ngữ tier STRUCTURAL (chưa có resolver riêng) ➔ <span class="b">Relaxed Whitelist</span> chỉ cần ≥ 1 symbol khớp AST.</p>
         ${g ? `<div class="symchips">${g.symbols.map(s => `<span class="${s.ok ? "hit" : "miss"}">${s.ok ? "✓" : "✕"} ${esc(s.s)}</span>`).join("")}</div>` : `<span style="color:var(--dim)">Chưa có output AI — click một node.</span>`}
         <p style="margin:8px 0 4px"><b>Chốt 2 — Regex Blacklist</b> (công nghệ ngoài package.json)</p>
         <div class="symchips">${BLACKLIST.map(b => `<span class="${g && g.hits.includes(b) ? "miss" : ""}">${b}</span>`).join("")}</div>

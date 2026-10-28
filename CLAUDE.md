@@ -31,6 +31,7 @@ A pipeline that turns a public GitHub repo into an interactive DAG of cross-file
 - 2-phase loop: Phase 1 X-Ray walkthrough, Phase 2 Feynman assessment.
 - Zero-Trust / Zero-Disk: no `git clone`, no executing user code; static analysis only; stream from `codeload.github.com` with a pre-flight HEAD probe.
 - One LLM call per node (not Actor-Critic multi-turn); AI output must pass the two-gate guardrail before display, with an AST-syntax fallback question on rejection.
+- Language support is tiered via a Language Registry, not a hard-coded list: `RESOLVED` (has its own `ImportResolver`: TS/JS, Python, Java, Go, Dart → accurate edges) vs `STRUCTURAL` (any language with a Tree-sitter grammar → Universal Resolver, edges `confidence: INFERRED`, not guaranteed 100%). Only languages with no grammar are `UNSUPPORTED` (`ERR_UNSUPPORTED_LANGUAGE`). Never claim "100+ languages verified" — only TS/JS and Python are verified for the hackathon MVP. No regex fallback, no LLM-based graph extraction.
 - Node states/colours: `#F59E0B` available, `#10B981` completed, `#EF4444` failed, plus locked; background `#0F172A`.
 - Latency/cost numbers (cold-start DAG < 1.5s, JIT 1.2–1.8s, < $0.002/session) are repeated across files — change them everywhere or nowhere.
 - Positioning: never claim to have invented Compound AI, BKT, PageRank, or Tree-sitter repo-maps (Aider prior art); frame as novel *combination/application* (see `KyVong45.md`).

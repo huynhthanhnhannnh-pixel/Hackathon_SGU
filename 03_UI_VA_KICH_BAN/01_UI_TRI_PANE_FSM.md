@@ -81,8 +81,8 @@ Giao diện được chia thành 3 cột tương tác phản ứng (Reactive Lay
   * Phân tích **Điểm Hay (Design Pattern & Dependency Injection)**: Lý do phân tầng, lợi ích kiểm thử và mở rộng.
 * **Tab 2: Socratic Feynman Challenge (Sát hạch Bản chất):**
   * Hiển thị câu hỏi Socratic từ AI Co-Architect đóng khung trong đoạn code hạt nhân.
-  * Người học nhập lời giải thích bằng ẩn dụ đời thường (quán ăn, đi chợ, giao thông) vào ô văn bản và bấm **[Nộp Bài]**.
-  * AI chấm điểm Rubric (Đúng bản chất $\ge 70$, Bình dân $\ge 70$) $\implies$ Đổi màu Node sang XANH LÁ (COMPLETED) tức thì và mở khóa `smell_reveal_after_attempt`.
+  * Người học nhập lời giải thích bằng lời của mình (ẩn dụ đời thường là điểm cộng) vào ô văn bản và bấm **[Nộp Bài]**.
+  * AI chấm điểm Rubric (`core_accuracy >= 70`, `simplicity` là điểm cộng) $\implies$ Đổi màu Node sang XANH LÁ (COMPLETED) tức thì và mở khóa `smell_reveal_after_attempt`.
 
 ---
 

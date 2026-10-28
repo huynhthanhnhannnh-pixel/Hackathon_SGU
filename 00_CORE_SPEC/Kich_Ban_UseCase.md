@@ -220,13 +220,13 @@ Khi người dùng bấm nút **[Nộp Bài Chấm Điểm]**, dữ liệu phả
    * `OFF_TOPIC` (Nói nhảm, chửi thề): Nhắc nhở quay lại bài học.
    * `EVALUATION`: Chuyển tiếp vào bộ chấm điểm chính thức.
 2. **Feynman Rubric Judge (Gemini 2.5 Flash Structured Outputs - 0.8s):**
-   Chấm điểm câu trả lời độc lập theo 3 thước đo Rubric chuẩn:
-   * `core_accuracy` (0 - 100): Tính chính xác kỹ thuật (Đạt $92/100$ - hiểu đúng bản chất I/O Overhead và Network Round-trip).
-   * `simplicity` (0 - 100): Độ bình dân trong sáng (Đạt $95/100$ - ví dụ bồi bàn quán ăn rất sinh động, không dùng từ ngữ cao đạo).
-   * `repo_grounding` (0 - 100): Mức độ bám sát mã nguồn ($85/100$).
-3. **Jargon Detector:** Quét kiểm tra xem người học có nói vẹt các từ chuyên môn như *"tính đa hình"*, *"idempotent"* mà không giải thích bản chất không.
+   Chấm điểm câu trả lời theo rubric sư phạm:
+   * `core_accuracy` (0 - 100): Hiểu đúng vì sao code viết như vậy VÀ bám đúng code thật (nhắc đúng hàm/biến/luồng trong snippet). Tiêu chí duy nhất quyết định Đạt/Trượt.
+   * `simplicity` (0 - 100): Điểm cộng diễn đạt đời thường / ẩn dụ dễ hiểu (quán ăn, đi chợ, giao thông). Không ảnh hưởng Đạt/Trượt. Dùng thuật ngữ chuyên ngành không bị trừ điểm.
+3. **Jargon Detector:** Quét nhận diện thuật ngữ chuyên ngành để gợi ý giải nghĩa cho người học, không dùng để trừ điểm. Chống học vẹt bằng tiêu chí bám code trong `core_accuracy` (chỉ thuộc định nghĩa mà không chỉ ra trong code thì vẫn Trượt).
 4. **Quy tắc Đạt chuẩn (Pass Rule):**
-   $$\text{is\_passed} = \text{true} \iff (\text{core\_accuracy} \ge 70 \text{ VÀ } \text{simplicity} \ge 70)$$
+   $$\text{is\_passed} = \text{true} \iff \text{core\_accuracy} \ge 70$$
+   (Backend tự tính lại `is_passed` từ `core_accuracy`, không tin trường do model trả về).
 5. Backend trả về kết quả JSON `FeynmanEvaluationResult`.
 
 ---
@@ -250,10 +250,10 @@ Toàn bộ thuật toán BKT chạy trực tiếp trên trình duyệt qua Zusta
 2. **Kích hoạt vector kỹ năng $q_j$ (16 chiều):**
    Bài tập Checkout kích hoạt 2 kỹ năng: $k_5$ (`DB_OPTIMIZATION`) và $k_7$ (`ASYNC_CONCURRENCY`).
 3. **Công thức Cập nhật Xác suất Bản thể $P(L_t)$:**
-   Áp dụng 4 tham số chuẩn: Prior $P(L_0) = 0.20$, Transit $P(T) = 0.20$, Guess $P(G) = 0.15$, Slip $P(S) = 0.05$:
-   $$P(L_{t-1} \mid \text{Correct}) = \frac{P(L_{t-1}) \cdot (1 - P(S))}{P(L_{t-1}) \cdot (1 - P(S)) + (1 - P(L_{t-1})) \cdot P(G)}$$
-   $$P(L_t) = P(L_{t-1} \mid \text{Correct}) + \big(1 - P(L_{t-1} \mid \text{Correct})\big) \times P(T)$$
-   Điểm năng lực của 2 kỹ năng tăng vọt từ $0.20 \to 0.72$. Ghi nhận mốc thời gian: `last_practiced_at = Date.now()`.
+   Áp dụng bộ tham số chuẩn hóa: Prior $P(L_0) = 0.25$, Transit $P(T \mid \text{Correct}) = 0.08$, Guess $P(G) = 0.25$, Slip $P(S) = 0.12$:
+   $$P(L_{t-1} \mid \text{Correct}) = \frac{P(L_{t-1}) \cdot (1 - P(S))}{P(L_{t-1}) \cdot (1 - P(S)) + (1 - P(L_{t-1})) \cdot P(G)} = \frac{0.25 \times (1 - 0.12)}{0.25 \times 0.88 + 0.75 \times 0.25} = \frac{0.2200}{0.4075} \approx 0.5399$$
+   $$P(L_1) = P(L_{t-1} \mid \text{Correct}) + \big(1 - P(L_{t-1} \mid \text{Correct})\big) \times P(T \mid \text{Correct}) = 0.5399 + (1 - 0.5399) \times 0.08 = \mathbf{0.5767}$$
+   Điểm năng lực của 2 kỹ năng tăng từ $0.25 \to 0.5767$ (lên đúng Tier 2: Practitioner). Ghi nhận mốc thời gian: `last_practiced_at = Date.now()`.
 4. **Máy trạng thái FSM 4 Màu chuyển đổi trạng thái:**
    * Node hiện tại chuyển sang: `status = "COMPLETED"` (Xanh ngọc).
 5. **Cơ chế Miễn Thi Tự Động (Fast-Track Auto-Pass):**
@@ -302,7 +302,7 @@ Toàn bộ thuật toán BKT chạy trực tiếp trên trình duyệt qua Zusta
 
 1. **Bộ Giả Lập Persona Simulator:**
    Menu Persona trên thanh Header cập nhật trực tiếp `user_profile` trong Zustand Store:
-   * *Persona 1 (Newbie):* Ép $P(L_0) = 0.20 \implies$ AI chỉ sinh câu hỏi Tier 1 (Truy vết biến).
+   * *Persona 1 (Newbie):* Ép $P(L_0) = 0.25 \implies$ AI chỉ sinh câu hỏi Tier 1 (Truy vết biến).
    * *Persona 2 (Mid-Level):* Ép $P(L_0) = 0.65 \implies$ AI sinh câu hỏi Tier 2 (Bắt lỗi N+1 Query).
    * *Persona 3 (Senior Rusty):* Ép `simulated_days_idle = 30` $\implies$ Kích hoạt công thức Ebbinghaus tức thì.
 2. **Cơ chế Dự phòng Ngoại tuyến (Fail-Safe Offline Mode):**

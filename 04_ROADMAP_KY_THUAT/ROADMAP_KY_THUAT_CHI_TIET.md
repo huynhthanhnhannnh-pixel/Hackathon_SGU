@@ -32,7 +32,7 @@
 | # | Hiện tại (theo spec) | Vấn đề | Hướng nâng cấp |
 | :-: | :--- | :--- | :--- |
 | G1 | Mọi trạng thái ở Zustand client | Không có dữ liệu tập trung → không làm được dashboard, không fit BKT, không đo KPI | Postgres + event log bất biến |
-| G2 | BKT tham số cố định ($P(L_0)=0.20$, $P(T)=0.20$, $P(G)=0.15$, $P(S)=0.05$), ngưỡng 70/70 | Tham số "đoán"; nhiễu của bộ chấm LLM bị coi là nhãn chắc chắn | Fit EM bằng `pyBKT`; logistic hiệu chuẩn nhãn 0/1 |
+| G2 | BKT tham số đặt tay ($P(L_0)=0.25$, $P(T\mid\text{Correct})=0.08$, $P(T\mid\text{Incorrect})=0.03$, $P(G)=0.25$, $P(S)=0.12$), ngưỡng `core_accuracy >= 70` | Tham số "đoán" có lý do sư phạm; nhiễu của bộ chấm LLM bị coi là nhãn chắc chắn | Fit EM bằng `pyBKT`; logistic hiệu chuẩn nhãn 0/1 |
 | G3 | Nối hàm bằng Two-Pass heuristic | Sai với dynamic dispatch, DI, alias, re-export; ngôn ngữ tier `STRUCTURAL` chỉ có Universal Resolver (cạnh `INFERRED`) + Relaxed Gate | Resolver chính xác hơn (LSP/SCIP) + độ tin cậy trên cạnh |
 | G4 | "Slicing" thực chất là call-chain + Nominal Event Bridge | Không phải program slicing theo nghĩa Weiser (PDG) | Đổi tên đúng bản chất; tăng độ mịn best-effort, đo thay vì hứa |
 | G5 | Trần 50 file / 15MB, Top 6–8 node | Không dùng được cho monorepo doanh nghiệp | Phân cụm cộng đồng + indexing tăng dần + cache theo commit SHA |
