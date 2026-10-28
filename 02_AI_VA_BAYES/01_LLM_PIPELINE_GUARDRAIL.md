@@ -426,6 +426,11 @@ QUY TẮC SINH FOLLOW-UP QUESTION KHI CHƯA ĐẠT (core_accuracy < 70 hoặc in
   * follow_up_question: Chỉ ra hàm/bước đó và hỏi "Điều gì xảy ra ở đây khi [tình huống biên/luồng dữ liệu]...?"
 - Nếu current_attempt === 3:
   * follow_up_type = null, follow_up_question = null, follow_up_step_index = null.
+
+QUY TẮC FEEDBACK (1 – 2 câu, người học ĐỌC được):
+- Khi ĐẠT: khen đúng điểm người học làm tốt.
+- Khi CHƯA ĐẠT: ghi nhận phần người học nói đúng + 1 câu định hướng. TUYỆT ĐỐI không nêu đáp án hay nguyên nhân thật — việc dẫn dắt để follow_up_question lo.
+- misconception chỉ để hệ thống dùng nội bộ (server xóa trước khi trả về), không viết cho người học đọc.
 ```
 
 ---
@@ -446,6 +451,7 @@ QUY TẮC SINH FOLLOW-UP QUESTION KHI CHƯA ĐẠT (core_accuracy < 70 hoặc in
   "detected_jargons": ["I/O", "round-trip"]
 }
 ```
+* JSON trên là **output thô** Gemini trả về server. Trước khi trả về client, server **xóa trường `misconception`**: nó chỉ dùng để AI tự viết câu gợi ý trong cùng 1 lần gọi, và thường gần như nói luôn đáp án. Người học chỉ thấy `feedback` + `follow_up_question` (+ điểm số).
 
 > [!IMPORTANT]
 > **Quy tắc Tính `is_passed` Cứng Phía Backend:**
@@ -567,7 +573,7 @@ export type NodeOutcome = "PASS_FIRST" | "PASS_AFTER_HINT" | "FAILED";
 
 // 2. Thêm vào FeynmanEvaluationResult (Mục 4.2 – 4.5)
 //    intent: "ANSWER" | "GIVE_UP" | "OFF_TOPIC";          // thay Intent Router
-//    misconception: string;                              // chỉ dùng nội bộ để sinh gợi ý
+//    (misconception KHÔNG thêm vào contract: chỉ có trong output thô của Gemini, server xóa trước khi trả về client)
 //    follow_up_question: string | null;
 //    follow_up_type: "CONCEPT" | "CODE_POINTER" | null;
 //    follow_up_step_index: number | null;                // trỏ execution_steps, không tự sinh dòng
