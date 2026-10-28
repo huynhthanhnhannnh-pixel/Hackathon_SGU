@@ -7,7 +7,8 @@
 | **Thuộc tính** | **Thông số kiểm toán** |
 | :--- | :--- |
 | **Phân hệ** | `00_CORE_SPEC/00_AUDIT_VA_PHAN_VIEC_3_NGUOI.md` |
-| **Mục đích** | Rà soát toàn bộ 8 file tài liệu trong 4 phân hệ (`00` đến `03`), vạch trần mâu thuẫn và giao việc cụ thể |
+| **Mục đích** | Rà soát 8 file đặc tả chính trong 4 phân hệ (`00` đến `03`), vạch trần mâu thuẫn và giao việc cụ thể. Các file tổng hợp/đối chiếu khác: `Kich_Ban_UseCase.md` (chỉ đồng bộ từ file nguồn), `03_SYSTEM_EDGE_CASES_AUDIT.md`, `BAO_CAO_THAM_DINH_GIAM_KHAO.md`, `KyVong45.md`, Roadmap |
+| **Cập nhật gần nhất** | 2026-10-28 — đồng bộ toàn bộ spec: contract hợp nhất, bảng số liệu chuẩn (`01_TONG_QUAN_KIEN_TRUC.md` Mục 5), Gate v2, `challenge_token`, decay tính khi đọc, soft-bypass, bỏ Intent Router |
 | **Quy tắc kiểm toán** | **Thẳng thắn, Zero Hand-waving, Chuẩn hóa 5 Mục hành động** |
 | **Đội hình phân bổ** | **NGƯỜI 1** (Lead / UI), **NGƯỜI 2** (Static Engine), **NGƯỜI 3** (AI & Bayes) |
 
@@ -68,9 +69,10 @@
 2. **Những điểm còn mơ hồ, rườm rà hoặc mâu thuẫn:**
    - Cần đồng bộ kiểu dữ liệu cho giao diện Buồng lái Socratic (Cockpit Socratic Card).
 3. **Những phần đang thiếu thốn cần bổ sung gấp:**
-   - Interface cho thông số Fallback Mock JSON phòng khi mất mạng (`OfflineMockBundle`).
+   - ~~Interface cho thông số Fallback Mock JSON phòng khi mất mạng (`OfflineMockBundle`)~~ — đã bổ sung (contract Mục 2.6).
 4. **Checklist giao việc cụ thể cho NGƯỜI 1:**
-   - [ ] Bổ sung interface `OfflineMockBundle`.
+   - [x] Bổ sung interface `OfflineMockBundle` (đặc tả; file mock phải ghi lại từ output thật trong giờ thi).
+   - [x] Hợp nhất `LearnerCognitiveProfile` (gộp các trường của BKT), thêm `EnrichNodeClientResponse`, `ChallengeTokenPayload`, `EvaluateFeynmanRequest`, `RevealRequest`, `HiddenChallenge`, `NodeProgressRecord`; đưa `MIDDLEWARE` thành layer chính thức.
    - [ ] Đóng băng hợp đồng dữ liệu, gửi cho Người 2 và Người 3 để bắt đầu triển khai code mà không bị lệch kiểu.
 
 ---
@@ -81,17 +83,18 @@
 1. **Tóm tắt nội dung hiện có (Đạt 75%):**
    - Đã nói được cơ chế Stream Unzip từ URL `codeload.github.com` vào RAM và regex lọc rác TreePruner.
 2. **Những điểm còn mơ hồ, rườm rà hoặc mâu thuẫn:**
-   - **Mâu thuẫn lớn:** Ở Mục 1 và Bước 1 vẫn còn nhắc tới thư viện `isomorphic-git`. Thư viện này tạo file ảo trên browser rất nặng và không cần thiết.
-   - Thiếu đặc tả cách giải quyết branch mặc định (`main` vs `master`) khi URL không truyền branch.
+   - ~~Còn nhắc `isomorphic-git`~~ — đã hết; Tầng 0 dùng `unzipper` trên buffer RAM (Central-Directory-First).
+   - ~~Thiếu cách giải quyết branch mặc định~~ — đã có Bước 3 `RefResolver` (`archive/HEAD.zip`, dự phòng `main ➔ master ➔ dev`).
 3. **Những phần đang thiếu thốn cần bổ sung gấp:**
-   - Bước **Pre-Flight HEAD Probe (200ms)** để kiểm tra repo tồn tại/public trước khi tải stream.
-   - Mã lỗi cụ thể trả về (`ERR_REPO_NOT_FOUND`, `ERR_REPO_TOO_LARGE > 15MB`, `ERR_BRANCH_RESOLVE`).
+   - ~~Pre-Flight HEAD Probe~~ — đã có Bước 2 (≤ 300ms, enum `ProbeResult`).
+   - ~~Mã lỗi riêng~~ — dùng `IngestionErrorCode` trong contract.
+   - ~~Upload `.zip`~~ — đã có Bước 0 `ZipUploadReceiver`.
 4. **Checklist giao việc cụ thể cho NGƯỜI 2 (Khuôn chuẩn 5 Mục):**
    - [ ] **Input:** URL GitHub string `https://github.com/:owner/:repo`.
-   - [ ] **Logic:** Regex bóc tách $\to$ Gửi HEAD Probe (200ms) $\to$ Pipe Stream Zip vào RAM qua `unzipper` $\to$ TreePruner autodrain file rác.
-   - [ ] **Fallback:** Nếu branch `main` trả về 404 $\to$ tự động fallback sang `master`. Nếu repo > 15MB $\to$ ngắt stream báo lỗi.
+   - [ ] **Logic:** Chuẩn hóa link $\to$ HEAD Probe (≤ 300ms) $\to$ RefResolver $\to$ gom zip vào buffer RAM, đọc Central Directory $\to$ TreePruner neo segment + `FilePriorityScore` $\to$ giải nén chọn lọc. Hoặc nhận `.zip` tải lên (Bước 0).
+   - [ ] **Fallback:** Ref theo `archive/HEAD.zip`, dự phòng `main ➔ master ➔ dev`. Vượt 15MB nén mà chưa có file nào ⇒ `ERR_STREAM_QUOTA_EXCEEDED`; đã có file ⇒ cắt cụt + warning.
    - [ ] **Output JSON:** `Map<string, string>` chứa tối đa 50 file code sạch.
-   - [ ] **SLA:** Thời gian tải và giải nén dưới $1.2$ giây.
+   - [ ] **SLA:** Thời gian tải và giải nén $0.8\text{s} – 1.2\text{s}$ (bảng số liệu chuẩn Tổng quan Mục 5).
 5. **Bổ sung sau đợt rà soát edge case 2026-10-28** (chi tiết: `03_SYSTEM_EDGE_CASES_AUDIT.md` mục 1A, ma trận §7 của file Ingestion). Mã lỗi dùng `IngestionErrorCode` trong `02_DATA_CONTRACTS.md` (thay cho `ERR_REPO_NOT_FOUND` / `ERR_REPO_TOO_LARGE` / `ERR_BRANCH_RESOLVE` ở mục 3):
    - [ ] **🔴 Ưu tiên 1:** Central-Directory-First + `FilePriorityScore` (Case 1.14) và `ManifestStore` đủ manifest (Case 1.15).
    - [ ] **🔴** `NotebookExtractor` cho `.ipynb` (Case 1.5); `ERR_UNSUPPORTED_LANGUAGE` + `SfcScriptExtractor` (Case 1.16).
@@ -127,18 +130,18 @@
 
 #### FILE 5: `02_AI_VA_BAYES/01_LLM_PIPELINE_GUARDRAIL.md`
 1. **Tóm tắt nội dung hiện có (Đạt 70%):**
-   - Đã nói về Compound AI System, Gemini Flash, Zod Schema, Intent Router.
+   - Đã đặc tả Single-Pass Contrastive CoT, 2 endpoint JIT, Cổng Gác Nhị Phân v2, `challenge_token`, ngân sách token (Mục 1.4). Intent Router đã **bỏ** (là lần gọi LLM thứ 3), thay bằng nút "Bỏ qua node" ở client.
 2. **Những điểm còn mơ hồ, rườm rà hoặc mâu thuẫn:**
-   - **Mâu thuẫn lớn:** Tài liệu cũ viết "Latency phản hồi dưới 0.4 giây" và "Actor-Critic 2 lượt". Gọi LLM 2 lượt mà đòi 0.4s là hoàn toàn phi thực tế!
-   - Cần sửa lại: Áp dụng **Single-Pass Contrastive CoT Prompting** (1 lượt gọi duy nhất trong $1.2\text{s} - 1.8\text{s}$), ép mô hình nhẩm trong trường `_internal_reasoning` của JSON Schema.
+   - ~~"0.4 giây" và "Actor-Critic 2 lượt"~~ — đã thay bằng **Single-Pass Contrastive CoT** (1 lượt gọi, $1.2\text{s} - 1.8\text{s}$).
 3. **Những phần đang thiếu thốn cần bổ sung gấp:**
-   - Đặc tả chi tiết **Cổng Gác Nhị Phân 2 Chốt (Two-Gate Binary Verification)**: Chốt 1 (AST Symbol Whitelist) và Chốt 2 (Regex Blacklist).
+   - ~~Đặc tả Cổng Gác Nhị Phân 2 Chốt~~ — đã có (Gate v2: mảng rỗng bị REJECT, chuẩn hóa tên, Chốt 2 quét mọi trường văn bản, Relaxed theo `node.support_tier`).
+   - Còn thiếu: bộ eval 20–30 câu trả lời gắn nhãn, đo token/độ trễ thật bằng `usage_metadata`.
 4. **Checklist giao việc cụ thể cho NGƯỜI 3 (Khuôn chuẩn 5 Mục):**
-   - [ ] **Input:** `ContextSandwichPayload` (gồm 80 dòng code sạch, DTO, Persona tier, Blacklist).
+   - [ ] **Input:** `ContextSandwichPayload` (≤ 100 dòng code sạch, ≤ 1,500 token, DTO, Persona tier, `allowed_skills`, Blacklist).
    - [ ] **Logic:** Gửi Gemini 2.5 Flash ép kiểu Structured Output JSON Schema $\to$ Đón kết quả chạy qua Cổng Gác Nhị Phân (0.001s).
    - [ ] **Fallback:** Nếu `referenced_symbols` chứa tên biến không có trong AST $\to$ HỦY kết quả của AI, kích hoạt câu hỏi cú pháp AST an toàn.
    - [ ] **Output JSON:** `EnrichedSliceResponse` chuẩn.
-   - [ ] **SLA:** Thời gian phản hồi thực tế $1.2\text{s} – 1.8\text{s}$, tỷ lệ ảo giác $= 0\%$.
+   - [ ] **SLA:** Thời gian phản hồi thực tế $1.2\text{s} – 1.8\text{s}$; không symbol/công nghệ bịa nào lọt qua Cổng gác (cổng gác không kiểm chứng ngữ nghĩa, không tuyên bố "0% ảo giác").
    - [ ] **Liên tầng (rà soát 2026-10-28):** Chỉ nhận code đã qua `SecretRedactor`, dùng vị trí secret làm `hidden_challenge` Security Fatal (Case 1.20); đóng khung code repo như dữ liệu không tin cậy, đọc cờ `suspicious_instruction_comment` (Case 1.21); chuyển Mode B khi `ingestion_report.degraded_mode` có giá trị.
 
 ---
@@ -177,10 +180,10 @@
 
 #### FILE 8: `03_UI_VA_KICH_BAN/02_KICH_BAN_PITCH_DEMO.md`
 1. **Tóm tắt nội dung hiện có (Đạt 95%):**
-   - Có kịch bản từng phút chuẩn xác cho 5 phút thuyết trình.
-   - Có đầy đủ câu trả lời cho 7 câu hỏi bẫy hóc búa của Ban Giám khảo Khoa CNTT SGU.
+   - Có kịch bản từng phút cho 5 phút thuyết trình và 8 câu hỏi bẫy kèm câu trả lời.
 2. **Những điểm còn mơ hồ, rườm rà hoặc mâu thuẫn:**
-   - Tuyệt vời, không có mâu thuẫn kỹ thuật nào.
+   - Đã sửa (2026-10-28): bỏ cảnh hiện lỗi N+1 ở Tab 1; bỏ các khẳng định "100%", "an toàn tuyệt đối"; Q3 (PageRank), Q6 (chống chép), Q7 (offline là dữ liệu ghi lại), Q8 (Nominal Event Bridge thuộc lộ trình).
+   - Còn mở: thời lượng mỗi đội chưa có trong thể lệ — cần hỏi BTC.
 3. **Những phần đang thiếu thốn cần bổ sung gấp:**
    - Phím tắt bí mật kích hoạt chế độ Demo Offline: `Ctrl + Shift + D` để nạp ngay file Mock JSON nếu Wi-Fi hội trường bị rớt.
 4. **Checklist giao việc cụ thể cho NGƯỜI 1:**

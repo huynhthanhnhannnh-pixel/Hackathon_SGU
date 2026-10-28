@@ -10,6 +10,7 @@
 | **Người phụ trách** | **NGƯỜI 1 (LEAD ARCHITECT)** |
 | **Mục đích** | Đảm bảo tính nhất quán dữ liệu giữa Code Thuần (Tầng 0-2), AI Gemini (Tầng 4) và Client Store (Tầng 3, 5) |
 | **Nguyên tắc** | Strict Typing 100%, không dùng `any`, có đầy đủ guard-types và định nghĩa trường |
+| **Quy tắc tham chiếu** | Đây là **nguồn chân lý duy nhất** về kiểu dữ liệu. Các file khác **không chép lại** interface; chỉ ghi tên kiểu và trỏ về file này |
 
 ---
 
@@ -20,10 +21,12 @@
 // 1. Máy Trạng Thái Hữu Hạn 4 Màu (FSM Status)
 // ==========================================
 export type NodeStatus = 
-  | "LOCKED"      // Màu XÁM: Chưa hoàn thành các node tiền đề (Prerequisites)
+  | "LOCKED"      // Màu XÁM: Có node tiền đề chưa đi qua (chưa COMPLETED/FAILED)
   | "AVAILABLE"   // Màu VÀNG: Đã mở khóa, sẵn sàng cho sinh viên click vào học
-  | "COMPLETED"   // Màu XANH: Đã vượt qua sát hạch Feynman (Mastery đạt chuẩn)
-  | "FAILED";     // Màu ĐỎ: Trả lời sai quá 3 lần, ghi nhận điểm mù nhận thức
+  | "COMPLETED"   // Màu XANH: Đã vượt qua sát hạch Feynman, hoặc được Fast-Track (is_auto_mastered)
+  | "FAILED";     // Màu ĐỎ: Trả lời sai đủ 3 lần, hoặc người học bấm "Bỏ qua node này"
+// Lưu ý: "Suy giảm trí nhớ" (viền Vàng Cam) KHÔNG phải trạng thái FSM — chỉ là lớp hiển thị
+// tính khi đọc từ LearnerCognitiveProfile (xem 02_BAYES_COGNITIVE_BKT.md Mục 2.4).
 
 // ==========================================
 // 2. Nhận diện Hình thái Dự án (Project Archetype)
@@ -57,26 +60,28 @@ export interface ProjectFingerprint {
   archetype: ProjectArchetype;
   primary_language: LanguageId;                 // Ngôn ngữ chiếm nhiều byte code nhất (xem Ingestion Bước 5, Thao tác 5)
   language_breakdown: LanguageSupportInfo[];    // Mọi ngôn ngữ có trong repo, sắp theo code_bytes giảm dần (hỗ trợ repo đa ngôn ngữ)
-  graph_confidence: "HIGH" | "MIXED" | "LOW";   // HIGH: >= 80% byte thuộc tier RESOLVED; LOW: phần lớn là STRUCTURAL
+  graph_confidence: "HIGH" | "MIXED" | "LOW";   // HIGH: >= 80% byte thuộc tier RESOLVED; LOW: >= 50% byte thuộc tier STRUCTURAL
   detected_framework: string; // VD: "NestJS", "React Native", "Flutter", "FastAPI"
   is_monorepo: boolean;
   root_dir_offset: string;    // "" nếu single repo, "server/" hoặc "backend/" nếu monorepo
 }
 
 // ==========================================
-// 3. Tầng kiến trúc linh hoạt theo Archetype (Canonical 3-Tier)
+// 3. Tầng kiến trúc linh hoạt theo Archetype (Canonical Layers)
 // ==========================================
 export type ArchitecturalLayer = 
-  // Dùng chung cho Luồng Nghiệp vụ (Web, Mobile, Desktop, CLI)
+  // Dùng chung cho Luồng Nghiệp vụ (Web, Mobile, Desktop, CLI) — thứ tự chuẩn của lát cắt:
+  // ENTRY_POINT ➔ MIDDLEWARE (nếu có) ➔ BUSINESS_LOGIC ➔ DATA_ACCESS
   | "ENTRY_POINT"       // Cửa vào: Controller (Web), Screen/Widget (Mobile), Command (CLI)
+  | "MIDDLEWARE"        // Chặn giữa: Middleware/Guard/Interceptor/Validator (Web); bước Validate (PROCEDURAL)
   | "BUSINESS_LOGIC"    // Xử lý: Service (Web), ViewModel/Bloc (Mobile), Handler (CLI)
   | "DATA_ACCESS"       // Dữ liệu: Repository/SQL (Web), LocalStore/APIClient (Mobile)
   // Dùng riêng cho Thuật toán VIP
   | "ALGO_SETUP"        // Khởi tạo Heap / Mảng / State
   | "ALGO_EXECUTION"    // Vòng lặp thư giãn cạnh / biến đổi trạng thái
   | "ALGO_TERMINATION"  // Điều kiện dừng & Trả kết quả
-  // Tương thích ngược (Legacy Aliases)
-  | "CONTROLLER" | "MIDDLEWARE" | "SERVICE" | "REPOSITORY" | "DATABASE";
+  // Tương thích ngược (Legacy Aliases) — không dùng trong code mới
+  | "CONTROLLER" | "SERVICE" | "REPOSITORY" | "DATABASE";
 
 export interface LayerDisplayMeta {
   layer: ArchitecturalLayer;
@@ -92,7 +97,7 @@ export interface ExecutionTraceStep {
   function_name: string;       // VD: "checkout"
   line_start: number;          // Tọa độ dòng bắt đầu (1-indexed)
   line_end: number;            // Tọa độ dòng kết thúc
-  snippet: string;             // Code hạt nhân 15-30 dòng
+  snippet: string;             // Code hạt nhân 15–30 dòng (trần cứng 30 dòng/step)
   data_in?: string;            // Kiểu dữ liệu nhận vào (VD: "CreateOrderDTO")
   data_out?: string;           // Kiểu dữ liệu trả ra (VD: "OrderEntity")
 }
@@ -105,50 +110,68 @@ export interface UncleBobMetrics {
   abstractness: number;        // A = Na / (Na + Nc), trong đoạn [0, 1]
   distance: number;            // D = |A + I - 1|, trong đoạn [0, 1]
   diagnosis: "BALANCED" | "ZONE_OF_PAIN" | "ZONE_OF_USELESSNESS";
-  is_exempt?: boolean;         // true nếu miễn tính cho tầng UI_VIEW / ENTRY_POINT để tránh báo lỗi giả
+  is_exempt?: boolean;         // true nếu miễn tính (D = 0, BALANCED) khi: lát cắt là UI Screen; lát cắt toàn JS thuần
+                               // (không có cú pháp interface); mẫu số Ca+Ce = 0 hoặc Na+Nc = 0; ngôn ngữ STRUCTURAL
+                               // chưa khai báo abstractionKinds (xem 02_AST_SLICING_GRAPH.md Thuật toán 6)
 }
 
 // ==========================================
-// 5. Cấu trúc 1 Node Lai Kiến Trúc trên ReactFlow
+// 5. Thử thách ẩn của lát cắt (1 Node = 1 Thử Thách Trọng Tâm)
+// ==========================================
+export interface HiddenChallenge {
+  severity_level: 1 | 2 | 3;   // 1 = Security Fatal (secret lộ, thiếu auth); 2 = Bottleneck/Kiến trúc (N+1, chu trình phụ thuộc); 3 = còn lại
+  kind: "SECURITY_FATAL" | "N_PLUS_ONE" | "CIRCULAR_DEPENDENCY" | "MISSING_TRANSACTION" | "LAYER_VIOLATION" | "OTHER";
+  file_path: string;
+  line_start: number;
+  line_end: number;
+  // Chỉ dùng ở server để gợi ý cho AI; KHÔNG hiển thị ở Tab 1 (chống lộ đề)
+}
+
+// ==========================================
+// 6. Cấu trúc 1 Node Lai Kiến Trúc trên ReactFlow
 // ==========================================
 export interface HybridArchitecturalNode {
   id: string;                    // VD: "slice-order-checkout"
   title: string;                 // VD: "Order Checkout Flow"
   node_type: "ARCHITECTURAL_DATA_FLOW" | "ALGORITHMIC_CORE"; // Phân loại luồng dữ liệu vs thuật toán
-  status: NodeStatus;
-  is_auto_mastered?: boolean;    // true nếu được miễn thi do kỹ năng BKT >= 0.92 (Fast-Track)
+  status: NodeStatus;            // Trạng thái KHỞI TẠO do Engine tính (mọi root = AVAILABLE, còn lại LOCKED);
+                                 // khi chạy, trạng thái thật lấy từ LearnerCognitiveProfile.node_history
+  is_auto_mastered?: boolean;    // true nếu được miễn thi do mọi kỹ năng BKT >= 0.92 (Fast-Track)
   preliminary_skills: SWESkill[]; // 1-3 kỹ năng gán tĩnh từ Tầng 2 để xét Auto-Pass trước khi gọi AI
   prerequisites: string[];       // Danh sách ID các node cha (để Dagre phân nhánh)
   position: { x: number; y: number }; // Tọa độ (x, y) do Dagre tính toán
   files: string[];               // Các file trong lát cắt (VD: ["order.controller.ts", "order.service.ts"]). Quy ước: files[0] = file Monaco mở mặc định (SuperNode: file có in-degree từ ngoài cụm cao nhất)
+  languages: LanguageId[];       // Các ngôn ngữ của file trong lát cắt
+  support_tier: LanguageSupportTier; // Tier THẤP NHẤT trong các file của lát cắt; "STRUCTURAL" ⇒ Cổng gác chạy Relaxed Mode
   cognitive_complexity: number;  // Điểm xoắn não SonarQube của lát cắt
   uncle_bob: UncleBobMetrics;
   is_vip_algorithm: boolean;     // true nếu được cấp vé VIP do thuật toán phức tạp
-  retry_count: number;           // Số lần trả lời sai ở Pha 2 (Max = 3)
+  hidden_challenge?: HiddenChallenge; // Ứng viên thử thách chính do Engine phát hiện (chỉ server dùng)
+  retry_count: number;           // Giá trị khởi tạo = 0. Khi chạy, số lần sai thật lấy từ node_history (tối đa 3)
   trace_steps: ExecutionTraceStep[];
 }
 
 // ==========================================
-// 6. Toàn bộ đồ thị trả về từ Static Engine
+// 7. Toàn bộ đồ thị trả về từ Static Engine
 // ==========================================
 export interface StaticEngineResult {
   repo_name: string;
   fingerprint: ProjectFingerprint; // Định danh hình thái dự án bóc tách từ Tầng 0
   total_files: number;
-  nodes: HybridArchitecturalNode[];
+  nodes: HybridArchitecturalNode[]; // 6–8 node theo Display Budget (xem 02_AST_SLICING_GRAPH.md Thuật toán 7)
   edges: Array<{
     id: string;
     source: string;
     target: string;
     confidence: "RESOLVED" | "INFERRED"; // RESOLVED: nối bởi ImportResolver riêng; INFERRED: nối bởi Universal Resolver (UI vẽ nét đứt)
-    ambiguous?: boolean;                 // true nếu một interface có nhiều implementor
+    ambiguous?: boolean;                 // true nếu một interface có nhiều implementor (UI vẽ nét đứt)
   }>;
-  symbol_whitelist: string[];    // Sổ hộ khẩu Symbol dùng cho Cổng Gác Nhị Phân
+  symbol_whitelist: string[];    // Sổ hộ khẩu Symbol dùng cho Cổng Gác Nhị Phân (quy tắc dựng: 02_AST_SLICING_GRAPH.md §5)
   ingestion_report?: IngestionReport; // Báo cáo cắt giảm / cảnh báo / chế độ suy biến (tùy chọn, không phá kiểu cũ)
 }
 
 // ==========================================
-// 7. Bảng Mã Lỗi Chuẩn Tầng 0–2 (Nguồn chân lý duy nhất cho UI & Engine)
+// 8. Bảng Mã Lỗi Chuẩn Tầng 0–2 (Nguồn chân lý duy nhất cho UI & Engine)
 // ==========================================
 export type IngestionErrorCode =
   | "ERR_INVALID_GITHUB_URL"        // Link không phải GitHub / sai cú pháp
@@ -180,6 +203,7 @@ export interface IngestionReport {
   warnings: string[];               // Thông điệp tiếng Việt hiển thị cho người học
   degraded_mode?: "PROCEDURAL" | "ALGORITHM_COLLECTION"; // Chế độ suy biến của Tầng 1–2 (nếu có)
   redacted_secret_count?: number;   // Số secret đã bị SecretRedactor che trước khi gửi AI
+  suspicious_instruction_files?: string[]; // File có comment/string nghi prompt-injection (cờ suspicious_instruction_comment) — không hiển thị cho người học
 }
 ```
 
@@ -189,7 +213,7 @@ export interface IngestionReport {
 
 ```typescript
 // ==========================================
-// 1. Đóng gói Context Sandwich gửi cho Gemini
+// 1. Đóng gói Context Sandwich gửi cho Gemini (chỉ tồn tại ở SERVER)
 // ==========================================
 export interface ContextSandwichPayload {
   macro_context: {
@@ -198,24 +222,28 @@ export interface ContextSandwichPayload {
     primary_language: LanguageId;
     graph_confidence: "HIGH" | "MIXED" | "LOW"; // Từ ProjectFingerprint; LOW ⇒ prompt dặn AI không khẳng định chắc chắn quan hệ gọi hàm
     is_monorepo: boolean;
-    tech_stack: string[];        // Trích xuất từ package.json / pubspec.yaml
+    tech_stack: string[];        // Trích xuất từ mọi manifest trong ManifestStore (package.json, requirements.txt, pom.xml, go.mod, pubspec.yaml...)
     node_id: string;
     node_title: string;
+    node_type: "ARCHITECTURAL_DATA_FLOW" | "ALGORITHMIC_CORE";
+    degraded_mode?: "PROCEDURAL" | "ALGORITHM_COLLECTION"; // Có giá trị ⇒ Mode B
     dag_predecessors: string[];  // Node đứng trước
     dag_successors: string[];    // Node đứng sau
   };
   micro_trace: {
-    scoped_code_snippet: string; // 60-100 dòng code thật bóc tách từ 3 hàm
+    scoped_code_snippet: string; // ≤ 100 dòng code thật (≤ 30 dòng/step), ≤ 1,500 token, đã che secret
     dto_interfaces: string;      // Định nghĩa kiểu dữ liệu DTO liên quan
+    hidden_challenge?: HiddenChallenge; // Gợi ý điểm thử thách chính cho AI (nếu Engine phát hiện được)
   };
   invariants: {
-    learner_persona_tier: "NOVICE" | "PRACTITIONER" | "ARCHITECT";
+    learner_persona_tier: "NOVICE" | "PRACTITIONER" | "ARCHITECT"; // Tier tính từ kỹ năng yếu nhất (BKT Mục 3)
+    allowed_skills: SWESkill[];            // = preliminary_skills của node; target_skills AI trả về PHẢI là tập con
     forbidden_external_keywords: string[]; // Dynamic Blacklist đã lọc trừ tech_stack thật
   };
 }
 
 // ==========================================
-// 2. Dữ liệu mổ xẻ & Thử thách Feynman do AI trả về (Anti-Spoiler)
+// 2. Dữ liệu mổ xẻ & Thử thách Feynman do AI trả về (bản đầy đủ — chỉ ở SERVER)
 // ==========================================
 export interface CandidateProbe {
   angle: string;
@@ -227,12 +255,12 @@ export interface ExecutionStepDisplay {
   step_index: number;
   label: string;
   file_path: string;
-  highlight_lines: number[];     // Tọa độ mảng dòng code để highlight trên Editor
+  highlight_lines: number[];     // Server ghi đè bằng [line_start..line_end] của trace_steps tương ứng — không tin dòng do AI tự sinh
 }
 
 export interface SocraticChallenge {
   feynman_question: string;
-  smell_reveal_after_attempt: string; // Giải thích chi tiết lỗi và giải pháp, ẩn đi cho tới khi đạt hoặc hết 3 lần thử
+  smell_reveal_after_attempt: string; // Điểm Dở + giải pháp chuẩn. Đóng gói vào challenge_token, KHÔNG gửi về client cho tới khi đạt / hết 3 lần thử / bỏ qua
 }
 
 export interface EnrichedSliceResponse {
@@ -240,17 +268,53 @@ export interface EnrichedSliceResponse {
     candidate_probes: CandidateProbe[];
   };
   internal_design_xray: {
-    identified_pattern: string;  // VD: "Layered Architecture + Dependency Injection"
-    why_it_works: string;        // Lý do thiết kế
+    identified_pattern: string;  // VD: "Layered Architecture + Dependency Injection" (Điểm Hay)
+    why_it_works: string;        // Lý do thiết kế (Điểm Hay) — không được nêu Điểm Dở
     execution_steps: ExecutionStepDisplay[]; // Không chứa đáp án lỗi để tránh lộ đề
   };
-  referenced_symbols: string[];  // Danh sách các biến/hàm đối chiếu Symbol_Table
-  target_skills: SWESkill[];     // Ánh xạ vào vector q-Matrix 16 kỹ năng SWE
+  referenced_symbols: string[];  // Danh sách các biến/hàm đối chiếu symbol_whitelist (rỗng ⇒ Cổng gác REJECT)
+  target_skills: SWESkill[];     // Ánh xạ vào vector q-Matrix 16 kỹ năng SWE; bắt buộc ⊆ allowed_skills
   socratic_challenge: SocraticChallenge; // Thử thách sư phạm Feynman
 }
 
 // ==========================================
-// 3. Kết quả Chấm điểm Phản biện Feynman
+// 3. Phản hồi gửi về CLIENT của POST /api/enrich-node (Anti-Spoiler)
+// ==========================================
+export interface ChallengeTokenPayload {   // Server mã hóa AES-GCM thành challenge_token; client không đọc được
+  node_id: string;
+  feynman_question: string;
+  reference_answer: string;                // = smell_reveal_after_attempt
+  target_skills: SWESkill[];
+  snippet_hash: string;                    // Để bộ chấm lấy đúng đoạn code đã dùng khi hỏi
+  issued_at: number;
+}
+
+export interface EnrichNodeClientResponse {
+  node_id: string;
+  internal_design_xray: EnrichedSliceResponse["internal_design_xray"]; // Hiển thị ở Tab 1
+  feynman_question: string;                // Hiển thị ở Tab 2
+  target_skills: SWESkill[];
+  challenge_token: string;                 // Gửi kèm khi nộp bài / xin mở đáp án
+  is_fallback: boolean;                    // true nếu Cổng gác REJECT và đây là câu hỏi AST tĩnh
+}
+
+// ==========================================
+// 4. Nộp bài Feynman & mở đáp án
+// ==========================================
+export interface EvaluateFeynmanRequest {   // POST /api/evaluate-feynman
+  node_id: string;
+  challenge_token: string;                 // Server giải mã để lấy câu hỏi, đáp án tham chiếu, target_skills, snippet
+  student_answer: string;
+  attempt_number: 1 | 2 | 3;
+}
+
+export interface RevealRequest {           // POST /api/reveal — khi người học bấm "Bỏ qua node này"
+  node_id: string;
+  challenge_token: string;
+}
+
+// ==========================================
+// 5. Kết quả Chấm điểm Phản biện Feynman
 // ==========================================
 export interface FeynmanEvaluationResult {
   core_accuracy: number;         // Hiểu đúng vì sao code viết như vậy + bám đúng code thật (0 - 100). Tiêu chí duy nhất quyết định Đạt
@@ -258,6 +322,19 @@ export interface FeynmanEvaluationResult {
   is_passed: boolean;            // true nếu core_accuracy >= 70 (backend tự tính lại, không tin giá trị model trả về)
   feedback: string;              // Nhận xét phản hồi 2 câu từ AI Co-Architect
   detected_jargons: string[];    // Thuật ngữ chuyên ngành xuất hiện trong câu trả lời, chỉ để gợi ý giải nghĩa, không trừ điểm
+  smell_reveal?: string;         // Chỉ có khi is_passed === true hoặc attempt_number === 3
+}
+
+// ==========================================
+// 6. Gói dữ liệu Demo Offline (Ctrl + Shift + D)
+// ==========================================
+export interface OfflineMockBundle {       // File public/demo/mock_repo_shop.json
+  bundle_version: string;
+  recorded_from: { repo: string; ref: string; recorded_at: string }; // GHI LẠI từ output thật của engine, không viết tay
+  static_result: StaticEngineResult;
+  enrich_responses: Record<string, EnrichNodeClientResponse>;          // Theo node_id
+  reveal_texts: Record<string, string>;                                // Theo node_id
+  sample_evaluations: Record<string, FeynmanEvaluationResult[]>;       // Theo node_id, dùng khi chấm offline
 }
 ```
 
@@ -291,21 +368,32 @@ export const SWE_SKILLS = [
 export type SWESkill = typeof SWE_SKILLS[number];
 
 // ==========================================
-// 2. Trạng thái Bộ nhớ Nhận thức BKT trên Client Store
+// 2. Trạng thái Bộ nhớ Nhận thức BKT trên Client Store (Zustand + localStorage)
 // ==========================================
 export interface CognitiveSkillState {
   skill: SWESkill;
-  p_mastery: number;           // Xác suất làm chủ P(L_t) trong đoạn [0, 1]
-  last_practiced_at: number;   // Timestamp (mili-giây) lần ôn tập cuối
-  decayed_p_mastery: number;   // P(L_t) sau khi tính hàm Half-Life Decay
+  p_mastery: number;           // P(L_t) GỐC sau lần cập nhật BKT gần nhất ∈ [0.01, 0.99]. Decay KHÔNG ghi đè trường này
+  last_practiced_at: number;   // Timestamp (mili-giây) lần nộp bài gần nhất có kỹ năng này
+  practice_count: number;      // Tổng số lần nộp bài liên quan đến kỹ năng
+  correct_count: number;       // Số lần trả lời đạt
+  // decayed_p_mastery KHÔNG lưu: tính khi đọc bằng getDecayedMastery(record, now) (BKT Mục 4)
+}
+
+export interface NodeProgressRecord {
+  node_id: string;
+  status: NodeStatus;
+  is_auto_mastered: boolean;
+  has_warning: boolean;        // true nếu node được mở khóa khi có node cha FAILED (soft-bypass) — UI hiện tam giác vàng
+  retry_count: number;         // Số lần trả lời sai (0–3); = 3 ⇒ FAILED
+  last_attempt_at: number;
 }
 
 export interface LearnerCognitiveProfile {
   user_id: string;
   overall_tier: "NOVICE" | "PRACTITIONER" | "ARCHITECT";
+  last_updated_at: number;
   skills: Record<SWESkill, CognitiveSkillState>;
-  completed_nodes: string[];
-  failed_nodes: string[];
+  node_history: Record<string, NodeProgressRecord>; // Theo node_id — nguồn chân lý về trạng thái node khi chạy
 }
 
 // ==========================================
@@ -317,8 +405,8 @@ export interface PersonaConfig {
   mode: PersonaMode;
   name: string;
   description: string;
-  initial_p_mastery: number;
-  simulated_days_idle: number; // Số ngày nghỉ để demo công thức Half-Life Decay
+  initial_p_mastery: number;   // NEWBIE 0.25, MID_LEVEL 0.65, SENIOR_RUSTY 0.95
+  simulated_days_idle: number; // Số ngày nghỉ để demo Half-Life Decay (SENIOR_RUSTY = 30)
 }
 
 // ==========================================
@@ -327,8 +415,9 @@ export interface PersonaConfig {
 export interface ClientWorkbenchState {
   active_node_id: string | null;
   active_tab: "XRAY_WALKTHROUGH" | "FEYNMAN_CHALLENGE";
-  node_cache: Record<string, EnrichedSliceResponse>; // Cache nạp ngầm pre-fetch phản hồi tức thì 0ms
+  node_cache: Record<string, EnrichNodeClientResponse>; // Cache nạp ngầm; trúng cache ⇒ hiển thị ngay, không skeleton
   is_prefetching: boolean;
+  is_offline_mode: boolean;    // true khi đã bấm Ctrl + Shift + D (nạp OfflineMockBundle)
   user_profile: LearnerCognitiveProfile;
 }
 ```

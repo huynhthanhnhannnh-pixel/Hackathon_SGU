@@ -9,7 +9,7 @@
 | **Phân hệ tài liệu** | `01_ENGINE_THUAT_TOAN/01_INGESTION_STREAM.md` |
 | **Tầng kiến trúc** | **TẦNG 0: INGESTION STREAM & PRE-FLIGHT (0 TOKEN AI)** |
 | **Người phụ trách** | **NGƯỜI 2 (STATIC ENGINE & GRAPH ARCHITECT)** |
-| **Phương thức tiếp nhận** | **Duy nhất: Chuỗi URL GitHub công khai (Link Input)** |
+| **Phương thức tiếp nhận** | **(1) Chuỗi URL GitHub công khai (Link Input)** — luồng chính. **(2) Upload file `.zip` ≤ 15MB** — cho repo private, khi GitHub giới hạn lưu lượng hoặc mạng hội trường chập chờn (xem Bước 0) |
 | **Thời gian thực thi** | **0.8s – 1.2s** (Mạng thông thường) |
 | **Chi phí AI Token** | **0 Token** (Thuần toán học, Stream và Regex trên RAM) |
 | **Chính sách I/O** | **Zero-Disk Policy (100% trong bộ nhớ Heap RAM, không ghi ổ cứng)** |
@@ -20,7 +20,7 @@
 
 ## 1. TỔNG QUAN LUỒNG HOẠT ĐỘNG THỰC TẾ
 
-Toàn bộ quy trình Tầng 0 được thiết kế tinh gọn, tập trung xử lý duy nhất bài toán: **Nhận Link GitHub $\longrightarrow$ Trả về Danh sách Code Sạch trong RAM** trong vòng 1 giây, hoàn toàn miễn nhiễm với GitHub API Rate Limit (60 req/h) và không làm tốn dù chỉ 1 byte ổ cứng:
+Toàn bộ quy trình Tầng 0 được thiết kế tinh gọn, tập trung xử lý duy nhất bài toán: **Nhận Link GitHub $\longrightarrow$ Trả về Danh sách Code Sạch trong RAM** với mục tiêu 0.8s – 1.2s (mạng ổn định, repo ≤ 15MB nén), hoàn toàn miễn nhiễm với GitHub API Rate Limit (60 req/h) và không làm tốn dù chỉ 1 byte ổ cứng:
 
 ```mermaid
 flowchart TD
@@ -36,6 +36,7 @@ flowchart TD
 
     AlgBranch --> AlgStream["4a. CodeloadStreamClient + ByteCountingTransform<br/>Tải zip/&lt;ref&gt; từ codeload.github.com, đếm byte nén, timeout 5s"]
 
+    ZipUpload["0. ZipUploadReceiver (luồng thay thế)<br/>POST /api/ingest multipart ≤ 15MB, đếm byte, không ghi đĩa"] --> AlgPlanner
     AlgStream --> AlgPlanner["4b. CentralDirectoryPlanner<br/>Đọc danh sách path + size ➔ TreePruner ➔ FilePriorityScore ➔ chọn Top-50"]
 
     AlgPlanner --> AlgExtract["4c. SelectiveInflater<br/>Giải nén đúng file đã chọn, đếm byte giải nén, lọc nhị phân / encoding / minified"]
@@ -103,6 +104,20 @@ Toàn bộ dữ liệu được lưu trữ trong 3 bảng băm trên RAM:
 ## 3. CHI TIẾT CÁC BƯỚC XỬ LÝ KỸ THUẬT (RÕ RÀNG TỪNG BƯỚC)
 
 Mỗi bước dưới đây được chuẩn hóa theo cấu trúc 4 trụ cột: **Tại sao cần & Vai trò $\to$ Cơ chế kỹ thuật $\to$ Làm thế nào để thực hiện được (Từng thao tác chi tiết) $\to$ Đầu ra chuẩn hóa**.
+
+---
+
+### BƯỚC 0: NHẬN FILE `.ZIP` TẢI LÊN (`ZipUploadReceiver` — luồng thay thế cho Bước 1–3)
+
+#### 1. Tại sao cần bước này & Vai trò của nó?
+* **Vấn đề thực tế:** Nhiều đồ án môn học để **private**; cả hội trường dùng chung một IP nên có thể bị GitHub trả `429`; Wi-Fi phòng thi có thể chập chờn. Upload `.zip` giải quyết cả ba trường hợp mà vẫn giữ Zero-Disk.
+* **Vai trò:** Cửa vào thứ hai. Sau bước này, file zip đi thẳng vào **Bước 4 từ Thao tác 3** (chuẩn hóa đường dẫn, TreePruner, chấm điểm, giải nén chọn lọc) — không qua Bước 1–3 vì không có URL, probe hay ref.
+
+#### 2. Làm thế nào để thực hiện được? (Từng thao tác cụ thể):
+* **Thao tác 1:** `POST /api/ingest` dạng `multipart/form-data` (trường `archive`). Đọc body bằng stream có `ByteCountingTransform` như Bước 4 Thao tác 2; vượt `MAX_STREAM_BYTES` (15MB) ⇒ `ERR_STREAM_QUOTA_EXCEEDED`. Không ghi file tạm ra đĩa.
+* **Thao tác 2:** `unzipper.Open.buffer(buf)` lỗi chữ ký ⇒ `ERR_STREAM_CORRUPTED`.
+* **Thao tác 3 (Thư mục gốc):** zip do người dùng nén có thể **không** có thư mục bọc ngoài như zip của GitHub. Chỉ cắt segment đầu tiên khi **mọi** entry cùng chung segment đó; ngược lại giữ nguyên đường dẫn.
+* **Thao tác 4:** `repo_name` = tên file zip bỏ đuôi; cache LRU theo hash SHA-256 của buffer thay cho `owner/repo@ref`.
 
 ---
 
@@ -312,7 +327,7 @@ interface ResolvedRef {
 
 #### 1. Tại sao cần bước này & Vai trò của nó?
 * **Vấn đề thực tế:**
-  * Repo AI/Data Science của sinh viên thường chỉ có file `.ipynb`. Đây là **JSON**, không phải Python — nếu đưa thẳng vào Tree-sitter Python, parser (vốn chịu lỗi) sẽ sinh cây đầy node `ERROR`, không thu được hàm nào. Nếu không có bước này, `.ipynb` thậm chí không nằm trong `VALID_EXTENSIONS` ⇒ repo bị báo oan `ERR_NO_SOURCE_FILES_FOUND`.
+  * Repo AI/Data Science của sinh viên thường chỉ có file `.ipynb`. Đây là **JSON**, không phải Python — nếu đưa thẳng vào Tree-sitter Python, parser (vốn chịu lỗi) sẽ sinh cây đầy node `ERROR`, không thu được hàm nào. Nếu không có bước này, `.ipynb` không có trong `LanguageRegistry.extensionMap` (nó là JSON, không phải ngôn ngữ) ⇒ repo bị báo oan `ERR_NO_SOURCE_FILES_FOUND`.
   * File `.vue`/`.svelte` (Single File Component) trộn HTML + CSS + `<script>` — chỉ khối `<script>` là code phân tích được.
   * Code sinh viên hay hardcode secret (`AWS_SECRET`, mật khẩu DB). Gửi nguyên văn sang Gemini là **rò rỉ bí mật ra dịch vụ ngoài**.
 * **Vai trò:** "Bộ chuyển đổi định dạng" biến mọi đầu vào đặc biệt thành code thuần mà Tree-sitter hiểu được, đồng thời là **lớp vệ sinh dữ liệu cuối cùng** trước khi code rời Tầng 0.
@@ -587,7 +602,7 @@ Mọi mã dưới đây thuộc `IngestionErrorCode` trong `02_DATA_CONTRACTS.md
 | Vượt quota nhưng đã có file (không phải lỗi) | *(warning, `truncated = true`)* | *"Repository lớn — hệ thống ưu tiên phân tích 50 tệp mã nguồn nghiệp vụ quan trọng nhất."* |
 | Phần lớn code thuộc ngôn ngữ không có grammar Tree-sitter | `ERR_UNSUPPORTED_LANGUAGE` | *"Repository chủ yếu viết bằng {ngôn ngữ}. SimpliFey chưa có bộ phân tích cú pháp cho ngôn ngữ này nên chưa dựng được đồ thị."* |
 | Phần lớn code thuộc ngôn ngữ tier `STRUCTURAL` (không lỗi, chỉ cảnh báo) | *(không có mã lỗi — ghi `ingestion_report.warnings`)* | *"Đồ thị của {ngôn ngữ} được suy luận bằng bộ phân giải phổ quát. Các cạnh nét đứt có thể chưa chính xác 100%."* |
-| Không có file code hợp lệ | `ERR_NO_SOURCE_FILES_FOUND` | *"Không tìm thấy file mã nguồn (.ts, .js, .py, .java, .dart, .go, .ipynb). {gợi ý submodule nếu có}"* |
+| Không có file code hợp lệ | `ERR_NO_SOURCE_FILES_FOUND` | *"Không tìm thấy file mã nguồn nào mà SimpliFey đọc được (repository chỉ có tài liệu, cấu hình hoặc file nhị phân). {gợi ý submodule nếu có}"* |
 
 ---
 

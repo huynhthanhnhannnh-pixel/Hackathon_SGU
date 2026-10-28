@@ -81,7 +81,7 @@
 ### Case 1.5: File định dạng Jupyter Notebook (`.ipynb`)
 * **Trạng thái:** 🔴 **CHƯA XỬ LÝ / TỬ HUYỆT (CRITICAL GAP)**
 * **Cách hệ thống hiện tại đang xử lý:**
-  `.ipynb` **không nằm trong `VALID_EXTENSIONS`** ⇒ bị `autodrain()` ngay ở Tầng 0, không hề tới Tree-sitter.
+  `.ipynb` **không nằm trong danh sách đuôi gõ cứng `VALID_EXTENSIONS` của bản cũ** (nay đã thay bằng Language Registry) ⇒ bị `autodrain()` ngay ở Tầng 0, không hề tới Tree-sitter.
 * **Điểm yếu / Lỗ hổng thực tế:**
   * Repo AI/Data Science chỉ có notebook bị báo oan `ERR_NO_SOURCE_FILES_FOUND`.
   * Nếu chỉ thêm đuôi vào danh sách: `.ipynb` là JSON, Tree-sitter Python (vốn **chịu lỗi**, không crash) sẽ sinh cây đầy node `ERROR`, không thu được hàm nào. Notebook có output base64 thường $> 1\text{MB}$ nên còn bị `MAX_SINGLE_FILE_BYTES` loại.
@@ -192,7 +192,7 @@
 
 ### Case 1.16: Ngôn ngữ chưa hỗ trợ (C#, PHP, Kotlin, C++) và đuôi file bị bỏ sót
 * **Trạng thái:** 🔴 **CHƯA XỬ LÝ / TỬ HUYỆT (CRITICAL GAP)**
-* **Cách hệ thống hiện tại đang xử lý:** Không thuộc `VALID_EXTENSIONS` ⇒ bị lọc; kết quả rỗng ⇒ *"Không tìm thấy file mã nguồn"*.
+* **Cách hệ thống hiện tại đang xử lý (bản trước đợt vá):** Không thuộc danh sách đuôi gõ cứng `VALID_EXTENSIONS` ⇒ bị lọc; kết quả rỗng ⇒ *"Không tìm thấy file mã nguồn"*.
 * **Điểm yếu / Lỗ hổng thực tế:**
   * C#/ASP.NET, PHP/Laravel, Kotlin rất phổ biến trong đồ án đại học ở Việt Nam — thông báo "không có mã nguồn" là sai bản chất và khiến giám khảo nghĩ hệ thống lỗi.
   * Bỏ sót `.mjs`, `.cjs`, `.mts`, `.cts` và khối `<script>` trong `.vue`/`.svelte`.
@@ -446,8 +446,8 @@
 ### Case 2.2: Mất mạng Internet / Wi-Fi phòng thi Hackathon bị rớt
 * **Trạng thái:** 🟢 **XỬ LÝ TỐT (ROBUST)**
 * **Cách hệ thống hiện tại đang xử lý:**
-  Có sẵn kịch bản và hợp đồng `OfflineMockBundle`:
-  * Phím tắt bí mật `Ctrl + Shift + D` nạp ngay file `public/demo/mock_repo_shop.json`.
+  Có sẵn kịch bản và hợp đồng `OfflineMockBundle` (`02_DATA_CONTRACTS.md` Mục 2.6):
+  * Phím tắt `Ctrl + Shift + D` nạp ngay file `public/demo/mock_repo_shop.json` — dữ liệu **ghi lại từ output thật** của engine và AI, giao diện hiện nhãn "Chế độ Offline" (UI Mục 4.5).
   * Tầng phân tích tĩnh và Zustand Store chạy 100% trên Client / Localhost, không cần kết nối mạng.
   * AI Gateway tự động chuyển sang đọc dữ liệu mock nếu phát hiện `navigator.onLine === false` hoặc fetch trả về `Failed to fetch`.
 
@@ -550,10 +550,11 @@
 ### Case 4.2: Học viên trượt 3 lần $\implies$ Node chuyển sang ĐỎ (`FAILED`), làm tắc đồ thị DAG
 * **Trạng thái:** 🟢 **XỬ LÝ TỐT (ROBUST)**
 * **Cách hệ thống hiện tại đang xử lý:**
-  Khi `retry_count >= 3`:
+  Khi sai đủ 3 lần (`retry_count === 3`):
   * Khóa form nộp bài của Node đó, đổi Node sang màu **ĐỎ (`FAILED`)**.
-  * Mở khóa lời giải thích chuẩn mực kiến trúc (`smell_reveal_after_attempt`) để học viên học từ sai lầm.
-  * **Vẫn mở khóa các Node rẽ nhánh tiếp theo** trên DAG với trọng số Tier giảm xuống Tier 1, không làm bế tắc hành trình học tập ("Game Over").
+  * Hiển thị lời giải thích chuẩn mực kiến trúc (`smell_reveal`) để học viên học từ sai lầm.
+  * **Vẫn mở khóa các Node rẽ nhánh tiếp theo** (soft-bypass: luật mở khóa là mọi node cha ∈ {COMPLETED, FAILED}), gắn `has_warning = true` để UI hiện tam giác vàng; Tier của node sau tự hạ theo BKT vì kỹ năng vừa bị cập nhật Incorrect. Không làm bế tắc hành trình học tập ("Game Over").
+* **Đặc tả xử lý:** `01_UI_TRI_PANE_FSM.md` Mục 3, `01_LLM_PIPELINE_GUARDRAIL.md` Mục 4.3, `02_DATA_CONTRACTS.md` (`NodeProgressRecord.has_warning`).
 
 ---
 
@@ -572,6 +573,7 @@
   Nếu một sinh viên xuất sắc vào làm 1 repo mẫu chuẩn, toàn bộ 8 Node đều được Auto-Pass. Sinh viên bấm 3 click là "hoàn thành khóa học" mà không có bất kỳ thử thách nâng cao nào!
 * **Giải pháp khắc phục:**
   **Quy tắc Khóa Auto-Pass ở Node Trọng Yếu (Capstone Lock):** Bắt buộc giữ lại ít nhất **01 Super Hub Node** có độ phức tạp cao nhất trong đồ thị không được phép Auto-Pass, ép học viên phải đối mặt với câu hỏi Sát hạch Cấp cao Tier 3 (System Scalability / Trade-offs).
+* **Đặc tả xử lý:** `02_BAYES_COGNITIVE_BKT.md` Mục 3.3 (tham số `isCapstone` của `evaluateNodeTierAndAutoPass`), `01_UI_TRI_PANE_FSM.md` Mục 4.1.
 
 ---
 
@@ -579,8 +581,8 @@
 * **Trạng thái:** 🟢 **XỬ LÝ TỐT (ROBUST)**
 * **Cách hệ thống hiện tại đang xử lý:**
   Hệ thống áp dụng cận sàn suy giảm (Decay Floor):
-  $P_{\text{decayed}} = \max(P(L_0), P(L_t) \cdot e^{-\lambda \cdot \Delta t})$
-  Điểm số kỹ năng dù bỏ bẵng bao lâu cũng chỉ tụt về mức khởi điểm ban đầu $P(L_0) = 0.25$, không bao giờ bị xóa sạch về 0.
+  $P_{\text{decayed}} = \max\big(P(L_0),\; P(L_t) \cdot 2^{-\Delta t / 14}\big)$ (half-life $h = 14$ ngày, cùng công thức với `02_BAYES_COGNITIVE_BKT.md` Mục 2.4)
+  Điểm số kỹ năng dù bỏ bẵng bao lâu cũng chỉ tụt về mức khởi điểm ban đầu $P(L_0) = 0.25$, không bao giờ bị xóa sạch về 0. Giá trị decay được tính khi đọc, không ghi đè `p_mastery` gốc (tránh trừ chồng).
 
 ---
 
@@ -599,7 +601,7 @@
 *(Ví dụ trong code là `user_id`, nhưng AI giải thích viết nhầm thành `userId` hoặc `userDTO`)*
 * **Trạng thái:** 🟡 **XỬ LÝ DỞ / CÒN LỖ HỔNG**
 * **Cách hệ thống hiện tại đang xử lý:**
-  Chốt 1 kiểm tra tập hợp: `referenced_symbols ⊆ Symbol_Table`. Nếu AI sinh symbol không có trong AST thì REJECT.
+  Chốt 1 kiểm tra tập hợp: `referenced_symbols ⊆ symbol_whitelist`. Nếu AI sinh symbol không có trong AST thì REJECT.
 * **Điểm yếu / Lỗ hổng thực tế:**
   AI thường có xu hướng chuẩn hóa tên biến theo camelCase. Nếu code gốc viết kiểu snake_case (`order_item`), AI sinh ra `orderItem` sẽ bị Chốt 1 **REJECT OAN** dù nội dung phân tích hoàn toàn đúng!
 * **Giải pháp khắc phục bắt buộc:**
@@ -654,7 +656,7 @@
   1. **Giải tỏa tâm lý (De-stigmatization):** Hiển thị thông điệp tích cực: *"Đừng nản lòng! Đây là một điểm mù kinh điển (Classic Bottleneck) mà hơn 70% lập trình viên mới đi làm đều vấp phải."*
   2. **Lời giải ẩn dụ chuẩn mực (Canonical Feynman Metaphor):** Cung cấp ví dụ ẩn dụ mẫu mực nhất để người học đọc và chuyển hóa kiến thức.
   3. **Đoạn mã tối ưu chuẩn (Refactored Solution):** Hiển thị đoạn code sửa mẫu (ví dụ: dùng `findAllById([ids])` gom batch thay cho vòng lặp đơn lẻ).
-  4. **Ghi nhận Điểm Mù (Cognitive Blindspot):** Ghi vào `Cognitive Blindspot Profile` làm đề cương ôn tập vấn đáp cuối phiên.
+  4. **Ghi nhận Điểm Mù (Cognitive Blindspot):** Node được ghi `status = "FAILED"` trong `LearnerCognitiveProfile.node_history` — danh sách này làm đề cương ôn tập vấn đáp cuối phiên.
   5. **Cơ chế Soft-prerequisite Bypass:** Vẫn **mở khóa các Node rẽ nhánh tiếp theo** trên DAG với trọng số Tier 1 (Cơ bản) để học viên tiếp tục lộ trình, không bị bế tắc.
 
 ---
@@ -696,7 +698,7 @@
 ### Case 8.2: Học viên "Nản lòng / Bất lực học tập" (The Defeated Learner)
 * **Trạng thái:** 🟢 **XỬ LÝ TỐT (ROBUST)**
 * **Hiện tượng:** Trả lời sai 2 lần liên tiếp, bắt đầu nản, nhập vào ô trả lời: *"Em chịu rồi", "Khó quá bỏ qua đi"*.
-* **Cách xử lý:** Intent Router ở Tầng 4 nhận diện ý định đầu hàng (`intent === "GIVE_UP"`). Hệ thống không trừ điểm phạt nặng nề, tự động chuyển Node sang màu ĐỎ, mở ngay `Architectural Debrief Box` an ủi và hướng dẫn tận tình, rồi mời học viên sang Node khác.
+* **Cách xử lý:** Tab 2 có nút **"Tôi chịu, bỏ qua node này"** chạy ở client (0 token, **không** dùng Intent Router — đã bỏ vì là lần gọi LLM thứ 3). Bấm nút ⇒ `POST /api/reveal` lấy đáp án, chuyển Node sang màu ĐỎ, mở ngay `Architectural Debrief Box` an ủi và hướng dẫn, không tạo quan sát BKT (không phạt thêm), rồi mở khóa node con theo soft-bypass. Người học gõ "em chịu rồi" vào ô trả lời thì vẫn được chấm như câu trả lời bình thường.
 
 ---
 
@@ -724,14 +726,12 @@
 ### Case 8.6: Học viên "Đoán mò Thử - Sai liên tục" (The Trial-and-Error Guesser)
 * **Trạng thái:** 🟢 **XỬ LÝ TỐT (ROBUST)**
 * **Hiện tượng:** Không đọc code, liên tục gõ các từ khóa thần thánh (*"Redis", "Kafka", "Index", "Async", "Queue"*) với hy vọng ăn may trúng từ khóa của AI.
-* **Cách xử lý:** Chốt 2 Regex Blacklist lập tức quét các từ khóa này: Nếu repo chỉ dùng SQLite/MySQL mà sinh viên gõ Redis/Kafka $\implies$ Bị Chốt 2 chặn hoặc AI trừ điểm `core_accuracy` vì đề xuất công nghệ ngoài phạm vi repo.
+* **Cách xử lý:** Chốt 2 của Cổng gác chỉ quét **nội dung do AI sinh ra**, không quét câu trả lời của sinh viên. Việc chống đoán mò nằm ở bộ chấm: rubric `core_accuracy` yêu cầu giải thích vì sao code viết như vậy và bám đúng hàm/biến trong snippet, nên chuỗi từ khóa rời rạc (hoặc công nghệ không có trong repo) không đạt ngưỡng 70; Vòng 1 chặn câu < 15 ký tự và câu lặp ≥ 80%; tối đa 3 lần thử.
 
 ---
 
 # TỔNG KẾT BẢNG ĐIỂM KIỂM TOÁN HỆ THỐNG TOÀN DIỆN
 
-| Nhóm Edge Cases | Tổng số Cases | 🟢 Xử lý Tốt | 🟡 Xử lý Dở / Cần vá | 🔴 Tử huyệt cần code ngay |
-| :--- | :---: | :---: | :---: | :---: |
 | Nhóm Edge Cases | Tổng số Cases | 🟢 Xử lý Tốt | 🟡 Xử lý Dở / Cần vá | 🔴 Tử huyệt cần code ngay | Đặc tả giải pháp |
 | :--- | :---: | :---: | :---: | :---: | :--- |
 | **1A. Mã nguồn & Repo — Tầng 0 Ingestion** | 19 | 0 | 11 | 8 | ✅ Đã bổ sung vào `01_INGESTION_STREAM.md` (chưa cài đặt) |

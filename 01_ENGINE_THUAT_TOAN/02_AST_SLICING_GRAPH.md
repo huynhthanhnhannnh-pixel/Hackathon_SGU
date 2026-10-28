@@ -317,7 +317,7 @@ function linkCallEdges(file: string, tree: Tree, ctx: LinkContext) {
 
   Ingress ánh xạ sang `ArchitecturalLayer = "ENTRY_POINT"` trong contract.
 * **Thao tác 5 (Bầu chọn Top Hubs):**
-  Sắp xếp theo Rank Score giảm dần (hòa ⇒ path tăng dần), chọn Top 4-5 đỉnh làm các Hub của đồ thị.
+  Sắp xếp theo Rank Score giảm dần (hòa ⇒ path tăng dần), chọn Top 4-5 đỉnh làm các Hub của đồ thị. *Phân biệt:* Hub là **gốc để rút lát cắt** (cùng với các hàm VIP), chưa phải node hiển thị; số node cuối cùng trên Canvas là **6–8** do Display Budget quyết định (Thuật toán 7).
 
 #### 4. Kết quả xếp hạng trên Benchmark:
 * `order.controller.ts`: $PR = 0.05 + 0.50 = \mathbf{0.550} \implies$ **HUB SỐ 1 (Đầu não tiếp nhận Request)**.
@@ -546,8 +546,8 @@ Tầng 1 & 2 của Engine đóng vai trò là **"nguồn cấp dữ liệu chu�
 ├──────────────────────────────────────────────┼──────────────────────────────────────────────┤
 │ 1. scoped_code_snippet (≤ 100 dòng thật,     │ • Truyền thẳng vào micro_trace trong         │
 │    ≤ 1,500 token, đã che secret)             │   POST /api/enrich-node của Gemini Flash     │
-│                                              │ • Giúp AI trả lời tức thì (1.2s - 1.8s),      │
-│                                              │   không bao giờ bị quá tải token (0.002$)    │
+│                                              │ • Giữ lời gọi enrich trong 1.2s - 1.8s và    │
+│                                              │   ≤ 2,000 token đầu vào (Guardrail Mục 1.4)  │
 ├──────────────────────────────────────────────┼──────────────────────────────────────────────┤
 │ 2. symbol_whitelist: string[]                │ • Nạp vào CỔNG GÁC NHỊ PHÂN (CHỐT 1 - AST)  │
 │    (xem quy tắc dựng bên dưới)               │   để kiểm tra referenced_symbols.            │
@@ -579,7 +579,7 @@ Tầng 1 & 2 của Engine đóng vai trò là **"nguồn cấp dữ liệu chu�
 Kết thúc Tầng 1 và Tầng 2 (< 0.25 giây), kết quả trả về đúng hợp đồng dữ liệu `StaticEngineResult`:
 
 1. **Bàn giao cho NGƯỜI 1 (Frontend Lead - Cột 1 ReactFlow Canvas):**
-   * Mảng `nodes: HybridArchitecturalNode[]` (6–8 node) đã có sẵn tọa độ `position: { x, y }`, tên nhãn, và trạng thái màu ban đầu (mọi root = `AVAILABLE` màu Vàng, các node sau = `LOCKED` màu Xám). `files[0]` là file Monaco mở mặc định.
+   * Mảng `nodes: HybridArchitecturalNode[]` (6–8 node) đã có sẵn tọa độ `position: { x, y }`, tên nhãn, và trạng thái màu ban đầu (mọi root = `AVAILABLE` màu Vàng, các node sau = `LOCKED` màu Xám). `files[0]` là file Monaco mở mặc định. Mỗi node có `languages` và `support_tier` (tier thấp nhất trong các file của lát cắt) để Cổng gác chọn Strict/Relaxed Mode, và `hidden_challenge` (nếu phát hiện) — trường này chỉ server dùng, không hiển thị ở Tab 1.
    * Mảng `edges` nối các Node theo trật tự phân nhánh (cạnh `ambiguous` vẽ nét đứt).
    * `ingestion_report.warnings` để hiển thị thông báo cắt giảm / chế độ suy biến.
 2. **Bàn giao cho NGƯỜI 3 (AI Architect - Cột 3 Sát Hạch Feynman):**

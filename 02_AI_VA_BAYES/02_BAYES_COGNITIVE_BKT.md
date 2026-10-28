@@ -44,56 +44,33 @@ Hệ thống định lượng trình độ người học trên không gian véc
 * **Bản chất vấn đề:** Nếu phải chờ Gemini Flash phân tích ở `/api/enrich-node` mới có danh sách kỹ năng, hệ thống buộc phải tiêu tốn token và chịu độ trễ $1.5\text{s}$ trước khi biết người học có đủ điều kiện miễn thi hay không.
 * **Giải pháp Kỹ thuật:**
   1. Tại **Tầng 2 (Static AST Parsing - 0 Token, < 1.5s)**: Parser tự động đối sánh mã nguồn Node với bảng heuristics ở trên để gán mảng `preliminary_skills: SWESkill[]` (từ 1 đến 3 kỹ năng) vào metadata của từng Node trên đồ thị DAG.
-  2. Ngay khi Node được mở khóa: Client Zustand Store kiểm tra trực tiếp điều kiện Auto-Pass ($\ge 0.92$) với `preliminary_skills`. Nếu thỏa mãn, Node lập tức chuyển sang trạng thái hoàn thành mà **hoàn toàn không cần gọi API AI**.
+  2. Ngay khi Node **đủ điều kiện mở khóa** (mọi node cha đã COMPLETED hoặc FAILED): Client Zustand Store kiểm tra điều kiện Auto-Pass ($\ge 0.92$, tính trên điểm **đã decay**) với `preliminary_skills`. Nếu thỏa mãn (và node không bị Capstone Lock, Mục 3.3), Node chuyển thẳng sang `COMPLETED` với `is_auto_mastered = true` mà **hoàn toàn không cần gọi API AI**; ngược lại chuyển sang `AVAILABLE`.
+  3. AI chỉ được chọn `target_skills` **trong** `preliminary_skills` (Cổng gác kiểm tra, xem `01_LLM_PIPELINE_GUARDRAIL.md` Mục 3), để BKT cập nhật đúng tập kỹ năng mà Fast-Track xét.
 
 ---
 
-### 1.3. Cấu trúc Dữ liệu Lưu trữ `UserCognitiveState` (Local Storage / Zustand)
+### 1.3. Cấu trúc Dữ liệu Lưu trữ `LearnerCognitiveProfile` (localStorage / Zustand)
 
-```typescript
-export type SWESkill =
-  | "HTTP_ROUTING" | "DTO_VALIDATION" | "AUTH_SECURITY" | "DEPENDENCY_INJECTION"
-  | "LAYERED_SEPARATION" | "DB_OPTIMIZATION" | "ASYNC_CONCURRENCY" | "TRANSACTION_INTEGRITY"
-  | "ERROR_HANDLING" | "STATE_MANAGEMENT" | "ALGORITHMIC_COMPLEXITY" | "MEMORY_MANAGEMENT"
-  | "API_CONTRACT_DESIGN" | "CACHING_STRATEGY" | "RATE_LIMIT_RESILIENCE" | "DATA_SERIALIZATION";
-
-export interface SkillMasteryRecord {
-  p_mastery: number;                // Xác suất làm chủ P(L_t) ∈ [0.0, 1.0]
-  last_practiced_timestamp: number; // Unix timestamp tính bằng mili-giây
-  practice_count: number;           // Tổng số lần nộp bài liên quan đến skill này
-  correct_count: number;            // Số lần trả lời đạt
-}
-
-export interface UserCognitiveState {
-  user_id: string;
-  last_updated_timestamp: number;
-  skills: Record<SWESkill, SkillMasteryRecord>;
-  node_history: Record<string, {
-    node_id: string;
-    status: "LOCKED" | "AVAILABLE" | "COMPLETED" | "FAILED";
-    is_auto_mastered: boolean;
-    retry_count: number;
-    last_attempt_timestamp: number;
-  }>;
-}
-```
+Kiểu dữ liệu định nghĩa duy nhất trong [`00_CORE_SPEC/02_DATA_CONTRACTS.md`](../00_CORE_SPEC/02_DATA_CONTRACTS.md) Mục 3: `SWESkill`, `CognitiveSkillState`, `NodeProgressRecord`, `LearnerCognitiveProfile`. Quy tắc quan trọng: `p_mastery` là giá trị **gốc** sau lần cập nhật BKT gần nhất; giá trị đã decay **không được lưu**, chỉ tính khi đọc (Mục 2.4).
 
 ```json
 {
   "user_id": "usr_dev_4091",
-  "last_updated_timestamp": 1774000000000,
+  "overall_tier": "PRACTITIONER",
+  "last_updated_at": 1774000000000,
   "skills": {
-    "HTTP_ROUTING": { "p_mastery": 0.82, "last_practiced_timestamp": 1773900000000, "practice_count": 4, "correct_count": 3 },
-    "DB_OPTIMIZATION": { "p_mastery": 0.25, "last_practiced_timestamp": 1773800000000, "practice_count": 1, "correct_count": 0 },
-    "ASYNC_CONCURRENCY": { "p_mastery": 0.74, "last_practiced_timestamp": 1773950000000, "practice_count": 3, "correct_count": 3 }
+    "HTTP_ROUTING": { "skill": "HTTP_ROUTING", "p_mastery": 0.82, "last_practiced_at": 1773900000000, "practice_count": 4, "correct_count": 3 },
+    "DB_OPTIMIZATION": { "skill": "DB_OPTIMIZATION", "p_mastery": 0.25, "last_practiced_at": 1773800000000, "practice_count": 1, "correct_count": 0 },
+    "ASYNC_CONCURRENCY": { "skill": "ASYNC_CONCURRENCY", "p_mastery": 0.74, "last_practiced_at": 1773950000000, "practice_count": 3, "correct_count": 3 }
   },
   "node_history": {
     "slice-order-checkout": {
       "node_id": "slice-order-checkout",
       "status": "COMPLETED",
       "is_auto_mastered": false,
+      "has_warning": false,
       "retry_count": 1,
-      "last_attempt_timestamp": 1773950000000
+      "last_attempt_at": 1773950000000
     }
   }
 }
@@ -172,13 +149,16 @@ Khởi tạo kỹ năng với $P(L_0) = 0.25$, các tham số $P(G) = 0.25$, $P(
 
 Mức độ làm chủ tri thức suy giảm tự nhiên theo thời gian nếu không được tái kích hoạt:
 
-$$P(L_{\text{current}}) = P(L_{\text{last}}) \times 2^{-\frac{\Delta t}{h}}$$
+$$P(L_{\text{current}}) = \max\Big(P(L_0),\; P(L_{\text{last}}) \times 2^{-\frac{\Delta t}{h}}\Big)$$
 
-* $\Delta t$: Thời gian trôi qua kể từ lần thực hành gần nhất (tính theo ngày).
+* $\Delta t$: Thời gian trôi qua kể từ `last_practiced_at` (tính theo ngày).
 * $h = 14\text{ ngày}$: Chu kỳ bán rã trí nhớ chuẩn.
-* **Cảnh báo Trí nhớ Bào mòn:** Nếu một kỹ năng đã được làm chủ (VD: $0.9532$ sau 3 lần đúng, Mục 2.3) nhưng sau thời gian không ôn tập bị tụt xuống dưới ngưỡng $0.45$:
-  $$0.9532 \times 2^{-\frac{30}{14}} \approx 0.9532 \times 0.226 = 0.215 < 0.45$$
-  Node tự động chuyển sang viền **VÀNG CAM (Decay Warning)** và AI kích hoạt câu hỏi ôn tập điểm mù khi người học click vào.
+* **Sàn suy giảm (Decay Floor):** $P(L_0) = 0.25$ — bỏ bẵng bao lâu cũng chỉ tụt về mức khởi điểm, không về 0. Sàn này chỉ áp cho decay; bước cập nhật BKT vẫn kẹp trong $[0.01, 0.99]$.
+* **Tính khi đọc, không ghi đè:** $P(L_{\text{last}})$ là `p_mastery` gốc. Hàm decay là hàm thuần trả về giá trị đã decay, **không** ghi lại vào store — nếu ghi đè mà giữ nguyên `last_practiced_at`, mỗi lần mở app sẽ trừ chồng thêm một lần (lỗi đã sửa).
+* **Cảnh báo Trí nhớ Bào mòn (chỉ là lớp hiển thị):** Nếu một node `COMPLETED` có $P_{\text{node}}$ (Mục 3.1, tính trên điểm đã decay) tụt dưới ngưỡng $0.45$:
+  $$\max\big(0.25,\; 0.9532 \times 2^{-\frac{30}{14}}\big) = \max(0.25,\; 0.9532 \times 0.2266) = \max(0.25,\; 0.216) = 0.25 < 0.45$$
+  Node **giữ nguyên trạng thái `COMPLETED`** nhưng đổi sang viền **VÀNG CAM (Decay Warning)**. Khi người học click vào, enrich-node được gọi với Tier tính từ điểm đã decay để ôn lại kỹ năng yếu nhất.
+* Lưu ý: chỉ 1 lần đạt ($0.5767$) sẽ tụt dưới $0.45$ sau khoảng $14 \times \log_2(0.5767/0.45) \approx 5$ ngày — ngưỡng này cố ý nhạy để nhắc ôn sớm.
 
 ---
 
@@ -204,50 +184,40 @@ $$P_{\text{node}}(u) = \min_{k \in \mathcal{K}_u} P(L_t, k)$$
 
 ---
 
+### 3.3. Khóa Fast-Track ở Node Trọng Yếu (Capstone Lock — audit Case 4.4)
+Trong mỗi đồ thị, node có `cognitive_complexity` cao nhất (hòa ⇒ node có Rank Score cao nhất) **không bao giờ được Auto-Pass**. Người học giỏi vẫn phải trả lời ít nhất một câu hỏi Tier 3 trên repo đó thay vì "3 click là xong".
+
+---
+
 # 4. ĐẶC TẢ GIAO DIỆN HÀM (MODULE INTERFACE CHO NGƯỜI 3 CODE)
 
 Toàn bộ logic toán học của Tầng 5 được đóng gói thành các hàm thuần túy (Pure Functions) trong file `src/lib/bkt-engine.ts`:
 
 ```typescript
-import { SWESkill, UserCognitiveState } from "./types";
+import { SWESkill, CognitiveSkillState, LearnerCognitiveProfile } from "./types"; // từ 02_DATA_CONTRACTS.md
+
+const P_L0 = 0.25;              // Prior & sàn suy giảm
+const MS_PER_DAY = 86_400_000;
 
 export interface NodeEvaluationResult {
   tier: "NOVICE" | "PRACTITIONER" | "ARCHITECT";
   is_auto_pass: boolean;
   representative_score: number;
-  weakest_skill: SWESkill;
+  weakest_skill: SWESkill | null;  // null khi node không có kỹ năng gán tĩnh
 }
 
 /**
- * 1. Hàm áp dụng suy giảm trí nhớ Ebbinghaus dựa trên chênh lệch thời gian
+ * 1. Hàm THUẦN tính điểm đã suy giảm (Ebbinghaus) — KHÔNG ghi lại vào store
  */
-export function applyHalfLifeDecay(
-  state: UserCognitiveState,
+export function getDecayedMastery(
+  record: CognitiveSkillState | undefined,
   currentTimestamp: number,
   halfLifeDays: number = 14
-): UserCognitiveState {
-  const updatedSkills = { ...state.skills };
-  const msPerDay = 86_400_000;
-
-  for (const skillKey of Object.keys(updatedSkills) as SWESkill[]) {
-    const record = updatedSkills[skillKey];
-    if (!record || record.last_practiced_timestamp <= 0) continue;
-
-    const deltaDays = Math.max(0, (currentTimestamp - record.last_practiced_timestamp) / msPerDay);
-    if (deltaDays > 0) {
-      const decayedProb = record.p_mastery * Math.pow(2, -deltaDays / halfLifeDays);
-      updatedSkills[skillKey] = {
-        ...record,
-        p_mastery: Math.max(0.01, Math.min(0.99, Number(decayedProb.toFixed(4))))
-      };
-    }
-  }
-
-  return {
-    ...state,
-    last_updated_timestamp: currentTimestamp,
-    skills: updatedSkills
-  };
+): number {
+  if (!record || record.last_practiced_at <= 0) return P_L0;
+  const deltaDays = Math.max(0, (currentTimestamp - record.last_practiced_at) / MS_PER_DAY);
+  const decayed = record.p_mastery * Math.pow(2, -deltaDays / halfLifeDays);
+  return Number(Math.max(P_L0, decayed).toFixed(4)); // sàn P(L0) = 0.25
 }
 
 /**
@@ -255,24 +225,26 @@ export function applyHalfLifeDecay(
  */
 export function evaluateNodeTierAndAutoPass(
   preliminarySkills: SWESkill[],
-  state: UserCognitiveState
+  profile: LearnerCognitiveProfile,
+  currentTimestamp: number = Date.now(),
+  isCapstone: boolean = false        // Capstone Lock (Mục 3.3)
 ): NodeEvaluationResult {
   if (preliminarySkills.length === 0) {
     return {
       tier: "NOVICE",
       is_auto_pass: false,
-      representative_score: 0.25,
-      weakest_skill: "HTTP_ROUTING"
+      representative_score: P_L0,
+      weakest_skill: null
     };
   }
 
-  // Tìm kỹ năng có điểm năng lực thấp nhất (Nguyên lý Thùng Gỗ)
+  // Tìm kỹ năng có điểm năng lực thấp nhất (Nguyên lý Thùng Gỗ), trên điểm ĐÃ DECAY
   let minScore = 1.0;
   let weakestSkill: SWESkill = preliminarySkills[0];
   let allAboveAutoPass = true;
 
   for (const skill of preliminarySkills) {
-    const score = state.skills[skill]?.p_mastery ?? 0.25;
+    const score = getDecayedMastery(profile.skills[skill], currentTimestamp);
     if (score < 0.92) {
       allAboveAutoPass = false;
     }
@@ -292,7 +264,7 @@ export function evaluateNodeTierAndAutoPass(
 
   return {
     tier,
-    is_auto_pass: allAboveAutoPass && minScore >= 0.92,
+    is_auto_pass: !isCapstone && allAboveAutoPass && minScore >= 0.92,
     representative_score: Number(minScore.toFixed(4)),
     weakest_skill: weakestSkill
   };
@@ -304,9 +276,9 @@ export function evaluateNodeTierAndAutoPass(
 export function updateBKTState(
   targetSkills: SWESkill[],
   isPassed: boolean,
-  state: UserCognitiveState,
+  profile: LearnerCognitiveProfile,
   currentTimestamp: number = Date.now()
-): UserCognitiveState {
+): LearnerCognitiveProfile {
   const BKT_PARAMS = {
     P_G: 0.25,
     P_S: 0.12,
@@ -314,17 +286,19 @@ export function updateBKTState(
     P_T_INCORRECT: 0.03
   };
 
-  const updatedSkills = { ...state.skills };
+  const updatedSkills = { ...profile.skills };
 
   targetSkills.forEach(skill => {
-    const currentRecord = updatedSkills[skill] ?? {
-      p_mastery: 0.25,
-      last_practiced_timestamp: currentTimestamp,
+    const currentRecord: CognitiveSkillState = updatedSkills[skill] ?? {
+      skill,
+      p_mastery: P_L0,
+      last_practiced_at: currentTimestamp,
       practice_count: 0,
       correct_count: 0
     };
 
-    const pL = currentRecord.p_mastery;
+    // Prior của lần cập nhật = điểm đã decay tại thời điểm nộp bài (quên rồi thì học lại từ mức đã quên)
+    const pL = getDecayedMastery(currentRecord, currentTimestamp);
     let posterior = 0;
 
     if (isPassed) {
@@ -344,16 +318,17 @@ export function updateBKTState(
     const newPL = posterior + (1 - posterior) * pTransit;
 
     updatedSkills[skill] = {
+      skill,
       p_mastery: Math.max(0.01, Math.min(0.99, Number(newPL.toFixed(4)))),
-      last_practiced_timestamp: currentTimestamp,
+      last_practiced_at: currentTimestamp,
       practice_count: currentRecord.practice_count + 1,
       correct_count: currentRecord.correct_count + (isPassed ? 1 : 0)
     };
   });
 
   return {
-    ...state,
-    last_updated_timestamp: currentTimestamp,
+    ...profile,
+    last_updated_at: currentTimestamp,
     skills: updatedSkills
   };
 }

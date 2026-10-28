@@ -6,10 +6,10 @@
 
 # PHẦN I: ĐÁNH GIÁ HỆ THỐNG HIỆN TẠI (SYSTEM AUDIT)
 
-Hệ thống **SimpliFey V2 Pro** đã có khung kiến trúc kỹ thuật rất vững chắc (quy định tại [`00_CORE_SPEC`](file:///c:/Users/THIEN/Desktop/HocTap/SimpliFey/Hackathon_SGU/00_CORE_SPEC/01_TONG_QUAN_KIEN_TRUC.md), [`01_ENGINE_THUAT_TOAN`](file:///c:/Users/THIEN/Desktop/HocTap/SimpliFey/Hackathon_SGU/01_ENGINE_THUAT_TOAN/02_AST_SLICING_GRAPH.md), [`02_AI_VA_BAYES`](file:///c:/Users/THIEN/Desktop/HocTap/SimpliFey/Hackathon_SGU/02_AI_VA_BAYES/01_LLM_PIPELINE_GUARDRAIL.md)):
+Hệ thống **SimpliFey V2 Pro** đã có khung kiến trúc kỹ thuật rất vững chắc (quy định tại [`00_CORE_SPEC`](00_CORE_SPEC/01_TONG_QUAN_KIEN_TRUC.md), [`01_ENGINE_THUAT_TOAN`](01_ENGINE_THUAT_TOAN/02_AST_SLICING_GRAPH.md), [`02_AI_VA_BAYES`](02_AI_VA_BAYES/01_LLM_PIPELINE_GUARDRAIL.md)):
 
 ### 1. Điểm mạnh cốt lõi
-* **Bám sát tôn chỉ cuộc thi ("AI sáng tạo, tiết kiệm chi phí"):** Phân tách rạch ròi giữa **Động cơ Toán học Tĩnh (0 Token, < 1.5s)** và **AI Sư phạm JIT (1.2s – 1.8s, ~400 tokens)**. Chi phí vận hành chỉ **< $0.002 / phiên**, giải quyết bài toán "đốt tiền token" của naive RAG.
+* **Bám sát tôn chỉ cuộc thi ("AI sáng tạo, tiết kiệm chi phí"):** Phân tách rạch ròi giữa **Động cơ Toán học Tĩnh (0 Token, < 1.5s)** và **AI Sư phạm JIT (1.2s – 1.8s, ≤ 2,000 token vào / ≤ 900 token ra mỗi lần gọi)**. Chi phí ước lượng **≈ $0.03 / phiên (dưới 1.000đ)** — xem bảng số liệu chuẩn ở `00_CORE_SPEC/01_TONG_QUAN_KIEN_TRUC.md` Mục 5 — tránh bài toán "đốt tiền token" của naive RAG vì không gửi cả repo cho AI.
 * **Tích hợp sâu chuỗi công nghệ chuẩn mực:** Tree-sitter WASM, Tarjan SCC, PageRank kèm Utility Sink Filtering, SonarQube Cognitive Complexity, Inter-procedural Slicing, Dagre Layout, và Bayesian Knowledge Tracing (BKT).
 * **Kiến trúc Zero-Trust & Zero-Disk:** Không clone file vào đĩa cứng máy chủ, phân tích hoàn toàn in-memory, có Cổng gác nhị phân 2 chốt triệt tiêu hallucination.
 
@@ -60,7 +60,7 @@ Hệ thống **SimpliFey V2 Pro** đã có khung kiến trúc kỹ thuật rất
 | :--- | :--- | :--- |
 | **Tree-sitter AST & PageRank** | **Aider & Cursor:** Quét bóc tách symbol để tạo danh sách chữ ký hàm rời rạc (Repo-map) $\to$ **Nhồi vào prompt để AI viết code thay người**. | **Đảo ngược mục đích (Inverse):** Không nhặt symbol rời rạc, mà dùng Inter-procedural Slicing kéo trọn vẹn **1 sợi chỉ thực thi xuyên file** (`Controller` $\to$ `Service` $\to$ `DB`) $\to$ **Ép con người phải hiểu luồng dữ liệu**. |
 | **Tarjan SCC Algorithm** | **Compilers:** Khử phụ thuộc vòng tròn giữa các module để tối ưu thứ tự biên dịch. | **Công thái học Nhận thức (Cognitive Ergonomics):** Co cụm các cặp file phụ thuộc lẫn nhau thành **Super-Node duy nhất**, đảm bảo đồ thị đầu ra **100% DAG** không bao giờ bị rối mắt hay lặp vô tận trên Canvas. |
-| **Compound AI Architecture** | **Berkeley / Databricks:** Dùng hệ thống đa thành phần để giải quyết tác vụ tự động hóa doanh nghiệp phức tạp. | **Mô hình Sư phạm 2 Pha Tiết kiệm Chi phí:** Toán học gánh 90% việc nặng dựng khung xương với **0 Token**, LLM chỉ được kích hoạt JIT (~400 tokens) đóng vai trò Giảng viên phản biện Socratic. |
+| **Compound AI Architecture** | **Berkeley / Databricks:** Dùng hệ thống đa thành phần để giải quyết tác vụ tự động hóa doanh nghiệp phức tạp. | **Mô hình Sư phạm 2 Pha Tiết kiệm Chi phí:** Toán học gánh 90% việc nặng dựng khung xương với **0 Token**, LLM chỉ được kích hoạt JIT (1 lần gọi mỗi node, ≤ 2,000 token vào) đóng vai trò Giảng viên phản biện Socratic. |
 | **Bayesian Knowledge Tracing (BKT)** | **Duolingo / Khan Academy:** Đánh giá xác suất nắm vững kiến thức qua các câu hỏi **trắc nghiệm A-B-C-D đóng khung** (Toán, Ngoại ngữ). | **Chuyển giao miền (Domain Transfer) vào SWE:** Lần đầu tiên ánh xạ BKT vào **16 Trụ cột Kỹ nghệ Phần mềm**; biến lời giải thích tự do (Feynman) thành quan sát nhị phân qua Rubric Sensor để cập nhật xác suất tất định. |
 
 ---
@@ -104,7 +104,7 @@ timeline
 | :---: | :--- | :--- | :--- |
 | **0 – 3 Tháng** | **🏫 Thử nghiệm Pilot tại SGU** *(Sân nhà & Giải quyết nỗi đau giảng viên)* | • Phối hợp cùng **Đoàn Khoa CNTT SGU** triển khai dưới dạng **"Chương trình Đồng hành Ôn tập Đồ án"** cho sinh viên.<br/>• Tích hợp bộ **Tạo đề thi Vấn đáp Cá nhân hóa** hỗ trợ giảng viên chấm đồ án môn học. | • Thử nghiệm trên **2 môn học** (*Kỹ thuật Lập trình* & *Đồ án CNTT*).<br/>• Tiếp cận **~200 sinh viên** thực tế.<br/>• Giảm **60% thời gian** chuẩn bị câu hỏi vấn đáp cho giảng viên. |
 | **3 – 6 Tháng** | **🎓 Nghiên cứu & Đồ án Tốt nghiệp** *(Học thuật & Tính bền vững)* | • Phát triển thành đề tài ĐATN chính thức: *"Ứng dụng BKT và Program Slicing trong Đo lường Nhận thức Mã nguồn"**.<br/>• Hoàn thiện bản thảo khoa học và **Gửi nộp bài báo (Paper Submission)** tại các hội nghị uy tín (**RIVF / KSE 2027 / IEEE TALE**). | • Đo lường độ chính xác thuật toán: **$\text{AUC} \ge 0.82$** và **$\text{RMSE} \le 0.28$** trên mô hình BKT.<br/>• Chứng minh bằng A/B Testing: Giảm **45% điểm mù kiến trúc** (*Architecture Blindspot Reduction Rate*) so với nhóm tự học. |
-| **6 – 12 Tháng**| **🚀 Thương mại hóa B2B & B2C** *(Tự chủ tài chính & Thị trường)* | • **B2C:** Ra mắt gói **Pro Mock Defense** cho sinh viên chuẩn bị bảo vệ đồ án tốt nghiệp hoặc phỏng vấn Fresher.<br/>• **B2B:** Thử nghiệm giải pháp **Developer Onboarding** giúp lập trình viên mới đọc hiểu monorepo doanh nghiệp trong 3 ngày. | • Đạt **1.000 người dùng hoạt động hàng tháng (MAU)**.<br/>• Chi phí vận hành hạ tầng: **$< \$15/\text{tháng}$** (nhờ kiến trúc Zero-Disk + 0 Token DAG).<br/>• Thử nghiệm tại **2 doanh nghiệp phần mềm** theo mô hình **On-Premise Docker** (cam kết 100% không rò rỉ mã nguồn). |
+| **6 – 12 Tháng**| **🚀 Thương mại hóa B2B & B2C** *(Tự chủ tài chính & Thị trường)* | • **B2C:** Ra mắt gói **Pro Mock Defense** cho sinh viên chuẩn bị bảo vệ đồ án tốt nghiệp hoặc phỏng vấn Fresher.<br/>• **B2B:** Thử nghiệm giải pháp **Developer Onboarding** giúp lập trình viên mới đọc hiểu monorepo doanh nghiệp trong 3 ngày. | • Đạt **1.000 người dùng hoạt động hàng tháng (MAU)**.<br/>• Chi phí LLM ước lượng: **khoảng $110–120/tháng** cho 1.000 MAU × 4 phiên (≈ $0.03/phiên, cần đo thật); phần dựng DAG là code thuần nên 0 token.<br/>• Thử nghiệm tại **2 doanh nghiệp phần mềm** theo mô hình **On-Premise Docker** (cam kết 100% không rò rỉ mã nguồn). |
 | **Dài hạn** | **🔌 Mở rộng Hệ sinh thái DevTool** *(Bền vững & Scale-up)* | • Đưa hệ thống từ nền tảng Web App thành **VS Code & JetBrains Extension**, tích hợp trực tiếp vào môi trường làm việc của lập trình viên.<br/>• Cung cấp API / Plugin kiểm toán tuân thủ kiến trúc (Cognitive Architecture Audit) cho các hệ thống CI/CD. | • Đạt **10.000 lượt tải** trên VS Code Marketplace.<br/>• Nâng 5 ngôn ngữ phổ biến nhất (TypeScript, Python, Java, Go, Dart/Flutter) lên tier `RESOLVED` (cạnh chính xác cao); mọi ngôn ngữ có Tree-sitter grammar vẫn dùng được ở tier `STRUCTURAL` (cạnh suy luận, không đảm bảo 100%). |
 
 ---
@@ -117,7 +117,7 @@ timeline
 
 #### 1. Tính khả thi của Mô hình Kinh doanh (Chi phí Vận hành Siêu Thấp)
 * **Lợi thế sống còn:** Một trong những lý do khiến các startup AI EdTech phá sản là **chi phí token LLM quá lớn**. 
-* **SimpliFey giải quyết triệt để:** Nhờ nguyên tắc *Code thuần dựng DAG (0 Token)* và *Gemini Flash JIT (~400 tokens/phiên)*, hệ thống phục vụ 1.000 sinh viên hoạt động thường xuyên chỉ tốn chưa tới **$15 USD/tháng**. Nhóm hoàn toàn tự chủ tài chính ngay cả khi chưa có nguồn thu lớn.
+* **Cách SimpliFey giữ chi phí thấp:** Nhờ nguyên tắc *Code thuần dựng DAG (0 Token)* và *Gemini Flash JIT chỉ gửi lát cắt ≤ 1,500 token code*, một phiên học ước lượng ≈ **$0.03 (dưới 1.000đ)**. Với 1.000 sinh viên × 4 phiên/tháng, tiền LLM ước lượng **khoảng $110–120/tháng** — thấp so với một sản phẩm EdTech, nhưng là con số phải đo thật bằng `usage_metadata` và kiểm tra lại bảng giá Gemini trước khi trình bày.
 
 #### 2. Chiến lược An toàn Tuyệt đối khi tiếp cận Doanh nghiệp (Zero IP Leak)
 * Doanh nghiệp không bao giờ đưa mã nguồn bí mật lên dịch vụ đám mây công cộng.
@@ -159,6 +159,6 @@ timeline
 > ### 🎙️ Kịch bản đại diện nhóm trả lời:
 > *"Dạ thưa Thầy, đây chính là lúc giá trị của hệ thống phát huy mạnh nhất!  
 > 
-> Nếu code bị dồn hết vào 1 file hoặc viết cấu trúc lồng nhau phức tạp, thuật toán **SonarQube Cognitive Complexity** ở Tầng 2 sẽ đo đạc độ xoắn não vượt ngưỡng (> 15 điểm) và gắn cờ cảnh báo. Khi đó, hệ thống không vẽ được lát cắt nghiệp vụ đẹp mà sẽ hiển thị **'Node Báo Động (Anti-Pattern Node)'**. 
+> Nếu code bị dồn hết vào 1 file hoặc viết cấu trúc lồng nhau phức tạp, thuật toán **SonarQube Cognitive Complexity** ở Tầng 2 sẽ đo đạc độ xoắn não vượt ngưỡng (> 15 điểm) và gắn cờ cảnh báo. Khi repo không có cấu trúc phân tầng, Engine chuyển sang chế độ suy biến **PROCEDURAL**: chia hàm dài thành các chặng Nhập ➔ Kiểm tra ➔ Tính toán ➔ Dữ liệu, mỗi chặng là một node, và hàm vượt ngưỡng được cấp vé VIP. 
 > 
-> Sang Pha 1 X-Ray, hệ thống chỉ rõ cho sinh viên thấy: 'Hàm này đang gánh quá nhiều trách nhiệm (vi phạm Single Responsibility)'. Và sang Pha 2, AI sẽ đóng vai trò phản biện: 'Nếu đồ án này mở rộng thêm 10.000 người dùng, tại sao cấu trúc hiện tại sẽ gây nghẽn cổ chai?'. Nghĩa là code càng tệ, SimpliFey càng trở thành một người thầy chỉ lỗi đắc lực cho sinh viên!"*
+> Pha 1 X-Ray cho sinh viên đọc từng chặng của hàm đó. Sang Pha 2, AI sẽ đóng vai trò phản biện: 'Nếu đồ án này mở rộng thêm 10.000 người dùng, tại sao cấu trúc hiện tại sẽ gây nghẽn cổ chai?'. Sau khi sinh viên trả lời, hệ thống mới mở nhận xét 'Hàm này đang gánh quá nhiều trách nhiệm (vi phạm Single Responsibility)'. Nghĩa là code càng tệ, SimpliFey càng trở thành một người thầy chỉ lỗi đắc lực cho sinh viên!"*

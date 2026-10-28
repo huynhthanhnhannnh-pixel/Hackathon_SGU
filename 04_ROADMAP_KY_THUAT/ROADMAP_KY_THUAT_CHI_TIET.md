@@ -98,7 +98,7 @@
 - **Tùy chọn tăng độ mịn — lát cắt bám biến best-effort:** duyệt **AST** (không Regex trên text, vì Regex không phân biệt phạm vi/chuỗi/comment): thu binding từ `variable_declarator`, `assignment_expression`, bóc đệ quy `object_pattern/array_pattern`; lập chuỗi def→use trong thân hàm; nối tham số sang hàm được gọi nếu resolve được. Gặp tái gán trong nhánh/vòng lặp, alias, spread, `eval`/dynamic key → **mở rộng thành cả câu lệnh/hàm** và hạ độ tin cậy; không resolve được → **fallback cả hàm**.
 - **Đo thay vì hứa:** báo tỉ lệ hàm áp dụng được, mức giảm số dòng trung bình, độ phủ so với nhãn tay. Lợi ích không rõ thì ghi nhận là kết quả âm.
 - **Bộ nhãn tay 30–40 repo SV** (2 người gán slice "đúng"): đo precision/recall cạnh gọi hàm và overlap slice, so với (a) Aider-style repo-map, (b) gom theo thư mục. Đây là bằng chứng thực nghiệm cho luận điểm "Inverse EdTech".
-- **Độ tin cậy cạnh:** import tĩnh = 1.0; qua `Interface_Map` = 0.8; heuristic theo tên = 0.5. UI vẽ nét đứt cho cạnh < 0.8; Relaxed Gate dùng ngưỡng này thay vì cờ bật/tắt theo ngôn ngữ.
+- **Độ tin cậy cạnh:** import tĩnh = 1.0; qua `InterfaceImplMap` = 0.8; heuristic theo tên = 0.5. UI vẽ nét đứt cho cạnh < 0.8; Relaxed Gate dùng ngưỡng này thay vì cờ bật/tắt theo ngôn ngữ.
 - Dùng số Super-Node từ Tarjan SCC làm đặc trưng "độ khó" của node.
 
 ### 3.4. Thiết kế thí nghiệm
@@ -123,7 +123,7 @@
 - **Giọng nói:** Web Speech API → Whisper/Gemini audio; tốc độ nói/ngập ngừng chỉ là tín hiệu phụ, **không** đưa vào BKT.
 - **Repo riêng tư:** GitHub App/OAuth quyền fine-grained `contents:read`, token chỉ sống trong bộ nhớ; vẫn stream, không ghi đĩa.
 - **Thanh toán & quan sát:** PayOS/VNPay/MoMo + Stripe, bảng `subscriptions` + webhook idempotent; OpenTelemetry + Langfuse.
-- **Chi phí:** `< $15/tháng` hiện chỉ tính token. Tách "chi phí LLM biên/người dùng" (khoảng $0.002/phiên) khỏi "chi phí hạ tầng cố định" (Postgres, Redis, hosting) để không bị bắt bẻ; cập nhật con số khi có số đo thật từ pilot.
+- **Chi phí:** con số "$110–120/tháng cho 1.000 MAU" (KyVong45) hiện chỉ tính token. Tách "chi phí LLM biên/người dùng" (ước lượng ≈ $0.03/phiên, `00_CORE_SPEC/01_TONG_QUAN_KIEN_TRUC.md` Mục 5) khỏi "chi phí hạ tầng cố định" (Postgres, Redis, hosting) để không bị bắt bẻ; cập nhật con số khi có số đo thật từ pilot.
 
 ## 4B. B2B — Developer Onboarding On-Premise
 **Đóng gói:** Docker Compose/Helm gồm `web`, `postgres`, `redis`, (`worker` chỉ khi vượt ngưỡng ở Mục 2.1) và LLM nội bộ (vLLM/Ollama, ví dụ Qwen2.5-Coder).
@@ -189,7 +189,7 @@ Mục tiêu không phải "chỉ 5 ngôn ngữ" mà là **mọi ngôn ngữ có 
 
 | Ngôn ngữ | Thách thức | Xử lý |
 | :--- | :--- | :--- |
-| Java | DI Spring (`@Autowired`, interface→impl) | Mở rộng `Interface_Map` bằng quét annotation + `@Qualifier`/`@Primary` |
+| Java | DI Spring (`@Autowired`, interface→impl) | Mở rộng `InterfaceImplMap` bằng quét annotation + `@Qualifier`/`@Primary` |
 | Go | Interface thỏa mãn ngầm | So khớp **method-set** của struct với interface |
 | Python | Decorator định tuyến (FastAPI/Flask), duck typing | Bắt decorator làm `ENTRY_POINT`; cạnh duck-typing độ tin cậy thấp |
 | Dart | Cầu BLoC/Provider/Riverpod ngoài `on<Event>` | Mở rộng Nominal Event Bridge cho từng thư viện state |
