@@ -33,7 +33,7 @@
 | :-: | :--- | :--- | :--- |
 | G1 | Mọi trạng thái ở Zustand client | Không có dữ liệu tập trung → không làm được dashboard, không fit BKT, không đo KPI | Postgres + event log bất biến |
 | G2 | BKT tham số cố định ($P(L_0)=0.20$, $P(T)=0.20$, $P(G)=0.15$, $P(S)=0.05$), ngưỡng 70/70 | Tham số "đoán"; nhiễu của bộ chấm LLM bị coi là nhãn chắc chắn | Fit EM bằng `pyBKT`; logistic hiệu chuẩn nhãn 0/1 |
-| G3 | Nối hàm bằng Two-Pass heuristic | Sai với dynamic dispatch, DI, alias, re-export; Dart/Java chỉ có Regex + Relaxed Gate | Resolver chính xác hơn (LSP/SCIP) + độ tin cậy trên cạnh |
+| G3 | Nối hàm bằng Two-Pass heuristic | Sai với dynamic dispatch, DI, alias, re-export; ngôn ngữ tier `STRUCTURAL` chỉ có Universal Resolver (cạnh `INFERRED`) + Relaxed Gate | Resolver chính xác hơn (LSP/SCIP) + độ tin cậy trên cạnh |
 | G4 | "Slicing" thực chất là call-chain + Nominal Event Bridge | Không phải program slicing theo nghĩa Weiser (PDG) | Đổi tên đúng bản chất; tăng độ mịn best-effort, đo thay vì hứa |
 | G5 | Trần 50 file / 15MB, Top 6–8 node | Không dùng được cho monorepo doanh nghiệp | Phân cụm cộng đồng + indexing tăng dần + cache theo commit SHA |
 | G6 | Guardrail chỉ chặn bịa symbol + từ khóa ngoài repo | Chưa chống prompt-injection từ comment trong repo; chưa chống nhờ AI trả lời Feynman | Sanitize ngữ cảnh + tín hiệu hành vi |
@@ -68,7 +68,7 @@
 
 ### 2.3. Đo lường & rủi ro
 - Đo **baseline** thời gian soạn đề của GV *trước* pilot — không có baseline thì con số 60% không bảo vệ được. Thêm: SUS/NPS, tỉ lệ Gate reject, chi phí token thực tế/SV, tỉ lệ trúng Response Cache.
-- Repo SV ngoài phạm vi ngôn ngữ (PHP/C#…) → hiển thị thông báo "chưa hỗ trợ" rõ ràng thay vì đồ thị rỗng.
+- Repo SV viết bằng ngôn ngữ chưa có resolver riêng (PHP/C#…) → vẫn dựng đồ thị ở tier `STRUCTURAL` kèm huy hiệu "độ tin cậy thấp"; chỉ ngôn ngữ **không có grammar** mới hiển thị thông báo "chưa hỗ trợ" rõ ràng thay vì đồ thị rỗng.
 
 ---
 
@@ -177,7 +177,15 @@
 - **Luật kiến trúc khai báo** kiểu ArchUnit (`layer(controller) may not call layer(repository)`), chỉ kiểm tra trên cạnh có độ tin cậy ≥ ngưỡng.
 - **Đầu ra:** SARIF 2.1 (GitHub Code Scanning), bình luận PR, GitHub Action / GitLab CI template.
 
-### 5.3. Hỗ trợ 5 ngôn ngữ
+### 5.3. Hỗ trợ đa ngôn ngữ theo tầng (Language Registry)
+
+Mục tiêu không phải "chỉ 5 ngôn ngữ" mà là **mọi ngôn ngữ có grammar Tree-sitter**, chia hai tầng (xem `01_ENGINE_THUAT_TOAN/02_AST_SLICING_GRAPH.md` §3.0 và Thao tác 2b):
+
+- **Tầng nền `STRUCTURAL` (mặc định cho mọi ngôn ngữ có grammar):** thêm ngôn ngữ = thêm file `.wasm` + `.scm`, không viết code thuật toán. Symbol chính xác (từ AST); cạnh suy luận bằng Universal Resolver, gắn `confidence: INFERRED`, UI vẽ nét đứt, **không đảm bảo 100%**.
+- **Tầng `RESOLVED` (nâng cấp có chọn lọc):** viết thêm `importResolver` riêng cho ngôn ngữ phổ biến ⇒ cạnh và lát cắt chính xác cao. Khởi điểm: TS/JS, Python, Java, Go, Dart. Ứng viên tiếp theo theo mức phổ biến trong đồ án SV: C#, PHP, Kotlin, Rust.
+- Tiêu chí nâng tầng: ngôn ngữ đạt **conformance test** (precision/recall cạnh trên bộ nhãn tay) vượt ngưỡng đã đặt trước.
+
+Độ khó riêng của 5 ngôn ngữ khởi điểm khi nâng độ chính xác:
 
 | Ngôn ngữ | Thách thức | Xử lý |
 | :--- | :--- | :--- |
@@ -187,10 +195,10 @@
 | Dart | Cầu BLoC/Provider/Riverpod ngoài `on<Event>` | Mở rộng Nominal Event Bridge cho từng thư viện state |
 | TypeScript | Path alias, re-export, barrel file | `tsconfig` project references / TS compiler API |
 
-Thay Regex fallback bằng grammar tree-sitter + truy vấn `tags.scm` riêng từng ngôn ngữ; bộ **conformance test** (repo mẫu + kết quả mong đợi) chạy trong CI trước mỗi bản phát hành.
+Mọi ngôn ngữ dùng grammar tree-sitter + truy vấn `tags.scm`/`.scm` của adapter (không còn Regex fallback theo tên ngôn ngữ); bộ **conformance test** (repo mẫu + kết quả mong đợi) chạy trong CI trước mỗi bản phát hành.
 
 ### 5.4. Phân phối & đo KPI
-Telemetry **opt-in**, ẩn danh; theo dõi retention D7/D30 chứ không chỉ lượt tải; WASM tải lười theo ngôn ngữ, bundle gọn vì ảnh hưởng đánh giá trên Marketplace.
+Telemetry **opt-in**, ẩn danh; theo dõi retention D7/D30 chứ không chỉ lượt tải; WASM đóng gói trong bundle và nạp lười theo ngôn ngữ thực sự có trong repo, bundle gọn vì ảnh hưởng đánh giá trên Marketplace.
 
 ---
 

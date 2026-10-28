@@ -60,6 +60,7 @@ Giao diện được chia thành 3 cột tương tác phản ứng (Reactive Lay
   * 🟡 **AVAILABLE (Vàng hổ phách - Có hào quang Pulse sáng):** Node đã mở khóa, sẵn sàng cho sinh viên chọn học.
   * 🟢 **COMPLETED (Xanh ngọc lục bảo):** Đã vượt qua sát hạch Feynman (`is_passed === true`). Tự động kích hoạt mở khóa các node con.
   * 🔴 **FAILED (Đỏ cảnh báo):** Trả lời sai quá 3 lần, ghi nhận vào danh sách điểm mù.
+* **Độ tin cậy của cạnh (đa ngôn ngữ):** Cạnh `confidence: "RESOLVED"` (ngôn ngữ có `ImportResolver` riêng) vẽ nét liền. Cạnh `confidence: "INFERRED"` (ngôn ngữ tier `STRUCTURAL`, Universal Resolver) hoặc `ambiguous: true` vẽ **nét đứt** kèm tooltip *"Cạnh suy luận — chưa đảm bảo 100%"*. Thanh trên cùng của canvas hiện huy hiệu `fingerprint.graph_confidence` (Cao / Trung bình / Thấp) và danh sách `language_breakdown`; khi `LOW`, hiển thị cảnh báo từ `ingestion_report.warnings`. Lưu ý: nét đứt của cạnh khác với viền đứt của node LOCKED.
 
 ---
 

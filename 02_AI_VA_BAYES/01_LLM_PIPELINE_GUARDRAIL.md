@@ -226,6 +226,10 @@ export interface EnrichedSliceResponse {
   };
 }
 
+// isRelaxedMode được bật theo TIER của ngôn ngữ trong lát cắt (language_breakdown[].tier === "STRUCTURAL"),
+// KHÔNG còn bật theo tên ngôn ngữ (trước đây: Dart/Java chạy Regex). Symbol vẫn lấy từ AST thật ở mọi tier.
+// Relaxed chỉ nới từ "mọi symbol phải hợp lệ" xuống "ít nhất 1 symbol hợp lệ" (adapter STRUCTURAL có thể chưa thu đủ
+// field/tham số); lát cắt không có symbol hợp lệ nào vẫn bị loại và rơi về câu hỏi AST tĩnh.
 export function verifyWithBinaryGate(
   aiOutput: EnrichedSliceResponse,
   symbolTable: Set<string>,

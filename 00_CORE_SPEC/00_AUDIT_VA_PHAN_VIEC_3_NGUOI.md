@@ -92,6 +92,13 @@
    - [ ] **Fallback:** Nếu branch `main` trả về 404 $\to$ tự động fallback sang `master`. Nếu repo > 15MB $\to$ ngắt stream báo lỗi.
    - [ ] **Output JSON:** `Map<string, string>` chứa tối đa 50 file code sạch.
    - [ ] **SLA:** Thời gian tải và giải nén dưới $1.2$ giây.
+5. **Bổ sung sau đợt rà soát edge case 2026-10-28** (chi tiết: `03_SYSTEM_EDGE_CASES_AUDIT.md` mục 1A, ma trận §7 của file Ingestion). Mã lỗi dùng `IngestionErrorCode` trong `02_DATA_CONTRACTS.md` (thay cho `ERR_REPO_NOT_FOUND` / `ERR_REPO_TOO_LARGE` / `ERR_BRANCH_RESOLVE` ở mục 3):
+   - [ ] **🔴 Ưu tiên 1:** Central-Directory-First + `FilePriorityScore` (Case 1.14) và `ManifestStore` đủ manifest (Case 1.15).
+   - [ ] **🔴** `NotebookExtractor` cho `.ipynb` (Case 1.5); `ERR_UNSUPPORTED_LANGUAGE` + `SfcScriptExtractor` (Case 1.16).
+   - [ ] **🔴** Probe trả enum `ProbeResult`, tách `ERR_NETWORK_TIMEOUT` khỏi 404 (Case 1.10); `ERR_EMPTY_REPOSITORY` / `ERR_REPO_UNAVAILABLE_451` / gợi ý submodule (Case 1.11); `pipeline()` + retry 1 lần (Case 1.12).
+   - [ ] **🔴** `SecretRedactor` trước khi code rời Tầng 0 (Case 1.20 — phối hợp Người 3).
+   - [ ] **🟡** `UrlNormalizer` (1.9), Longest-Prefix Ref + `zip/:ref` (1.3), byte counter 2 lớp + trần giải nén (1.2), regex rác neo segment (1.13), encoding/BOM/CRLF (1.17), symlink/LFS/minified (1.18), semaphore + LRU cache (1.19).
+   - [ ] **Kiểm chứng bằng `curl -I`:** `archive/HEAD.zip` redirect, header `Content-Length` của codeload, data descriptor trong zip codeload.
 
 ---
 
@@ -108,6 +115,11 @@
    - [ ] **Fallback:** Nếu đồ thị rời rạc không có Controller $\to$ dùng Cognitive Complexity cấp Vé VIP cho file thuật toán làm node chính.
    - [ ] **Output JSON:** Cấu trúc `StaticEngineResult` chuẩn theo `02_DATA_CONTRACTS.md`.
    - [ ] **SLA:** Toàn bộ hoàn thành trong $< 0.25$ giây trên CPU.
+5. **Bổ sung sau đợt rà soát edge case 2026-10-28** (chi tiết: `03_SYSTEM_EDGE_CASES_AUDIT.md` mục 1B, ma trận §7 của file AST):
+   - [ ] **🔴 Ưu tiên 1 (quyết định đồ thị đúng hay sai):** Pass 2 trên AST + `FieldTypeMap` thay regex substring (Case 1.23); Interface ➔ Impl / DI (1.24); `ImportResolver` đa ngôn ngữ, đọc `tsconfig.paths` từ `ManifestStore` (1.25); cạnh Route/Middleware (1.26).
+   - [ ] **🔴 Đa ngôn ngữ theo tầng (Person 2 chính, Person 1 sửa contract, Person 3 gắn Relaxed Gate theo tier):** `LanguageRegistry` (adapter `{extensions, wasmGrammar, queryFile, importResolver?, ingressPatterns?, abstractionKinds?}`); tier `RESOLVED` (có `importResolver`) vs `STRUCTURAL` (Universal Resolver, Thao tác 2b, cạnh `INFERRED`); `ProjectFingerprint` thêm `language_breakdown`, `graph_confidence`; `edges[].confidence`; bỏ enum đóng `primary_language`; `ERR_UNSUPPORTED_LANGUAGE` chỉ cho ngôn ngữ không có grammar; UI vẽ cạnh `INFERRED` nét đứt + huy hiệu độ tin cậy đồ thị.
+   - [ ] **🔴** Phân nhánh 0 cạnh theo số file: `PROCEDURAL` vs `ALGORITHM_COLLECTION` (1.31, 1.1, 1.4); `DATA_SINK_PATTERNS` + control dependence + trần dòng/token (1.33).
+   - [ ] **🟡** Tỉ lệ node `ERROR` (1.22), khóa `file#symbol` + arrow/default export (1.27), SCC khổng lồ (1.28), PageRank dangling + basename match (1.29), `INGRESS_PATTERNS` đa framework (1.30), nesting theo AST cho Python (1.32), Uncle Bob mẫu số 0 / JS thuần (1.34), Display Budget + mọi root AVAILABLE + deterministic (1.35), warm-up grammar + `ENGINE_BUDGET_MS` (1.36), whitelist có field/tham số (1.37).
 
 ---
 
@@ -127,6 +139,7 @@
    - [ ] **Fallback:** Nếu `referenced_symbols` chứa tên biến không có trong AST $\to$ HỦY kết quả của AI, kích hoạt câu hỏi cú pháp AST an toàn.
    - [ ] **Output JSON:** `EnrichedSliceResponse` chuẩn.
    - [ ] **SLA:** Thời gian phản hồi thực tế $1.2\text{s} – 1.8\text{s}$, tỷ lệ ảo giác $= 0\%$.
+   - [ ] **Liên tầng (rà soát 2026-10-28):** Chỉ nhận code đã qua `SecretRedactor`, dùng vị trí secret làm `hidden_challenge` Security Fatal (Case 1.20); đóng khung code repo như dữ liệu không tin cậy, đọc cờ `suspicious_instruction_comment` (Case 1.21); chuyển Mode B khi `ingestion_report.degraded_mode` có giá trị.
 
 ---
 
@@ -158,6 +171,7 @@
 4. **Checklist giao việc cụ thể cho NGƯỜI 1:**
    - [ ] Định nghĩa bảng mã màu CSS tokens trong file: `#0F172A` (Nền), `#F59E0B` (Vàng Available), `#10B981` (Xanh Completed), `#EF4444` (Đỏ Failed).
    - [ ] Ráp Zustand Store quản lý trạng thái chọn Node đồng bộ cả 3 cột.
+   - [ ] **Rà soát 2026-10-28:** Hiển thị `ingestion_report.warnings` (repo bị cắt bớt, chế độ suy biến); cho chọn lại thư mục phân tích khi phát hiện nhiều backend (Case 1.7); Monaco mở `files[0]` khi click SuperNode (Case 1.6); vẽ nét đứt cho cạnh `ambiguous` (Case 1.24); mọi node root đều `AVAILABLE` (Case 1.35); ánh xạ đủ các mã `IngestionErrorCode` sang thông điệp UI.
 
 ---
 

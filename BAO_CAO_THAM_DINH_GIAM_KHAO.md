@@ -419,7 +419,7 @@ pie showData
 
 | # | BGK hỏi | Câu trả lời hiện có trong repo | Nên trả lời |
 | :-: | :--- | :--- | :--- |
-| 1 | "Đây là repo của tôi, chạy thử ngay được không?" | Chưa có | "Được, với repo TS/JS public hoặc file .zip; ngôn ngữ khác hiện sẽ báo chưa hỗ trợ." Và sản phẩm phải *thật sự* chạy được |
+| 1 | "Đây là repo của tôi, chạy thử ngay được không?" | Chưa có | "Được, với repo TS/JS (và Python) public hoặc file .zip là phạm vi đã kiểm chứng đầy đủ; ngôn ngữ khác có Tree-sitter vẫn vẽ được đồ thị ở tier `STRUCTURAL` nhưng cạnh chỉ là suy luận, chưa đảm bảo 100%." Và sản phẩm phải *thật sự* chạy được |
 | 2 | "Khác gì DeepWiki, hay dán code vào ChatGPT rồi hỏi?" | Chỉ so sánh với Aider và Duolingo ([KyVong45 L143-L152](KyVong45.md#L143-L152)) | Dùng câu ở mục 4.4: các công cụ đó giúp *đọc*; SimpliFey *kiểm chứng mức hiểu*, ghi nhớ chỗ hổng, đặt câu hỏi bám code |
 | 3 | "SV copy câu hỏi sang ChatGPT thì sao?" | Chưa có | Câu hỏi phản thực tế bám dòng code, chấm điểm bám code, cờ nghi dán, câu hỏi nối tiếp. Nói rõ là "giảm chứ không loại bỏ" |
 | 4 | "Sao biết điểm 70/70 của AI là đúng?" | Chưa có | Đưa ra độ đồng thuận đo trên bộ 20–30 câu đã gắn nhãn, và nói rõ đây mới là bước đầu |
@@ -455,7 +455,7 @@ pie showData
 | :--- | :--- |
 | **Bắt buộc** | Ingest GitHub public và upload .zip · TS/JS (Express, NestJS, Next.js route) · Tree-sitter, phát hiện entry point, call-chain slicing, Tarjan, node builder, Dagre · enrich (X-Ray, 1 câu hỏi, đáp án nằm trong token) với gate v2 · evaluate có đáp án tham chiếu · BKT, FSM, lưu localStorage · giao diện 3 cột có chế độ trình chiếu · đồng hồ chi phí · mock là bản ghi output thật · video dự phòng |
 | **Nên có** | Fast-Track · decay kèm persona "du hành thời gian" (nói rõ là mô phỏng) · prefetch · Python · thang gợi ý 2 nấc · cờ "nghi dán" |
-| **Để vào Roadmap** | Dart/Java/Flutter và Nominal Event Bridge · Uncle Bob đầy đủ · AST folding · Context Caching · 6 archetype (chỉ hiển thị nhãn) · Intent Router · Dashboard giảng viên · nhập bằng giọng nói |
+| **Để vào Roadmap** | Resolver riêng (tier `RESOLVED`) cho Dart/Java/Go/Flutter và Nominal Event Bridge · Language Registry đầy đủ + Universal Resolver (tier `STRUCTURAL`) cho các ngôn ngữ còn lại · Uncle Bob đầy đủ · AST folding · Context Caching · 6 archetype (chỉ hiển thị nhãn) · Intent Router · Dashboard giảng viên · nhập bằng giọng nói |
 
 | Giờ | Người 1 (UI/Lead) | Người 2 (Engine) | Người 3 (AI/BKT) |
 | :--- | :--- | :--- | :--- |

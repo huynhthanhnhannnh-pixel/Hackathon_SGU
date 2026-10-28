@@ -62,7 +62,7 @@
 # 2. CẨM NANG PHẢN BIỆN 7 CÂU HỎI BẪY CỦA HỘI ĐỒNG BAN GIÁM KHẢO SGU
 
 1. **BGK hỏi:** *"Làm sao bóc tách Call-Graph cho cả Java, Go, Python mà không cần cài JVM hay Compiler nặng?"*
-   > **Đáp:** *"Dạ thưa Thầy, chúng em dùng cơ chế **Two-Pass Global Symbol Resolution** chạy trên Tree-sitter WASM. Chặng 1 quét AST lập 3 bảng băm tra cứu ký hiệu trên RAM trong 15ms. Chặng 2 chỉ cần đối chiếu lời gọi hàm qua bảng băm là liên kết chính xác 100% mà không cần bất kỳ trình biên dịch nào!"*
+   > **Đáp:** *"Dạ thưa Thầy, chúng em dùng cơ chế **Two-Pass Global Symbol Resolution** chạy trên Tree-sitter WASM. Chặng 1 quét AST lập 3 bảng băm tra cứu ký hiệu trên RAM trong 15ms. Chặng 2 đối chiếu lời gọi hàm qua bảng băm để liên kết mà không cần bất kỳ trình biên dịch nào. Với ngôn ngữ đã có bộ phân giải import riêng (TypeScript/JavaScript, Python... nhóm đã kiểm chứng), độ chính xác cạnh cao. Với hơn 100 ngôn ngữ còn lại có Tree-sitter, hệ thống vẫn vẽ được đồ thị bằng bộ phân giải phổ quát, nhưng cạnh được gắn nhãn 'suy luận' (nét đứt) vì không đảm bảo 100%, chúng em không giấu điều đó!"*
 
 2. **BGK hỏi:** *"Nếu mã nguồn có 2 file gọi vòng tròn nhau (A gọi B, B gọi A) thì đồ thị của các em có bị treo vòng lặp vô tận không?"*
    > **Đáp:** *"Dạ hoàn toàn không! Hệ thống áp dụng **Thuật toán Tarjan SCC**: Phát hiện toàn bộ chu trình phụ thuộc và thực hiện thao tác Co Cụm (Condensation), gom 2 file đó thành 1 Super-Node duy nhất, đảm bảo đồ thị đầu ra 100% là Directed Acyclic Graph (DAG)!"*

@@ -99,7 +99,7 @@ Trước khi đi vào từng bước cụ thể, toàn bộ hệ thống phối 
    * Quét các file cấu hình tại độ sâu 2 cấp: `package.json`, `pubspec.yaml`, `requirements.txt`, `pom.xml`, `go.mod`.
    * **Phát hiện Monorepo:** Dùng Regex nhận diện cặp đối ngẫu `client|frontend|web|ui` và `server|backend|api|core`. Nếu có cả 2 $\implies$ Gán `is_monorepo = true`, ưu tiên phân tích `server/` trước và kích hoạt nút gạt `[Phân tích: Server | Client]` trên UI.
    * **Nhận diện 6 Hình thái (`ProjectArchetype`):** `WEB_BACKEND`, `MOBILE_APP` (React Native, Flutter), `DESKTOP_APP` (Electron, Tauri), `WEB_FRONTEND`, `CLI_TOOL`, `ALGORITHM_CORE`.
-   * **Kiểm soát Scope an toàn 24h:** Dùng Native Tree-sitter WASM cho TS/JS & Python; dùng Heuristic Regex Fallback cho Dart/Flutter và Java/Android.
+   * **Hỗ trợ đa ngôn ngữ theo tầng (Language Registry):** Mọi ngôn ngữ có grammar Tree-sitter đều đọc được bằng Tree-sitter WASM. Ngôn ngữ có `ImportResolver` riêng (khởi điểm TS/JS, Python, Java, Go, Dart) thuộc tier `RESOLVED` ⇒ cạnh và lát cắt chính xác cao. Ngôn ngữ còn lại thuộc tier `STRUCTURAL` ⇒ vẫn bóc tách được lát cắt bằng Universal Resolver, cạnh gắn nhãn *suy luận* và không đảm bảo 100%. Không còn Regex Fallback theo tên ngôn ngữ. Phạm vi **kiểm chứng đầy đủ** cho cuộc thi 24h vẫn là TS/JS và Python.
 5. **Thuật toán 2 - Two-Pass Symbol Harvesting (Tầng 1 - 20ms):**
    * *Chặng 1:* Nạp `tree-sitter.wasm` phân tích AST song song trên RAM, lập 3 bảng băm:
      - `Symbol_Table`: Lưu vị trí `{ file, line_start, line_end }` của mọi hàm/class.
@@ -165,7 +165,7 @@ Trước khi đi vào từng bước cụ thể, toàn bộ hệ thống phối 
    * Tự nhẩm 3 góc độ câu hỏi sát hạch, loại bỏ câu học vẹt sách vở, chọn duy nhất 01 câu hỏi Socratic phù hợp với trình độ người học.
 4. **Thuật toán 11 - Cổng Gác Nhị Phân 2 Chốt (Two-Gate Binary Verification - 0.001s):**
    Trước khi trả dữ liệu về máy khách, hàm code thuần kiểm tra tính toàn vẹn:
-   * **Chốt 1 (Set Intersection):** `aiOutput.referenced_symbols` có thuộc `Symbol_Table` của AST không? Nếu ngôn ngữ là Dart/Java chạy Heuristic Regex $\implies$ kích hoạt chế độ *Relaxed Whitelist* chỉ kiểm tra tên Class/Method để không reject oan.
+   * **Chốt 1 (Set Intersection):** `aiOutput.referenced_symbols` có thuộc `Symbol_Table` của AST không? Nếu lát cắt thuộc ngôn ngữ tier `STRUCTURAL` (chưa có resolver riêng, adapter có thể chưa thu đủ field/tham số) $\implies$ kích hoạt chế độ *Relaxed Whitelist* (chỉ cần ít nhất 1 symbol hợp lệ có trong AST) để không reject oan.
    * **Chốt 2 (Regex Blacklist):** Câu hỏi của AI có chứa từ khóa ngoài repo (như Kafka, Redis khi dự án chỉ dùng MySQL) không? Nếu có $\implies$ **REJECT**.
    * *Cơ chế Fallback:* Nếu vi phạm, hủy bỏ kết quả của AI và nạp câu hỏi AST cú pháp an toàn chuẩn mực.
 5. **Ba Tầng Chuẩn Hóa Đại Diện (Canonical 3-Tier Display Stepper):**

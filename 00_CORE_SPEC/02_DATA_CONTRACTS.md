@@ -36,9 +36,28 @@ export type ProjectArchetype =
   | "CLI_TOOL"          // Commander, Typer, Argparse
   | "ALGORITHM_CORE";   // Package giải thuật thuần
 
+// Mã ngôn ngữ chuẩn hóa, lấy từ Language Registry (UPPER_SNAKE theo tên grammar Tree-sitter).
+// VD: "TYPESCRIPT", "PYTHON", "JAVA", "GO", "DART", "RUST", "CSHARP", "PHP", "KOTLIN", "CPP"...
+// KHÔNG còn là enum đóng: thêm ngôn ngữ mới = thêm 1 adapter vào registry, không sửa contract.
+export type LanguageId = string;
+
+// Mức hỗ trợ của một ngôn ngữ (quyết định độ chính xác của CẠNH, không quyết định việc có vẽ được hay không)
+export type LanguageSupportTier =
+  | "RESOLVED"      // Có ImportResolver riêng (TS/JS, Python, Java, Go, Dart...) ➔ cạnh & lát cắt độ chính xác cao
+  | "STRUCTURAL"    // Có grammar Tree-sitter nhưng chưa có resolver riêng ➔ dùng Universal Resolver, cạnh = suy luận
+  | "UNSUPPORTED";  // Không có grammar ➔ chỉ hiển thị cây thư mục / đọc từng file, không dựng DAG
+
+export interface LanguageSupportInfo {
+  language: LanguageId;
+  tier: LanguageSupportTier;
+  code_bytes: number;            // Số byte code của ngôn ngữ này trong phạm vi root_dir_offset
+}
+
 export interface ProjectFingerprint {
   archetype: ProjectArchetype;
-  primary_language: "TYPESCRIPT" | "JAVASCRIPT" | "PYTHON" | "DART" | "JAVA" | "OTHER";
+  primary_language: LanguageId;                 // Ngôn ngữ chiếm nhiều byte code nhất (xem Ingestion Bước 5, Thao tác 5)
+  language_breakdown: LanguageSupportInfo[];    // Mọi ngôn ngữ có trong repo, sắp theo code_bytes giảm dần (hỗ trợ repo đa ngôn ngữ)
+  graph_confidence: "HIGH" | "MIXED" | "LOW";   // HIGH: >= 80% byte thuộc tier RESOLVED; LOW: phần lớn là STRUCTURAL
   detected_framework: string; // VD: "NestJS", "React Native", "Flutter", "FastAPI"
   is_monorepo: boolean;
   root_dir_offset: string;    // "" nếu single repo, "server/" hoặc "backend/" nếu monorepo
@@ -101,7 +120,7 @@ export interface HybridArchitecturalNode {
   preliminary_skills: SWESkill[]; // 1-3 kỹ năng gán tĩnh từ Tầng 2 để xét Auto-Pass trước khi gọi AI
   prerequisites: string[];       // Danh sách ID các node cha (để Dagre phân nhánh)
   position: { x: number; y: number }; // Tọa độ (x, y) do Dagre tính toán
-  files: string[];               // Các file trong lát cắt (VD: ["order.controller.ts", "order.service.ts"])
+  files: string[];               // Các file trong lát cắt (VD: ["order.controller.ts", "order.service.ts"]). Quy ước: files[0] = file Monaco mở mặc định (SuperNode: file có in-degree từ ngoài cụm cao nhất)
   cognitive_complexity: number;  // Điểm xoắn não SonarQube của lát cắt
   uncle_bob: UncleBobMetrics;
   is_vip_algorithm: boolean;     // true nếu được cấp vé VIP do thuật toán phức tạp
@@ -121,8 +140,46 @@ export interface StaticEngineResult {
     id: string;
     source: string;
     target: string;
+    confidence: "RESOLVED" | "INFERRED"; // RESOLVED: nối bởi ImportResolver riêng; INFERRED: nối bởi Universal Resolver (UI vẽ nét đứt)
+    ambiguous?: boolean;                 // true nếu một interface có nhiều implementor
   }>;
   symbol_whitelist: string[];    // Sổ hộ khẩu Symbol dùng cho Cổng Gác Nhị Phân
+  ingestion_report?: IngestionReport; // Báo cáo cắt giảm / cảnh báo / chế độ suy biến (tùy chọn, không phá kiểu cũ)
+}
+
+// ==========================================
+// 7. Bảng Mã Lỗi Chuẩn Tầng 0–2 (Nguồn chân lý duy nhất cho UI & Engine)
+// ==========================================
+export type IngestionErrorCode =
+  | "ERR_INVALID_GITHUB_URL"        // Link không phải GitHub / sai cú pháp
+  | "ERR_PREFLIGHT_404_OR_PRIVATE"  // Repo không tồn tại HOẶC private (GitHub trả 404 cho cả hai)
+  | "ERR_NETWORK_TIMEOUT"           // Probe/stream quá thời gian — KHÔNG được gộp với 404
+  | "ERR_BRANCH_NOT_FOUND"          // Không phân giải được ref (branch/tag/SHA)
+  | "ERR_EMPTY_REPOSITORY"          // Repo chưa có commit nào
+  | "ERR_REPO_UNAVAILABLE_451"      // Repo bị gỡ (DMCA / pháp lý)
+  | "ERR_GITHUB_RATE_LIMIT_CDN"     // HTTP 429 từ github.com / codeload
+  | "ERR_STREAM_TIMEOUT"            // Tải stream quá STREAM_TIMEOUT_MS
+  | "ERR_STREAM_CORRUPTED"          // Stream đứt giữa chừng / zip hỏng chữ ký
+  | "ERR_STREAM_QUOTA_EXCEEDED"     // Vượt MAX_STREAM_BYTES (chỉ là lỗi cứng khi chưa nạp được file nào)
+  | "ERR_UNSUPPORTED_LANGUAGE"      // Phần lớn code thuộc ngôn ngữ KHÔNG có grammar Tree-sitter nào trong Language Registry (tier UNSUPPORTED). Ngôn ngữ tier STRUCTURAL KHÔNG gây lỗi này
+  | "ERR_NO_SOURCE_FILES_FOUND"     // 0 file code hợp lệ (manifest KHÔNG được tính là code)
+  | "ERR_NO_ARCHITECTURAL_SLICE";   // Tầng 1–2 không dựng được lát cắt nào sau mọi fallback
+
+export interface IngestionReport {
+  truncated: boolean;               // true nếu đã dừng nạp vì chạm quota (giữ phần đã có)
+  code_file_count: number;          // Số file code thực sự nạp vào RAMCodeStore
+  manifest_count: number;           // Số manifest nạp vào ManifestStore (không tính quota 50)
+  skipped: {
+    garbage: number;                // Khớp IGNORE_DIR_SEGMENTS / IGNORE_FILE_PATTERNS
+    binary: number;                 // Null byte / symlink / LFS pointer
+    oversized: number;              // > MAX_SINGLE_FILE_BYTES hoặc dòng quá dài (minified)
+    unsupported_lang: number;       // Đuôi file thuộc ngôn ngữ không có grammar trong Language Registry (tier UNSUPPORTED)
+    quota: number;                  // Bị loại do FilePriorityScore thấp (ngoài Top-50)
+    parse_error: number;            // Tỉ lệ node ERROR của Tree-sitter > 30%
+  };
+  warnings: string[];               // Thông điệp tiếng Việt hiển thị cho người học
+  degraded_mode?: "PROCEDURAL" | "ALGORITHM_COLLECTION"; // Chế độ suy biến của Tầng 1–2 (nếu có)
+  redacted_secret_count?: number;   // Số secret đã bị SecretRedactor che trước khi gửi AI
 }
 ```
 
@@ -138,7 +195,8 @@ export interface ContextSandwichPayload {
   macro_context: {
     repo_name: string;
     archetype: ProjectArchetype;
-    primary_language: string;
+    primary_language: LanguageId;
+    graph_confidence: "HIGH" | "MIXED" | "LOW"; // Từ ProjectFingerprint; LOW ⇒ prompt dặn AI không khẳng định chắc chắn quan hệ gọi hàm
     is_monorepo: boolean;
     tech_stack: string[];        // Trích xuất từ package.json / pubspec.yaml
     node_id: string;
