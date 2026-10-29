@@ -7,7 +7,7 @@
 - Cây làm việc có thay đổi chưa commit của planner (`.ai/CHOT_CUOI.md`, `.ai/tools/refcheck.mjs`, `.ai/tasks/TASK_06.md`). **Không sửa, không `git add`** các file đó.
 
 ## Được ghi
-`spec/00_QUYET_DINH.md`, `spec/01_KIEN_TRUC_VA_LUONG.md`, `spec/03_API_VA_LUU_TRU.md`, `spec/20_AI_GOI_VA_PROMPT.md`, `spec/21_AI_KIEM_VA_DUYET.md`, `spec/22_BKT_VA_KE_HOACH_CAU_HOI.md`, `spec/30_UI.md`, `spec/50_TEST_VA_FIXTURE.md`, `pitch/PHAN_BIEN_BGK.md`, `pitch/KICH_BAN_DEMO.md`, `pitch/LUONG_DE_HIEU.md`, `.ai/tasks/TASK_06.report.md`, `.ai/tasks/DONE_06`. Không file nào khác. **Không sửa `spec/02`**: không thêm / đổi hằng, kiểu nào; cần thêm ⇒ dừng, ghi vào báo cáo.
+`spec/00_QUYET_DINH.md`, `spec/01_KIEN_TRUC_VA_LUONG.md`, `spec/03_API_VA_LUU_TRU.md`, `spec/20_AI_GOI_VA_PROMPT.md`, `spec/21_AI_KIEM_VA_DUYET.md`, `spec/22_BKT_VA_KE_HOACH_CAU_HOI.md`, `spec/30_UI.md`, `spec/40_KE_HOACH_21H.md`, `spec/50_TEST_VA_FIXTURE.md`, `pitch/PHAN_BIEN_BGK.md`, `pitch/KICH_BAN_DEMO.md`, `pitch/LUONG_DE_HIEU.md`, `.ai/tasks/TASK_06.report.md`, `.ai/tasks/DONE_06`. Không file nào khác. **Không sửa `spec/02`**: không thêm / đổi hằng, kiểu nào; cần thêm ⇒ dừng, ghi vào báo cáo.
 
 ## Việc
 Chỉ sửa đúng các điểm dưới; không đổi chữ nào khác (chuỗi hiển thị, khối prompt, schema giữ nguyên). Gọi bằng mã / tên (`BKT-24`, `CONFIG.*`), không tự đặt số.
@@ -32,7 +32,10 @@ Chỉ sửa đúng các điểm dưới; không đổi chữ nào khác (chuỗi
    - Mục 4 tầng 5 và bảng luồng Mục 5 ("… mở khóa, Fast-Track") bỏ Fast-Track.
 8. **`pitch/PHAN_BIEN_BGK.md`.** Bảng "Không nói" còn "≈ $0.03/phiên" ⇒ sửa cho khớp `02` Mục 1.1 sau D-37 (người học sau cùng repo ~0,03 USD, ước tính chưa đo; phiên đầu tiên theo cách tính cũ).
 9. **`pitch/KICH_BAN_DEMO.md`.** Rà D-37: câu trả lời soạn sẵn dùng cho 3 node demo lấy từ **Offline bundle đã duyệt**, không từ lần sinh câu hỏi trực tiếp; khối "cổng gác chặn câu AI bịa tên hàm" (V-1) giữ nguyên. Chỉ sửa chữ nếu đang nói khác.
-10. **Chỉ rà, không sửa trừ khi sai (ghi kết quả vào báo cáo):**
+10. **V-1 / test `GUARD-04`.** Giữ cách demo chạy lệnh ở terminal (không thêm thành phần UI ở `30`). Thêm:
+    - `spec/40` Mục DoD: 1 dòng "repo thi có test tên bắt đầu bằng `GUARD-04` (`21` Test bắt buộc, `50` Mục 2.1), chạy xanh" — đặt cạnh các dòng DoD cùng loại, đặt mốc giờ theo cách các dòng đó đang ghi, không tự đặt giờ mới.
+    - `pitch/KICH_BAN_DEMO.md` đoạn 3:20–3:50 và Mục 4 (dự phòng): nếu terminal lỗi hoặc không chuyển cửa sổ được thì mở ảnh chụp kết quả test chụp sẵn (Mục 5 đã nhắc chụp); 1–2 câu, không viết lại đoạn.
+11. **Chỉ rà, không sửa trừ khi sai (ghi kết quả vào báo cáo):**
     - `spec/30` không đọc trực tiếp `node_runs` / `question_attempts` qua Supabase client (RLS, `03`).
     - `spec/30` không viện dẫn `GithubRepoInfo.path_trimmed` như thể server trả cho client nếu `02` không trả trường đó; client tự nhận `/tree/…`, `/blob/…` là đủ.
     - `node_runs.steps` / `forbidden_external_keywords` chỉ chứa tên (INV-04) — nếu `03` / `20` có chỗ mô tả như chứa code thì sửa.
@@ -52,13 +55,13 @@ node .ai/tools/refcheck.mjs --diff .ai/tools/refcheck_baseline.txt
 Đạt khi: mọi sơ đồ OK; `spec/20` ≤ 47 433, các spec khác ≤ 40 000 byte (`spec/03` cố gắng ≤ 32 000, không đạt cũng được); mọi token `preserve` báo mất đều thuộc thứ đã bỏ ở đây (liệt kê + mã); `refcheck` **không còn** dòng `AI-24` và không có dòng mới nào khác.
 
 ## Báo cáo `.ai/tasks/TASK_06.report.md`
-Từng file: byte trước → sau (đo bằng lệnh) · mmcheck · token mất + lý do · chỗ chưa làm / không chắc. Thêm: lệnh `node -e` đã dùng cho T-MM, thông điệp `ERR_BRANCH_NOT_FOUND` mới, danh sách token cũ còn lại (mục 10), toàn bộ output `refcheck` cuối.
+Từng file: byte trước → sau (đo bằng lệnh) · mmcheck · token mất + lý do · chỗ chưa làm / không chắc. Thêm: lệnh `node -e` đã dùng cho T-MM, thông điệp `ERR_BRANCH_NOT_FOUND` mới, dòng DoD `GUARD-04` đã thêm ở `spec/40`, danh sách token cũ còn lại (mục 11), toàn bộ output `refcheck` cuối.
 
 ## Kết thúc (đúng thứ tự)
 1. Tạo file rỗng `.ai/tasks/DONE_06`.
 2. Chạy đúng lệnh:
 ```
-git add spec/00_QUYET_DINH.md spec/01_KIEN_TRUC_VA_LUONG.md spec/03_API_VA_LUU_TRU.md spec/20_AI_GOI_VA_PROMPT.md spec/21_AI_KIEM_VA_DUYET.md spec/22_BKT_VA_KE_HOACH_CAU_HOI.md spec/30_UI.md spec/50_TEST_VA_FIXTURE.md pitch/PHAN_BIEN_BGK.md pitch/KICH_BAN_DEMO.md pitch/LUONG_DE_HIEU.md .ai/tasks/TASK_06.report.md .ai/tasks/DONE_06
+git add spec/00_QUYET_DINH.md spec/01_KIEN_TRUC_VA_LUONG.md spec/03_API_VA_LUU_TRU.md spec/20_AI_GOI_VA_PROMPT.md spec/21_AI_KIEM_VA_DUYET.md spec/22_BKT_VA_KE_HOACH_CAU_HOI.md spec/30_UI.md spec/40_KE_HOACH_21H.md spec/50_TEST_VA_FIXTURE.md pitch/PHAN_BIEN_BGK.md pitch/KICH_BAN_DEMO.md pitch/LUONG_DE_HIEU.md .ai/tasks/TASK_06.report.md .ai/tasks/DONE_06
 git commit -m "docs: TASK_06 dọn lệch sau 05A-C"
 ```
 3. Dừng. **Không push.**
