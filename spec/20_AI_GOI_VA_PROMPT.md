@@ -1,20 +1,19 @@
-# 20 — AI: 4 LỜI GỌI, PROMPT, SCHEMA, LUẬT ĐẠT & `challenge_token`
+# 20 — AI: 4 LỜI GỌI, PROMPT, SCHEMA & LUẬT ĐẠT
 
-> Đặc tả 4 lời gọi Gemini (`analyze-node`, `analyze-overview`, `enrich-node`, `evaluate-feynman`), luật Đạt, gợi ý 3 nấc, `challenge_token`. Cổng gác: `21_AI_KIEM_VA_DUYET.md` · Kiểu: `02_CONTRACTS.md` · Hằng số: `CONFIG.*` · Endpoint: `03` · Kế hoạch: `22`.
-> Code: `src/server/ai/gemini.ts`, `src/server/ai/prompts/{common,analyze,overview,questions,grade}.ts`, `src/server/ai/schemas.ts`, `src/server/ai/{analyze,overview,questions,grade}.ts`, `src/server/token.ts` (quota: `src/server/quota.ts`, cache: `src/server/cache.ts`).
+> Đặc tả 4 lời gọi Gemini (`analyze-node`, `analyze-overview`, `enrich-node`, `evaluate-feynman`), luật Đạt, gợi ý 3 nấc. Cổng gác: `21_AI_KIEM_VA_DUYET.md` · Kiểu: `02_CONTRACTS.md` · Hằng số: `CONFIG.*` · Endpoint: `03` · Kế hoạch: `22`.
+> Code: `src/server/ai/gemini.ts`, `src/server/ai/prompts/{common,analyze,overview,questions,grade}.ts`, `src/server/ai/schemas.ts`, `src/server/ai/{analyze,overview,questions,grade}.ts` (quota: `src/server/quota.ts`, cache: `src/server/cache.ts`).
 
 ## Đọc nhanh
 
-- 4 lời gọi AI: `analyze-node` (lát cắt code → `NodeAnalysis`, cache `ai_cache`), `analyze-overview` (tổng quan repo → `RepoOverview`, cache), `enrich-node` (đặt câu hỏi & rubric → `feynman_question`, cache), `evaluate-feynman` (chấm Feynman → điểm & hints, không cache). Cổng gác `21` kiểm duyệt mọi kết quả.
+- 4 lời gọi AI: `analyze-node` (lát cắt code → `NodeAnalysis`, cache `ai_cache`), `analyze-overview` (tổng quan repo → `RepoOverview`, cache), `enrich-node` (đặt câu hỏi & rubric → `feynman_question`, lưu ở `node_runs`, không cache — D-37), `evaluate-feynman` (chấm Feynman → điểm & hints, không cache, không nhận code — D-36). Cổng gác `21` kiểm duyệt mọi kết quả.
 
 ```mermaid
 flowchart TD
   C["ai_cache (AI-08)"]
   AN["analyze-node (Mục 4)"] -->|NodeAnalysis| OV["analyze-overview (Mục 5)"]
-  AN -->|NodeAnalysis| EN["enrich-node (Mục 6)"] -->|rubric + challenge_token| EF["evaluate-feynman (Mục 7)"]
+  AN -->|NodeAnalysis| EN["enrich-node (Mục 6)"] -->|"rubric ở node_runs (D-36)"| EF["evaluate-feynman (Mục 7)"]
   AN <--> C
   OV <--> C
-  EN <--> C
   G["Cổng gác (21)"] -.-> AN & OV & EN & EF
 ```
 
@@ -23,7 +22,7 @@ flowchart TD
 | 1–3 | Luật chung, gọi model & đóng gói XML | `gemini.ts`, `prompts/common.ts` |
 | 4–5 | `analyze-node` & `analyze-overview` | `analyze.ts`, `overview.ts` |
 | 6–7 | `enrich-node` & `evaluate-feynman` | `questions.ts`, `grade.ts` |
-| 8–9 | `challenge_token`, lỗi & test | `token.ts`, `schemas.ts` |
+| 8 | Lỗi & test | `schemas.ts` |
 
 ---
 
@@ -36,9 +35,9 @@ flowchart TD
 - Server lấy `file_path`, `line_start`, `line_end` từ `trace_steps` theo số bước; không dùng dòng AI hiển thị. Dòng trong văn bản AI chỉ giữ khi qua `21` GUARD-08.
 - **AI-06:** Quota: trước lời gọi trượt cache: `tokens_used ≥ CONFIG.SESSION_TOKEN_QUOTA` ⇒ `ERR_TOKEN_QUOTA_EXCEEDED`. Trúng cache: 0 token.
 - **AI-07:** Đếm token sau request có `usageMetadata` (kể cả bị chặn): `tokens_used += promptTokenCount + candidatesTokenCount + (thoughtsTokenCount ?? 0)` bằng 1 câu `update` ngoài transaction (API-06, API-07). In-flight map chỉ tính phiên khởi tạo.
-- **AI-08:** Cache: khóa `03` Mục 3.3 (+ biến thể AI-22); chỉ ghi bản đã qua kiểm (D-15); `tokens_in/out` = tổng request; trùng khóa dùng chung 1 promise.
+- **AI-08:** Cache: chỉ `analyze-node`, `analyze-overview`, khóa `03` Mục 3.3; đặt câu hỏi và chấm không cache (D-37); chỉ ghi bản đã qua kiểm (D-15); `tokens_in/out` = tổng request; trùng khóa dùng chung 1 promise.
 - **AI-09:** Văn bản AI: tiếng Việt, câu ngắn; tên hàm/biến/thuộc tính/file đặt trong `` ` `` (`21` GUARD-04); không markdown khác.
-- **AI-10:** Response theo API-03 (`03`); phần AI không có `points[].quote`, `code_context`.
+- **AI-10:** Response theo API-03 (`03`); phần AI không có `points[].quote`.
 
 ---
 
@@ -67,16 +66,16 @@ ai.models.generateContent({ model: CONFIG.LLM_MODEL, contents: [{ role: "user", 
 flowchart TD
   S["Một lời gọi logic"] --> K{"Trúng ai_cache? (AI-08)"}
   K -- "có" --> HIT["Dùng bản đã kiểm · 0 token"]
-  K -- "không · lời gọi chấm không có cache" --> Q{"Còn quota? (AI-06)"}
+  K -- "không · đặt câu hỏi, chấm không có cache" --> Q{"Còn quota? (AI-06)"}
   Q -- "hết" --> EQ["ERR_TOKEN_QUOTA_EXCEEDED · không gọi"]
   Q -- "còn" --> R["Request JSON theo schema (AI-11)"]
   R --> T{"Kết quả (AI-12)"}
   T -- "JSON hợp lệ" --> G{"Cổng gác (21)"}
-  G -- "qua" --> OK["Ghi ai_cache, trừ lời gọi chấm · trả kết quả"]
+  G -- "qua" --> OK["Ghi ai_cache nếu là analyze / overview · trả kết quả"]
   G -- "bị chặn" --> GB["Theo luật từng lời gọi (Mục 4–7)<br/>gọi lại · bản khung · DROPPED · mẫu tĩnh"]
   T -- "TRANSIENT · INVALID_JSON" --> M{"Còn lượt?<br/>tối đa 1 + LLM_MAX_RETRIES request"}
   M -- "còn" --> W["retryDelay, không kiểm lại quota"] --> R
-  M -- "hết" --> UN["Nhánh AI không dùng được (Mục 9)"]
+  M -- "hết" --> UN["Nhánh AI không dùng được (Mục 8)"]
   T -- "FATAL 400 · 401 · 403 · 404" --> UN
 ```
 
@@ -88,7 +87,7 @@ Tối đa `1 + CONFIG.LLM_MAX_RETRIES` request mỗi lời gọi logic, bất k�
 | `finishReason` ≠ `STOP`, chặn, `JSON.parse` lỗi (sau bỏ ```` ```json ````), `parse()` = `null` | `INVALID_JSON` | Có |
 | HTTP 400/401/403/404 | `FATAL` | Không; log lỗi; hết lượt |
 
-Vòng gọi lại (AI-15, AI-19, AI-22, AI-27) chạy `await retryDelay(prev)` trước request kế tiếp. Request cuối `TRANSIENT`/`INVALID_JSON`/`FATAL` ⇒ nhánh AI không dùng được; cuối `GUARD` ⇒ nhánh gác chặn (Mục 9). `SessionRow` = dòng `learning_sessions`.
+Vòng gọi lại (AI-15, AI-19, AI-22, AI-27) chạy `await retryDelay(prev)` trước request kế tiếp. Request cuối `TRANSIENT`/`INVALID_JSON`/`FATAL` ⇒ nhánh AI không dùng được; cuối `GUARD` ⇒ nhánh gác chặn (Mục 8). `SessionRow` = dòng `learning_sessions`.
 
 ---
 
@@ -98,12 +97,12 @@ Vòng gọi lại (AI-15, AI-19, AI-22, AI-27) chạy `await retryDelay(prev)` t
 
 ```typescript
 const DATA_TAGS = ["repo_info","node","skill_catalogue","pattern_catalogue","forbidden_tech","warning","code_data","dto_data",
-  "node_analysis","questions_plan","previous_questions","repo_summary","question","focus","reference_answer",
+  "node_analysis","questions_plan","repo_summary","question","focus","reference_answer",
   "must_have_points","steps","attempt","hint_rule","student_answer"] as const;
 const TAG_RE = new RegExp(`<\\s*/?\\s*(?:${DATA_TAGS.join("|")})\\b`, "gi");
 export const wrapData = (tag: (typeof DATA_TAGS)[number], body: string) =>
   `<${tag}>\n${body.replace(TAG_RE, (m) => m.replace("<", "‹"))}\n</${tag}>`;     // dữ liệu không đóng/mở được thẻ giả
-export function renderSteps(node: HybridArchitecturalNode, stepIndices: number[]): string; // prompt VÀ code_context của token
+export function renderSteps(node: HybridArchitecturalNode, stepIndices: number[]): string; // chỉ prompt phân tích / đặt câu hỏi; chấm không nhận code (D-36)
 ```
 
 `renderSteps` — bước tăng dần trong `stepIndices`; dòng có `snippet_line_map[i] > 0` in số dòng gốc căn phải 4 ký tự, dòng marker (`0`) in 5 khoảng trắng:
@@ -305,25 +304,21 @@ export const OVERVIEW_SCHEMA = obj({                               // = RepoOver
 ### Luồng đặt câu hỏi (AI-22)
 
 ```typescript
-export async function getOrGenerateQuestions(session: SessionRow, graph: StaticEngineResult, node: HybridArchitecturalNode,
-  analysis: NodeAnalysis, plan: QuestionPlanItem[], mode: RunMode): Promise<RunQuestion[]>;   // RunQuestion: 03 §3.1
+export async function generateQuestions(session: SessionRow, graph: StaticEngineResult, node: HybridArchitecturalNode,
+  analysis: NodeAnalysis, plan: QuestionPlanItem[]): Promise<RunQuestion[]>;   // RunQuestion: 03 §3.1
 ```
 
-1. Khóa: `base = questionKey(session, node, item, mode)` (`03` Mục 3.3); biến thể `v`: `base` (`v === 1`), `base + "|v" + v` (v ≥ 2). `LEARN` dùng `v === 1`. `REMEDIATION`/`DECAY_REVIEW`: lấy biến thể đầu trong cache có `normText(feynman_question) ∉ normText(previous)` (AI-24); chưa có ⇒ ghi câu mới.
-2. Item thiếu ⇒ `assertQuota` ⇒ request 1 mọi item thiếu ⇒ `checkQuestions` (`21` GUARD-12) ⇒ ghi cache câu đạt ⇒ request 2 chỉ item hỏng ⇒ hỏng ⇒ `DROPPED`. Request 1 `TRANSIENT`/`INVALID_JSON` ⇒ retry cả lô; request 2 lỗi mạng ⇒ item chưa xong thành `DROPPED`.
-3. Trả `RunQuestion[]` theo `plan`; item `DROPPED` ⇒ `finished = true`, `outcome = null`, `ended_by = "DROPPED"`, không cache. Mọi item `DROPPED` ⇒ `enrichNode` ném `ERR_AI_REJECTED`.
+1. Không cache (D-37): mỗi run sinh mới; câu hỏi + đáp án lưu ở `node_runs` (`03` Mục 6.1).
+2. `assertQuota` ⇒ request 1 mọi item ⇒ `checkQuestions` (`21` GUARD-12) ⇒ request 2 chỉ item hỏng ⇒ hỏng ⇒ `DROPPED`. Request 1 `TRANSIENT`/`INVALID_JSON` ⇒ retry cả lô; request 2 lỗi mạng ⇒ item chưa xong thành `DROPPED`.
+3. Trả `RunQuestion[]` theo `plan`; item `DROPPED` ⇒ `finished = true`, `outcome = null`, `ended_by = "DROPPED"`. Mọi item `DROPPED` ⇒ `enrichNode` ném `ERR_AI_REJECTED`.
 
 ### Bước gửi AI (AI-23)
 
-`QuestionPlanItem.step_indices` do `planNodeQuestions` tính (`22` BKT-48; `FLOW`/`CHANGE` gửi mọi bước). Code gửi AI = `renderSteps(node, hợp step_indices các item của request)`; câu chỉ dựa vào bước trong `buoc` (`code_context` của token = đúng các bước đó).
-
-### previous_questions (AI-24)
-
-`LEARN` ⇒ `[]`. `REMEDIATION` ⇒ `feynman_question` các câu cùng `skill` trong run trước (lưu ở `run_questions`, khóa `RunQuestion.cache_key`). `DECAY_REVIEW` ⇒ `feynman_question` mọi lần hỏi trước của node (`previous`).
+`QuestionPlanItem.step_indices` do `planNodeQuestions` tính (`22` BKT-48; `FLOW`/`CHANGE` gửi mọi bước). Code gửi AI = `renderSteps(node, hợp step_indices các item của request)`; câu chỉ dựa vào bước trong `buoc`. AI chấm không nhận code (D-36).
 
 ### Prompt đặt câu hỏi (AI-25)
 
-`QuestionPromptPayload` dựng từ `graph`, `node`, `analysis`, `plan`, `previous_questions`. Hệ thống = `QUESTIONS_SYSTEM` + `FOCUS_GUIDE_A | FOCUS_GUIDE_B` (`FOCUS_GUIDE_A`, `FOCUS_GUIDE_B`) + (`LOW_CONFIDENCE`). `{{FLOW_MIN}}` = `CONFIG.QUESTIONS_FLOW_MIN_STEPS`; `{{PMIN}}`, `{{PMAX}}` = `CONFIG.MUST_HAVE_POINTS_MIN`, `CONFIG.MUST_HAVE_POINTS_MAX` (`MUST_HAVE_POINTS_MAX`). Cần nhắc ít nhất `CONFIG.FLOW_ANSWER_MIN_STEPS` bước.
+`QuestionPromptPayload` dựng từ `graph`, `node`, `analysis`, `plan`. Hệ thống = `QUESTIONS_SYSTEM` + `FOCUS_GUIDE_A | FOCUS_GUIDE_B` (`FOCUS_GUIDE_A`, `FOCUS_GUIDE_B`) + (`LOW_CONFIDENCE`). `{{FLOW_MIN}}` = `CONFIG.QUESTIONS_FLOW_MIN_STEPS`; `{{PMIN}}`, `{{PMAX}}` = `CONFIG.MUST_HAVE_POINTS_MIN`, `CONFIG.MUST_HAVE_POINTS_MAX` (`MUST_HAVE_POINTS_MAX`). Cần nhắc ít nhất `CONFIG.FLOW_ANSWER_MIN_STEPS` bước.
 
 ```text
 [QUESTIONS_SYSTEM]
@@ -339,7 +334,6 @@ LUẬT CHO MỖI CÂU
 5. fix: cách sửa cụ thể, được viết code mới. Câu không về điểm dở và không có gì cần sửa ⇒ "Không có lỗi cần sửa ở góc này."
 6. Chỉ nhắc tên có trong <code_data>, <dto_data> hoặc tên file trong <repo_info> (riêng fix được dùng tên mới). Không nhắc công nghệ trong <forbidden_tech> ở bất kỳ trường nào.
 7. Tiếng Việt, câu ngắn, không markdown ngoài backtick.
-8. Có <previous_questions>: câu mới phải khác góc, khác tình huống, không lặp câu cũ hay chỉ đổi vài chữ.
 
 ĐỘ SÂU THEO tier: NOVICE — 1 tình huống, 1–2 bước suy luận, trả lời trong vài câu. PRACTITIONER — thêm hậu quả hoặc cách sửa, hoặc so sánh 2 cách. ARCHITECT — tình huống biên, tải lớn, đồng thời hoặc đánh đổi thiết kế.
 
@@ -376,7 +370,6 @@ diem_do:
 <questions_plan>
 {i}. skill={skill} · tier={tier} · focus={focus} · buoc={step_indices nối ","}
 </questions_plan>
-[<previous_questions>- {câu cũ}</previous_questions> nếu có]
 [<warning> nếu có]
 <code_data>{micro_trace.scoped_code_snippet}</code_data>
 <dto_data>{micro_trace.dto_interfaces | (không có)}</dto_data>
@@ -400,10 +393,12 @@ export const questionsSchema = (items: QuestionPlanItem[]) => obj({          // 
 
 ### gradeWithAI (AI-27)
 
-`gradeWithAI` gọi ở `03` Mục 6.2 bước 3 khi `isInjection(answer)` = false (`21` GUARD-15).
+`gradeWithAI` gọi ở `03` Mục 6.2 bước 3 khi `isInjection(answer)` = false (`21` GUARD-15). Đầu vào đọc từ DB (D-36), không có code:
 
 ```typescript
-export async function gradeWithAI(t: ChallengeTokenPayload, answer: string, attempt: number,
+// nội bộ — dựng từ 1 dòng node_runs (03 Mục 3.1): câu question_index + steps + forbidden_external_keywords của run
+type GradeContext = RunQuestion & { steps: RunStepRef[]; forbidden_external_keywords: string[] };
+export async function gradeWithAI(t: GradeContext, answer: string, attempt: number,
   maxAttempts: number, session: SessionRow): Promise<GradingRaw> {   // CHỈ SERVER
   await assertQuota(session);                     // ERR_TOKEN_QUOTA_EXCEEDED — không tính lượt
   const raw = await callWithRetry(gradeRequest(t, answer, attempt, maxAttempts, session));
@@ -454,10 +449,10 @@ feedback (người học đọc, tối đa {{FMAX}} câu)
 
 detected_jargons: thuật ngữ chuyên ngành người học đã dùng, chép nguyên văn từ <student_answer>; không có ⇒ [].
 
-Tên hàm, biến, file trong feedback và gợi ý đặt trong backtick, chỉ dùng tên có trong <code_data>, <steps> hoặc <student_answer>. Viết tiếng Việt.
+Tên hàm, biến, file trong feedback và gợi ý đặt trong backtick, chỉ dùng tên có trong <steps> hoặc <student_answer>. Viết tiếng Việt.
 ```
 
-`HINT_RULE[expectedFollowUpType(attempt, maxAttempts, t.mode) ?? "NONE"]`:
+`HINT_RULE[expectedFollowUpType(attempt, maxAttempts) ?? "NONE"]`:
 
 ```text
 [CONCEPT] Nếu chưa đạt: follow_up_type = "CONCEPT"; follow_up_step_index = null; follow_up_question = 1 câu hỏi gợi mở về KHÁI NIỆM người học đang hiểu sai hoặc còn thiếu. KHÔNG chỉ vị trí trong code: không nêu bước, file, tên hàm, tên biến, số dòng.
@@ -473,7 +468,6 @@ Tin nhắn người dùng:
 <reference_answer>{t.reference_answer}</reference_answer>
 <must_have_points>{i}. {ý thứ i} (mỗi ý 1 dòng)</must_have_points>
 <steps>{step_index} · {layer} · {file_path} · {function_name} (mỗi bước của t.steps 1 dòng)</steps>
-<code_data>{t.code_context}</code_data>
 <attempt>{attempt}/{maxAttempts}</attempt>
 <hint_rule>{HINT_RULE[…]}</hint_rule>
 <student_answer>{answer}</student_answer>
@@ -497,7 +491,7 @@ export const gradeSchema = (n: number) => obj({                    // = GradingR
 ### Luật Đạt (AI-30, D-13)
 
 Server không sửa `core_accuracy`; điểm và ý cùng kết luận:
-1. `points_covered = coveredFlags(g, t.must_have_points, answer)`: ý `i` chỉ `covered = true` khi: AI đánh `true`, `quote` có thật trong `answer` (≥ `CONFIG.GRADING_QUOTE_MIN_CHARS` ký tự; so khớp bỏ khoảng trắng/hoa thường; quote chứa `…` thì mọi đoạn con có mặt đúng thứ tự), và không phải `OFF_TOPIC`.
+1. `points_covered = coveredFlags(g, t.must_have_points, answer)`: ý `i` chỉ `covered = true` khi: AI đánh `true`, `quote` có thật trong `answer` theo so khớp **lỏng** (D-13): sau chuẩn hóa (`normText`, bỏ dấu câu ở hai đầu) `quote` chỉ cần là đoạn con của `answer`, tổng ≥ `CONFIG.GRADING_QUOTE_MIN_CHARS` ký tự; quote chứa `…` thì mỗi đoạn là đoạn con (không xét thứ tự); và không phải `OFF_TOPIC`.
 2. `is_passed = decidePass`: `g.intent === "ANSWER"` VÀ `g.core_accuracy ≥ CONFIG.PASS_CORE_ACCURACY` VÀ mọi ý đều `covered`.
 
 ```typescript
@@ -516,30 +510,25 @@ export const decidePass = (g: GradingRaw, mustHave: string[], answer: string): b
   g.intent === "ANSWER" && g.core_accuracy >= CONFIG.PASS_CORE_ACCURACY && coveredFlags(g, mustHave, answer).every(Boolean);
 ```
 
-### Gợi ý theo lượt và mode (AI-31)
+### Gợi ý theo lượt (AI-31)
 
 ```mermaid
 flowchart LR
-  subgraph LD["LEARN, DECAY_REVIEW · tối đa MAX_ATTEMPTS_PER_QUESTION lượt"]
+  subgraph LD["LEARN · tối đa MAX_ATTEMPTS_PER_QUESTION lượt"]
     direction TB
     L1["Lượt 1 chưa đạt"] -- "gợi ý CONCEPT" --> L2["Lượt 2 … áp chót chưa đạt"] -- "gợi ý CODE_POINTER" --> L3["Lượt cuối chưa đạt"] -- "không gợi ý" --> LDONE["Câu xong · mở đáp án"]
-  end
-  subgraph RM["REMEDIATION · tối đa REMEDIATION_MAX_ATTEMPTS lượt"]
-    direction TB
-    R1["Lượt trước cuối chưa đạt"] -- "gợi ý CODE_POINTER" --> R2["Lượt cuối chưa đạt"] -- "không gợi ý" --> RDONE["Câu xong · mở đáp án"]
   end
 ```
 
 ```typescript
-export function expectedFollowUpType(attempt: number, maxAttempts: number, mode: RunMode): FollowUpType | null {
+export function expectedFollowUpType(attempt: number, maxAttempts: number): FollowUpType | null {
   if (attempt >= maxAttempts) return null;            // lượt cuối: câu xong ⇒ hiện đáp án
-  if (mode === "REMEDIATION") return "CODE_POINTER";  // đã xem đáp án ở run LEARN
   return attempt === 1 ? "CONCEPT" : "CODE_POINTER";
 }
 export function decideFollowUp(g: GradingRaw, attempt: number, maxAttempts: number,
-  isPassed: boolean, t: ChallengeTokenPayload, answer: string): FollowUp | null {
+  isPassed: boolean, t: GradeContext, answer: string): FollowUp | null {
   if (isPassed || g.misconception === INJECTION_MARKER) return null;              // AI-33
-  const expected = expectedFollowUpType(attempt, maxAttempts, t.mode);
+  const expected = expectedFollowUpType(attempt, maxAttempts);
   if (expected === null) return null;
   const ok = g.follow_up_type === expected && g.follow_up_question !== null
     && verifyFollowUp(g, t, answer, isPassed).follow_up_ok;                       // 21 GUARD-13
@@ -565,7 +554,7 @@ export function decideFollowUp(g: GradingRaw, attempt: number, maxAttempts: numb
 
 ```typescript
 export const INJECTION_MARKER = "__INJECTION__";                 // nội bộ; misconception không bao giờ ra client (AI-10)
-export const injectionGrading = (t: ChallengeTokenPayload): GradingRaw => ({
+export const injectionGrading = (t: Pick<RunQuestion, "must_have_points">): GradingRaw => ({
   core_accuracy: 0, simplicity: 0, intent: "OFF_TOPIC",
   points: t.must_have_points.map((_, i) => ({ index: i + 1, covered: false, quote: "" })),
   misconception: INJECTION_MARKER, follow_up_question: null, follow_up_type: null, follow_up_step_index: null,
@@ -583,26 +572,7 @@ export const injectionGrading = (t: ChallengeTokenPayload): GradingRaw => ({
 
 ---
 
-## 8. `challenge_token` (`src/server/token.ts`)
-
-### Token bảo vệ lượt chấm (AI-35)
-
-```typescript
-type TokenBody = Omit<ChallengeTokenPayload, "v" | "issued_at" | "exp">;                  // nội bộ
-export function buildTokenPayload(userId: string, sessionId: string, run: { id: string; node_id: string; mode: RunMode },
-  rq: RunQuestion, q: GeneratedQuestionRaw, node: HybridArchitecturalNode, graph: StaticEngineResult): TokenBody;
-export function issueChallengeToken(body: TokenBody, now: number): string;
-export function openChallengeToken(token: string, now: number): ChallengeTokenPayload;   // ném _INVALID / _EXPIRED
-```
-
-- **Nội dung:** `question_index`, `skill`, `tier`, `focus`, `step_indices` từ `RunQuestion`; `run_id`, `node_id`, `mode` từ run; 4 trường đáp án từ `ai_cache`; `steps` = `trace_steps` ⇒ `{ step_index: step_number, layer, file_path, function_name }`; `code_context = renderSteps(node, rq.step_indices)` (D-14); `forbidden_external_keywords = forbiddenKeywords(…)` (AI-14); `exp = issued_at + CONFIG.CHALLENGE_TOKEN_TTL_MS`. Chỉ phát cho câu chưa `finished` (còn lại `""`).
-- **Mã hóa:** khóa = `base64decode(CHALLENGE_TOKEN_KEY)` (32 byte); `iv` 12 byte; AES-256-GCM, AAD `"simplifey.ct.v1"`; token = `"v1." + b64url(iv) + "." + b64url(ciphertext ‖ tag16)`.
-- **Mở:** (1) 3 phần, đầu `"v1"`; (2) `iv` 12 byte, sau > 16 byte; (3) giải mã + tag; (4) `JSON.parse` + kiểm hình dạng (`v === 1`, `question_index` ≥ 1, enum hợp lệ, `step_indices ⊆ steps[].step_index`) — sai ⇒ `INVALID`; (5) `now > exp` ⇒ `EXPIRED`.
-- **Kiểm thêm:** `user_id`, `session_id` khớp request (`03` Mục 6.2); `run_id` thuộc phiên, `run.node_id = node_id`, câu `question_index` cùng `skill` — lệch ⇒ `INVALID`.
-
----
-
-## 9. Xử lý lỗi
+## 8. Xử lý lỗi
 
 ### Bảng xử lý lỗi (AI-36)
 
@@ -616,7 +586,7 @@ export function openChallengeToken(token: string, now: number): ChallengeTokenPa
 | questions | Câu bị chặn sau thử lại / mọi câu | `DROPPED`, không BKT (D-03) / không tạo run ⇒ `ERR_AI_REJECTED` |
 | grade | Hỏng sau thử lại | Không tính lượt ⇒ `ERR_AI_UNAVAILABLE` (D-03) |
 | grade | Gợi ý/feedback trượt gác · regex tấn công | Mẫu tĩnh AI-32 · `injectionGrading`, tính 1 lượt |
-| server | Thiếu `GEMINI_API_KEY`, `CHALLENGE_TOKEN_KEY` sai độ dài | Không khởi động |
+| server | Thiếu `GEMINI_API_KEY` | Không khởi động |
 
 Token, độ trễ, chi phí: mục tiêu ở `02` Mục 1.1 (chưa đo). UI hiện `token_used` thật từ `usageMetadata`.
 
@@ -624,11 +594,11 @@ Token, độ trễ, chi phí: mục tiêu ở `02` Mục 1.1 (chưa đo). UI hi�
 
 ## Test bắt buộc
 
-Tên test bắt đầu bằng mã luật. Giả định `PASS_CORE_ACCURACY = 70`, `MAX_ATTEMPTS_PER_QUESTION = 3`, `REMEDIATION_MAX_ATTEMPTS = 2`, `LLM_MAX_RETRIES = 1`, `GRADING_QUOTE_MIN_CHARS = 3`. Fixture: `50` Mục 1–2.
+Tên test bắt đầu bằng mã luật. Giả định `PASS_CORE_ACCURACY = 70`, `MAX_ATTEMPTS_PER_QUESTION = 3`, `LLM_MAX_RETRIES = 1`, `GRADING_QUOTE_MIN_CHARS = 3`. Fixture: `50` Mục 1–2.
 
 | Mã | Đầu vào ⇒ Kỳ vọng |
 | :-- | :-- |
-| AI-31 | `LEARN` max 3, lượt 1/2/3 ⇒ `CONCEPT` / `CODE_POINTER` / `null` (`DECAY_REVIEW` giống hệt); `REMEDIATION` max 2, lượt 1/2 ⇒ `CODE_POINTER` / `null` |
+| AI-31 | `LEARN` max 3, lượt 1/2/3 ⇒ `CONCEPT` / `CODE_POINTER` / `null` |
 | AI-30a | `50` 2.4 lượt 2 (core 90, quote "201" và "vòng for ở dòng 16–18 gọi findById 200 lần") ⇒ `true`; đổi quote ý 2 thành "gọi findById cho mỗi loại hàng" ⇒ `false` |
 | AI-30b | Core 69, mọi trích dẫn thật ⇒ `false`. Quote khác hoa thường / khoảng trắng ⇒ vẫn thật. Quote "vòng for … gọi findById" ⇒ thật. Quote "là" ⇒ ý chưa có |
 | AI-27 | AI trả `OFF_TOPIC`, core 95, mọi ý covered ⇒ core 0, ý false, không đạt, lượt 1 `LEARN` có gợi ý `CONCEPT`. Thiếu `points` index 2 ⇒ ý 2 chưa có. Feedback 3 câu ⇒ còn 2 |
@@ -636,8 +606,7 @@ Tên test bắt đầu bằng mã luật. Giả định `PASS_CORE_ACCURACY = 70
 | AI-32 | Lượt 1: `CONCEPT` chứa `` `product.service.ts` `` ⇒ mẫu `CONCEPT`; AI trả `CODE_POINTER` ⇒ mẫu `CONCEPT`. Lượt 2, `step_index = 7`, `step_indices = [1,2,3]` ⇒ mẫu `CODE_POINTER` bước 2 |
 | AI-12 | Chấm 503 rồi OK ⇒ token cộng cả 2 request; 503 hai lần ⇒ `ERR_AI_UNAVAILABLE`, `attempts_used` giữ nguyên; HTTP 404 ⇒ không gọi lại |
 | AI-15 | Lần 1 `skeleton_only`, lần 2 `null` ⇒ giữ `skeleton_only`, cache. Lần 1 đầy đủ ⇒ không gọi lại |
-| AI-22 | Câu 2 trượt gác ⇒ request 2 chỉ có câu 2; vẫn trượt ⇒ `DROPPED`, câu 1 cache. Cả 2 trượt 2 lần ⇒ `ERR_AI_REJECTED`. `REMEDIATION` lần 2, `v1` trùng câu đã hỏi ⇒ câu mới ở `…|v2` |
-| AI-23 | Kế hoạch N3 (Q1 `WEAKNESS` `[2]`, Q2 `FLOW` `[1,2,3]`) ⇒ `<code_data>` có bước 1–3; token Q1 có `code_context` chỉ bước 2 |
+| AI-22 | Câu 2 trượt gác ⇒ request 2 chỉ có câu 2; vẫn trượt ⇒ `DROPPED`, câu 1 giữ. Cả 2 trượt 2 lần ⇒ `ERR_AI_REJECTED`. Không ghi `ai_cache` (D-37) |
+| AI-23 | Kế hoạch N3 (Q1 `WEAKNESS` `[2]`, Q2 `FLOW` `[1,2,3]`) ⇒ `<code_data>` có bước 1–3; prompt chấm Q1 không có `<code_data>` (D-36) |
 | AI-06 | `tokens_used = 80000`: trượt cache ⇒ `ERR_TOKEN_QUOTA_EXCEEDED`; trúng cache ⇒ vẫn trả, 0 token |
 | AI-13 · AI-18 | Code chứa `</code_data>` ⇒ prompt có `‹/code_data>`. N3: điểm dở bước 2 ⇒ dòng 14–20; kỹ năng `DB_OPTIMIZATION` (`findById`) ⇒ dòng 17 |
-| AI-35 | Đổi 1 byte ⇒ `INVALID`; `now = exp + 1` ⇒ `EXPIRED`; token user A gửi từ user B ⇒ `INVALID`; khóa 16 byte ⇒ không khởi động |

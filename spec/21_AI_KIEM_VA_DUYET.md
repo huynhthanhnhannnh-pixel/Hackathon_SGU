@@ -102,7 +102,7 @@ interface NameScope { files: readonly string[]; words: Set<string>; extra: Set<s
 
 export function nodeScope(node: HybridArchitecturalNode, graph: StaticEngineResult): NameScope;   // analyze, questions
 export function repoScope(graph: StaticEngineResult): NameScope;                                 // overview
-export function tokenScope(t: ChallengeTokenPayload, answer: string): NameScope;                 // grade
+export function gradeScope(t: GradeContext, answer: string): NameScope;                         // grade (GradeContext: 20 AI-27, D-36)
 
 export function isValidName(s: string, sc: NameScope): boolean {
   const t = s.trim().replace(/^\.\//, "");
@@ -121,7 +121,7 @@ export const checkNames = (texts: string[], sc: NameScope): string[] =>         
 | :-- | :-- | :-- | :-- | :-- |
 | `nodeScope` | `graph.file_index` | `symbol_whitelist` ∪ `file_index` ∪ `nodeCodeText(node)` | ∅ | `node.support_tier === "STRUCTURAL"` |
 | `repoScope` | `graph.file_index` | `symbol_whitelist` ∪ `file_index` ∪ `nodeCodeText` mọi node | `id` + `title` mọi node | có node `STRUCTURAL` |
-| `tokenScope` | `t.steps[].file_path` | `code_context` ∪ `steps` (`function_name`, `file_path`) ∪ `feynman_question` ∪ `reference_answer` ∪ `answer` | ∅ | `false` |
+| `gradeScope` | `t.steps[].file_path` | `steps` (`function_name`, `file_path`) ∪ `feynman_question` ∪ `reference_answer` ∪ `answer` (không có code, D-36) | ∅ | `false` |
 
 Chỉ chuỗi trong dấu `` ` `` bị kiểm (AI-09). Chuỗi bị kiểm ở mọi trường chữ của 4 lời gọi, **trừ** `fix` (chỉ kiểm từ cấm).
 
@@ -152,7 +152,7 @@ Node `support_tier = STRUCTURAL` (INV-09): một chuỗi trong backtick hợp l�
 export function forbiddenKeywords(fp: ProjectFingerprint, codeText: string): string[];   // từ quét của các công nghệ còn cấm, theo thứ tự bảng
 ```
 
-Phạm vi `codeText`: analyze, questions, token ⇒ `nodeCodeText(node)`; overview ⇒ nối mọi node. Kết quả là `{{FORBIDDEN}}` trong prompt (`20` AI-14), `invariants.forbidden_external_keywords` và `ChallengeTokenPayload.forbidden_external_keywords`.
+Phạm vi `codeText`: analyze, questions ⇒ `nodeCodeText(node)`; overview ⇒ nối mọi node. Kết quả là `{{FORBIDDEN}}` trong prompt (`20` AI-14), `invariants.forbidden_external_keywords` và `node_runs.forbidden_external_keywords` (ghi lúc tạo run, `03` Mục 6.1; dùng khi chấm — D-36).
 
 ### Quét từ cấm (GUARD-07)
 
@@ -283,22 +283,26 @@ Câu thứ `i` của `raw` ứng với `items[i]` (theo vị trí). Câu qua khi
 ### `verifyFollowUp` (GUARD-13)
 
 ```typescript
-export function verifyFollowUp(g: GradingRaw, t: ChallengeTokenPayload, answer: string, isPassed: boolean):
+export function verifyFollowUp(g: GradingRaw, t: GradeContext, answer: string, isPassed: boolean):
   { follow_up_ok: boolean; feedback_ok: boolean };
 const nums = (s: string) => new Set(s.match(/\d+/g) ?? []);
 // lộ con số: số có trong đáp án / ý bắt buộc, KHÔNG có trong câu hỏi và KHÔNG có trong câu trả lời
-export function leaksNumbers(text: string, t: ChallengeTokenPayload, answer: string): boolean;
+export function leaksNumbers(text: string, t: GradeContext, answer: string): boolean;
 ```
 
 `follow_up_ok` = mọi điều sau đúng (`q = g.follow_up_question`):
 1. `q` khác rỗng, `g.follow_up_type ∈ {"CONCEPT", "CODE_POINTER"}` (khớp loại mong đợi kiểm ở `20` AI-31).
-2. `findForbidden([q], t.forbidden_external_keywords)` rỗng; `checkNames([q], tokenScope(t, answer))` rỗng.
+2. `findForbidden([q], t.forbidden_external_keywords)` rỗng; `checkNames([q], gradeScope(t, answer))` rỗng.
 3. `CONCEPT` — **không lộ vị trí**: không có chuỗi backtick; `LOC_RE` không khớp; không chứa tên file (basename, không phân biệt hoa thường) của `t.steps`; `norm(phần cuối function_name)` của mọi bước ∉ `identWords(q)`; `!leaksNumbers(q)`.
 4. `CODE_POINTER`: `follow_up_step_index` nguyên trong `1..t.steps.length`; `!leaksNumbers(q′)` với `q′` = `q` đã bỏ các cụm `LOC_RE` và `LINE_RE`.
 
-`feedback_ok` = `f = g.feedback` khác rỗng ∧ không từ cấm ∧ `checkNames([f], tokenScope)` rỗng ∧ (đạt **hoặc** cả 3: (a) mọi từ dạng tên trong backtick của `f` ∈ `identWords(answer)`; (b) `LOC_RE` khớp ⇒ cụm khớp (sau `normText`) phải có trong câu trả lời; (c) `!leaksNumbers(f)`).
+`feedback_ok` = `f = g.feedback` khác rỗng ∧ không từ cấm ∧ `checkNames([f], gradeScope)` rỗng ∧ (đạt **hoặc** cả 3: (a) mọi từ dạng tên trong backtick của `f` ∈ `identWords(answer)`; (b) `LOC_RE` khớp ⇒ cụm khớp (sau `normText`) phải có trong câu trả lời; (c) `!leaksNumbers(f)`).
 
 Sai ⇒ gợi ý thay bằng `staticHint`, feedback thay bằng `staticFeedback` (`20` AI-32). Không gọi lại AI.
+
+### Trích dẫn ý bắt buộc (D-13)
+
+So khớp **lỏng**: `points[].quote` sau `normText` (bỏ dấu câu ở hai đầu) chỉ cần là đoạn con của `normText(answer)`; không xét thứ tự các đoạn nối bằng `…`. Trích dẫn không có thật ⇒ ý đó chưa có. Hàm `coveredFlags`, ngưỡng độ dài: `20` AI-30.
 
 ### Làm sạch (GUARD-14)
 
