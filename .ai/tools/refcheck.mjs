@@ -29,7 +29,7 @@ for (const f of files) {
 let out = [...problems].sort();
 const i = process.argv.indexOf("--diff");
 if (i > 0) {
-  const base = new Set(readFileSync(process.argv[i + 1], "utf8").split("\n").filter(Boolean));
+  const base = new Set(readFileSync(process.argv[i + 1], "utf8").split(/\r?\n/).filter(Boolean));
   out = out.filter((p) => !base.has(p));
   console.log(out.length ? out.join("\n") : "Không có lỗi tham chiếu mới so với baseline.");
 } else console.log(out.join("\n"));
