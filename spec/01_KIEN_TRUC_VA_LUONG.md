@@ -98,12 +98,12 @@ sequenceDiagram
     U->>FE: Dán link / kéo thả .zip
     FE->>BE: POST /api/ingest
     BE->>BE: Tầng 0–2 trong RAM (0 token)
-    BE->>DB: Upsert learning_sessions (khung, không code) + Fast-Track node gốc
+    BE->>DB: Tạo / mở learning_sessions (khung, không code)
     BE-->>FE: IngestResponse (bản đồ + progress + analyses có sẵn trong cache)
     loop Mỗi node chưa có bản phân tích, tối đa ANALYZE_CONCURRENCY cùng lúc
         FE->>BE: POST /api/analyze-node
         BE->>AI: Phân tích (nếu cache trượt)
-        BE->>DB: ai_cache + Fast-Track
+        BE->>DB: ai_cache
         BE-->>FE: NodeAnalysisView + node_state + unlocked_node_ids
     end
     FE->>BE: POST /api/analyze-overview (khi mọi node đã phân tích)
@@ -126,27 +126,22 @@ sequenceDiagram
     FE->>FE: Tab 1 hiện ngay từ NodeAnalysisView
     FE->>BE: POST /api/enrich-node { session_id, node_id, mode: LEARN } (chạy nền)
     alt Đã có run LEARN chưa xong (tải lại trang, tab khác)
-        BE-->>FE: Trả lại đúng run đó, token mới cho các câu chưa xong
+        BE-->>FE: Trả lại đúng run đó (câu hỏi đọc từ DB)
     else Chưa có run
-        BE->>DB: Đọc skill_states ⇒ planNodeQuestions (n câu, 1 câu / kỹ năng chưa thạo)
-        alt Kế hoạch rỗng (kỹ năng vừa vượt FAST_TRACK_MIN)
-            BE->>DB: Fast-Track
-            BE-->>FE: run_id null, không có câu ⇒ node miễn thi
-        else Có ít nhất 1 câu
-            BE->>AI: Viết câu hỏi còn thiếu trong cache (câu hỏng ⇒ gọi lại 1 lần ⇒ DROPPED)
-            alt Mọi câu DROPPED
-                BE-->>FE: ERR_AI_REJECTED ⇒ nút Thử lại, không tạo run
-            else Còn ít nhất 1 câu
-                BE->>DB: Tạo node_runs (kế hoạch cố định n câu)
-                BE-->>FE: EnrichNodeResponse (n câu, mỗi câu 1 challenge_token)
-            end
+        BE->>DB: Đọc skill_states ⇒ planNodeQuestions (n ≥ 1 câu, D-34)
+        BE->>AI: Viết n câu hỏi, không cache (câu hỏng ⇒ gọi lại 1 lần ⇒ DROPPED)
+        alt Mọi câu DROPPED
+            BE-->>FE: ERR_AI_REJECTED ⇒ nút Thử lại, không tạo run
+        else Còn ít nhất 1 câu
+            BE->>DB: Tạo node_runs (n câu + đáp án, D-36)
+            BE-->>FE: EnrichNodeResponse (n câu, không có đáp án)
         end
     end
     loop Mỗi câu chưa xong của run, theo question_index (bỏ câu DROPPED)
         loop Tới khi câu này xong (đạt / hết lượt / bỏ qua)
             U->>FE: Viết câu trả lời ⇒ Nộp
-            FE->>BE: POST /api/evaluate-feynman (token của câu này)
-            BE->>BE: Kiểm (token, độ dài, lượt, trùng, regex)
+            FE->>BE: POST /api/evaluate-feynman { run_id, question_index }
+            BE->>DB: Đọc câu hỏi + đáp án · kiểm độ dài, lượt, trùng, regex
             BE->>AI: Chấm (nếu không bị regex chặn)
             BE->>DB: Transaction: attempt + (BKT nếu câu xong) + (chốt node nếu đây là câu cuối chưa xong của run) + mở khóa
             BE-->>FE: Điểm, nhận xét, gợi ý nấc kế / đáp án nếu câu xong
@@ -158,21 +153,21 @@ sequenceDiagram
     FE->>FE: Tổng kết run ✅ ❌ 🚩, đổi màu node theo node_state (không tự tính)
 ```
 
-- **1 run = n câu cố định**, 1 câu cho mỗi kỹ năng chưa thạo của node (`22` BKT-41, BKT-42). Mỗi câu có 1 kỹ năng, 1 `challenge_token`, lượt và gợi ý riêng (Mục 7). Mọi token được cấp ngay khi tạo run, nên chuyển câu không gọi thêm API.
+- **1 run = n câu cố định**, 1 câu cho mỗi kỹ năng chưa thạo của node (`22` BKT-41, BKT-42). Mọi kỹ năng đã thạo ⇒ vẫn 1 câu cho kỹ năng có điểm thấp nhất; không có node miễn thi (D-34). Mỗi câu có 1 kỹ năng, lượt và gợi ý riêng (Mục 7). Mọi câu trả về ngay khi tạo run, nên chuyển câu không gọi thêm API.
+- **Câu hỏi + đáp án lưu ở DB** (`node_runs`), client không đọc trực tiếp; chấm bài đọc từ DB, AI chấm không nhận code (D-36).
 - **Câu xong** ⇒ hiện đáp án và nút "Câu tiếp theo", không tự nhảy (`30` UI-54).
 - **Run xong** khi mọi câu không `DROPPED` đều xong ⇒ server chốt màu node (`22` Mục 8), trả `node_state` và `unlocked_node_ids` (`30` UI-57).
 
-### 5.3. Ôn tập
+### 5.3. Không ôn tập — hiển thị mài mòn (D-35)
 
-- **Ôn node đỏ (`REMEDIATION`).** Nút "Ôn lại" hiện khi `can_remediate`. Run mới chỉ hỏi các kỹ năng đã trượt ở run `LEARN`, với góc hỏi khác câu cũ, mức `NOVICE`, tối đa `REMEDIATION_MAX_ATTEMPTS` lượt. Kết quả:
-  - đạt ⇒ `PASS_AFTER_HINT`;
-  - trượt ⇒ không trừ BKT;
-  - ôn đạt hết các kỹ năng đã trượt ⇒ node chuyển XANH.
-- **Ôn khi phai (`DECAY_REVIEW`).** Nút "Ôn bài" hiện trên node XANH có viền cam. Run chỉ hỏi các kỹ năng đang ở viền cam, với tier tính từ điểm đã decay. Run này chỉ cập nhật BKT, **không** đổi màu node.
+- Không có run ôn: node đỏ giữ đỏ, node xanh giữ xanh.
+- Bảng kỹ năng hiện thanh kỹ năng nhạt dần theo điểm đã decay và nhãn "đang mài mòn" khi điểm đã decay thấp hơn điểm gốc. Chỉ hiển thị, không có nút ôn (`22`, `30`).
 
 ### 5.4. Mở lại phiên
 
-Màn hình trống hiện danh sách "Tiếp tục học" (`GET /api/sessions`). Bấm mở ⇒ `POST /api/ingest { session_id }` ⇒ server dựng lại đúng commit SHA (trúng cache hoặc tải lại; kết quả giống hệt nhờ INV-10) ⇒ ghép `node_progress` và các run. Phiên từ `.zip` ⇒ mời kéo thả lại đúng file (so SHA-256). Phiên tạo bằng `engine_version` cũ ⇒ chỉ xem lịch sử.
+Màn hình trống hiện danh sách "Tiếp tục học" (`GET /api/sessions`). Bấm mở ⇒ `POST /api/ingest { session_id }` ⇒ server dựng lại đúng commit SHA của phiên (trúng cache hoặc tải lại theo SHA; kết quả giống hệt nhờ INV-10) ⇒ ghép `node_progress` và các run (D-39). Repo có commit mới ⇒ dán link ⇒ bản đồ và phiên mới. Phiên từ `.zip` ⇒ mời kéo thả lại đúng file (so SHA-256). Phiên tạo bằng `engine_version` cũ ⇒ chỉ xem lịch sử.
+
+"Học lại từ đầu" ⇒ phiên mới cùng repo: tiến độ node làm lại, điểm kỹ năng giữ nguyên, câu hỏi sinh mới (D-42).
 
 ---
 
@@ -183,19 +178,16 @@ stateDiagram-v2
     [*] --> AVAILABLE: Node gốc
     [*] --> LOCKED: Còn node cha chưa thông
     LOCKED --> AVAILABLE: Mọi node cha thông (COMPLETED / FAILED / phân tích lỗi)
-    AVAILABLE --> COMPLETED: Fast-Track (mọi kỹ năng ≥ FAST_TRACK_MIN, không phải Capstone)
     AVAILABLE --> COMPLETED: Run LEARN xong, không còn câu FAILED chưa 🚩 (BKT-72)
     AVAILABLE --> FAILED: Run LEARN xong, ≥ 1 câu FAILED chưa 🚩 (trượt hết lượt hoặc bỏ qua)
-    FAILED --> COMPLETED: Run REMEDIATION đạt hết kỹ năng đã trượt
-    FAILED --> COMPLETED: Báo sai làm mọi câu FAILED còn lại đều 🚩 hoặc đã ôn đạt (D-22)
+    FAILED --> COMPLETED: Báo sai làm mọi câu FAILED còn lại đều 🚩 (D-22)
 ```
 
 | Chuyển | Ai kích hoạt | Endpoint | Ghi gì | Client nhận |
 | :-- | :-- | :-- | :-- | :-- |
 | `LOCKED → AVAILABLE` | Server (suy ra) | Bất kỳ lệnh làm node cha xong | Không ghi (suy ra khi đọc, `03` Mục 5.1) | `unlocked_node_ids`, `node_state` |
-| `AVAILABLE → COMPLETED` (Fast-Track) | Server | `ingest`, `analyze-node`, `enrich-node` (kế hoạch `LEARN` rỗng), sau khi run xong, `sync/replay` | `node_progress(status, is_auto_mastered)` | `unlocked_node_ids` |
 | `AVAILABLE → COMPLETED / FAILED` | Server, khi câu cuối của run `LEARN` xong | `evaluate-feynman`, `reveal` | `node_runs.finished_at`, `node_progress.status` | `node_state` |
-| `FAILED → COMPLETED` | Server | `evaluate-feynman` (run `REMEDIATION`), `report-wrong` | `node_progress.status` | `node_state` |
+| `FAILED → COMPLETED` | Server | `report-wrong` | `node_progress.status` | `node_state` |
 | Phân tích lỗi | Server | `analyze-node` | `node_progress.analysis_failed = true` | `analysis = null`, node con mở kèm tam giác |
 
 Chuyển `FAILED → AVAILABLE` **không tồn tại** (D-16).
@@ -204,15 +196,15 @@ Chuyển `FAILED → AVAILABLE` **không tồn tại** (D-16).
 
 Một run có n câu (Mục 5.2); bảng dưới áp riêng cho từng câu. Câu xong ⇒ người học bấm sang câu kế; câu cuối xong ⇒ run xong.
 
-Lượt tối đa: `CONFIG.MAX_ATTEMPTS_PER_QUESTION`; `REMEDIATION`: `CONFIG.REMEDIATION_MAX_ATTEMPTS`. Lượt nào là lượt tối đa thì áp dòng "Lượt cuối".
+Lượt tối đa: `CONFIG.MAX_ATTEMPTS_PER_QUESTION`. Lượt nào là lượt tối đa thì áp dòng "Lượt cuối".
 
 | Lượt | Đạt (D-13) | Chưa đạt |
 | :-: | :-- | :-- |
-| 1 | Xong, `PASS_FIRST` (`REMEDIATION`: `PASS_AFTER_HINT`) ⇒ BKT | Gợi ý nấc 1 `CONCEPT`: hỏi khái niệm bị hiểu sai, chưa chỉ chỗ |
+| 1 | Xong, `PASS_FIRST` ⇒ BKT | Gợi ý nấc 1 `CONCEPT`: hỏi khái niệm bị hiểu sai, chưa chỉ chỗ |
 | 2 | Xong, `PASS_AFTER_HINT` ⇒ BKT | Gợi ý nấc 2 `CODE_POINTER` (chỉ bước) |
-| Lượt cuối | Xong, `PASS_AFTER_HINT` ⇒ BKT | Xong, `FAILED` ⇒ BKT (`REMEDIATION`: không trừ BKT), hiện đáp án |
-| Bất kỳ | — | "Bỏ qua câu này" ⇒ xong, `FAILED`, `ended_by = SKIP` ⇒ BKT (trừ `REMEDIATION`), hiện đáp án |
-| Sau khi xong | — | Câu `FAILED` do nộp bài ⇒ "Báo sai" ⇒ 🚩, hoàn BKT nếu kỹ năng chưa có cập nhật khác (D-22, `22` BKT-63); `REMEDIATION` chỉ 🚩 |
+| Lượt cuối | Xong, `PASS_AFTER_HINT` ⇒ BKT | Xong, `FAILED` ⇒ BKT, hiện đáp án |
+| Bất kỳ | — | "Bỏ qua câu này" ⇒ xong, `FAILED`, `ended_by = SKIP` ⇒ BKT, hiện đáp án |
+| Sau khi xong | — | Câu `FAILED` do nộp bài ⇒ "Báo sai" ⇒ 🚩, hoàn BKT nếu kỹ năng chưa có cập nhật khác (D-22, `22` BKT-63) |
 
 - `intent = GIVE_UP` (gõ "chịu", "không biết") ⇒ tính 1 lượt trượt, vẫn nhận gợi ý nấc kế.
 - Regex tấn công khớp ⇒ tính 1 lượt, 0 điểm, `OFF_TOPIC`, không gợi ý, không gọi AI.
@@ -226,12 +218,11 @@ Lượt tối đa: `CONFIG.MAX_ATTEMPTS_PER_QUESTION`; `REMEDIATION`: `CONFIG.RE
 | Dữ liệu | Nơi | Sống bao lâu | Ai ghi |
 | :-- | :-- | :-- | :-- |
 | Mã nguồn repo (`RAMCodeStore`, `ManifestStore`) | RAM server | Trong lúc chạy Tầng 0–2 | Engine |
-| `StaticEngineResult` đầy đủ | LRU RAM server | `INGESTION_CACHE_TTL_MS` | Engine |
+| `StaticEngineResult` đầy đủ | LRU RAM của 1 instance — không được dựa vào (D-27) | Tối đa `INGESTION_CACHE_TTL_MS` | Engine |
 | `ClientStaticEngineResult` (có snippet để hiện Monaco) | Zustand | Tới khi đổi repo / tải lại trang | Server trả về |
 | Tài khoản, `skill_states`, phiên, tiến độ, run, lượt nộp | Postgres | Tới khi xóa tài khoản | Chỉ server |
-| Bản phân tích, tổng quan, câu hỏi + đáp án (văn bản AI đã kiểm) | `ai_cache` (Postgres) | Lâu dài; khóa theo phiên bản repo + engine + prompt + model | Chỉ server |
-| Đáp án + `code_context` của 1 câu | `challenge_token` (AES-GCM) do client giữ hộ | `CHALLENGE_TOKEN_TTL_MS` | Server |
-| `SyncReceipt` chờ đồng bộ | `localStorage` | Tới khi replay thành công | Server ký |
+| Bản phân tích, tổng quan (văn bản AI đã kiểm) | `ai_cache` (Postgres) | Lâu dài; khóa theo phiên bản repo + engine + prompt + model | Chỉ server |
+| Câu hỏi + đáp án của 1 run (văn bản AI đã kiểm, không code) | `node_runs` (Postgres), client không đọc trực tiếp | Theo phiên | Chỉ server |
 | Tab đang mở, cỡ chữ | `localStorage` | Lâu dài | Client |
 
 ---

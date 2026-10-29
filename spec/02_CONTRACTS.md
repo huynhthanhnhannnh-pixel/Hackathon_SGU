@@ -8,7 +8,7 @@
 
 - Bảng tra: `CONFIG` (Mục 1) cho con số; kiểu (Mục 2–7, 10) cho hàm / component; request / response (Mục 8) và mã lỗi (Mục 9) cho route.
 - Đổi con số ⇒ sửa `CONFIG`, không sửa ở nơi dùng. Số ở Mục 1.1 là mục tiêu / ước lượng, chưa đo.
-- Nhãn 5.1–5.5 là chú thích trong khối code của Mục 5, không phải tiêu đề.
+- Nhãn 5.1–5.4 là chú thích trong khối code của Mục 5, không phải tiêu đề.
 
 | Mục | Nhóm kiểu / nội dung | File spec dùng nhiều nhất |
 | :-: | :-- | :-- |
@@ -16,9 +16,9 @@
 | 2 | Kiểu nền: `SWE_SKILLS`, `LearnerTier`, `NodeStatus` | `22`, `10`, `20` |
 | 3 | Đầu ra Engine: `HybridArchitecturalNode`, `StaticEngineResult` | `10`, `11`, `21` |
 | 4 | Kiểu nội bộ Engine: `LanguageAdapter`, `SymbolDefinition` | `10`, `11` |
-| 5 | AI: `NodeAnalysis` (5.1), `RepoOverviewRaw` (5.2), `QuestionPlanItem` (5.3), `GradingRaw` (5.4), `ChallengeTokenPayload` (5.5) | `20`, `22`, `21` |
+| 5 | AI: `NodeAnalysis` (5.1), `RepoOverviewRaw` (5.2), `QuestionPlanItem` (5.3), `GradingRaw` (5.4) | `20`, `22`, `21` |
 | 6 | Người học, BKT, tiến độ: `QuestionState`, `NodeStateView`, `PERSONAS` | `22`, `30`, `03` |
-| 7 | Lưu trữ: `GraphSkeletonNode`, `SyncReceipt` | `03`, `30` |
+| 7 | Lưu trữ: `GraphSkeletonNode`, `RunStepRef` | `03`, `30` |
 | 8 | API: request / response từng endpoint | `03`, `30` |
 | 9 | Lỗi: `ErrorCode`, `ApiError`, bảng mã HTTP | `03`, `30`, `20` |
 | 10 | Trình duyệt và Offline: `ClientWorkbenchState`, `OfflineMockBundle` | `30`, `21` |
@@ -34,10 +34,11 @@ export const CONFIG = {
   PROMPT_VERSION: "1.0.0",            // Đổi khi đổi prompt hoặc responseSchema của 4 lời gọi AI
 
   // ---------- Tầng 0: tải & lọc (10_ENGINE_INGEST) ----------
-  MAX_STREAM_BYTES: 15 * 1024 * 1024, // Byte nén nhận qua mạng / file zip upload
+  MAX_STREAM_BYTES: 15 * 1024 * 1024, // Byte nén tải từ GitHub
+  MAX_UPLOAD_BYTES: 4.5 * 1024 * 1024,// File zip upload — giới hạn body của Vercel Functions, D-27
   MAX_INFLATED_BYTES: 8 * 1024 * 1024,// Tổng byte sau giải nén của file được giữ
   MAX_COMPRESSION_RATIO: 100,         // uncompressed / compressed của 1 entry
-  MAX_CLEAN_FILES: 50,                // Số file code tối đa giữ lại
+  MAX_CLEAN_FILES: 100,               // Số file code tối đa giữ lại (D-41)
   MAX_SINGLE_FILE_BYTES: 1024 * 1024,
   MAX_NOTEBOOK_BYTES: 5 * 1024 * 1024,
   MAX_MANIFEST_BYTES: 256 * 1024,
@@ -49,12 +50,11 @@ export const CONFIG = {
   STREAM_RETRY_DELAY_MS: 500,         // Thử lại stream 1 lần
   PREFLIGHT_TIMEOUT_MS: 300,
   PREFLIGHT_RETRY_DELAY_MS: 1000,     // Thử lại probe 1 lần
-  MAX_REF_CANDIDATES: 4,              // Thử ref theo thứ tự ngắn → dài (D-11)
   DEFAULT_BRANCH_FALLBACKS: ["main", "master", "dev"],
-  MAX_CONCURRENT_INGESTIONS: 4,       // Semaphore toàn server, hàng đợi FIFO
+  MAX_CONCURRENT_INGESTIONS: 4,       // Semaphore trong 1 instance, hàng đợi FIFO (D-31)
   INGEST_QUEUE_TIMEOUT_MS: 10000,     // Chờ hàng đợi quá lâu ⇒ ERR_SERVER_BUSY
   INGESTION_CACHE_TTL_MS: 10 * 60 * 1000,
-  INGESTION_CACHE_MAX_ENTRIES: 20,    // LRU StaticEngineResult trong RAM
+  INGESTION_CACHE_MAX_ENTRIES: 20,    // LRU StaticEngineResult trong RAM — chỉ để nhanh, không được dựa vào (D-27)
   SECRET_MIN_VALUE_LENGTH: 6,
   UNSUPPORTED_LANGUAGE_RATIO: 0.5,    // > 50% byte code thuộc tier UNSUPPORTED và 0 file code ⇒ ERR_UNSUPPORTED_LANGUAGE
   MONOREPO_DOMINANT_RATIO: 0.7,
@@ -129,7 +129,6 @@ export const CONFIG = {
   MUST_HAVE_POINTS_MIN: 2,
   MUST_HAVE_POINTS_MAX: 3,
   FLOW_ANSWER_MIN_STEPS: 2,           // Đáp án câu FLOW phải nhắc tên ở ≥ 2 bước
-  CHALLENGE_TOKEN_TTL_MS: 24 * 60 * 60 * 1000,
   FEEDBACK_MAX_SENTENCES: 2,
 
   // ---------- Nộp bài ----------
@@ -139,9 +138,6 @@ export const CONFIG = {
   SUBMIT_DEBOUNCE_MS: 3000,
   PASS_CORE_ACCURACY: 70,
   MAX_ATTEMPTS_PER_QUESTION: 3,
-  REMEDIATION_MAX_ATTEMPTS: 2,
-  REMEDIATION_MAX_RUNS_PER_NODE: 2,   // Mỗi node trong 1 phiên
-  REMEDIATION_MIN_OTHER_FINISHED: 1,  // Phải học xong ≥ 1 node khác trước khi ôn node đỏ
 
   // ---------- BKT (22_BKT_VA_KE_HOACH_CAU_HOI) ----------
   BKT_P_L0: 0.25,
@@ -156,8 +152,7 @@ export const CONFIG = {
   DECAY_FLOOR: 0.25,                  // = BKT_P_L0
   TIER_PRACTITIONER_MIN: 0.45,
   TIER_ARCHITECT_MIN: 0.75,
-  FAST_TRACK_MIN: 0.92,
-  DECAY_WARNING_BELOW: 0.45,          // Viền cam: điểm gốc ≥ ngưỡng VÀ điểm đã decay < ngưỡng (D-03)
+  FAST_TRACK_MIN: 0.92,               // Ngưỡng "đã thạo" khi lập kế hoạch câu hỏi (22, D-34)
   NOVICE_SECOND_QUESTION: false,      // bật sau khi đo token
   GAP_TARGETING: false,
 
@@ -190,7 +185,7 @@ export const CONFIG = {
 | Đọc hồ sơ `GET /api/me` | 0.05 – 0.1 s | Server và Supabase cùng vùng |
 | Token: phân tích / tổng quan / đặt câu hỏi / chấm | ~2,000→700 · ~1,500→400 · ~1,600→650 · ~800→200 (vào→ra) | Mỗi lời gọi ra ≤ `LLM_MAX_OUTPUT_TOKENS` |
 | **Người học đầu tiên của 1 repo (7 node, ~15 câu)** | ~37 lời gọi · **~58,500 token** · ~$0.05 | Giá Gemini 2.5 Flash ($0.30 / 1M vào, $2.50 / 1M ra) — tính lại theo Q-05 |
-| Người học sau cùng repo (trúng cache) | ~22 lời gọi · ~22,000 token · ~$0.02 | Chỉ tốn lượt chấm + câu hỏi chưa có trong cache |
+| Người học sau cùng repo (trúng cache phân tích) | ~29 lời gọi · ~38,000 token · ~$0.03 | Tốn lượt đặt câu hỏi + chấm (câu hỏi không cache, D-37) |
 | Chế độ Offline | 0 token | Dữ liệu ghi lại, đã duyệt tay |
 | Dung lượng Postgres / người học | < 100 KB | Gồm câu trả lời ≤ `ANSWER_MAX_CHARS` |
 
@@ -331,10 +326,10 @@ export interface IngestionReport {
 export interface RepoSnapshotKey {
   source: "GITHUB" | "ZIP";
   repo_key: string;                    // "owner/repo" hoặc tên file zip
-  snapshot_id: string;                 // Commit SHA 40 hex hoặc SHA-256 của TOÀN BỘ buffer zip
+  snapshot_id: string;                 // Commit SHA 40 hex hoặc SHA-256 của TOÀN BỘ buffer zip; phiên gắn cố định (D-39)
   snapshot_id_kind: "COMMIT_SHA" | "ARCHIVE_HASH";
   subdir: string;                      // "" khi phân tích cả repo
-  ref_label: string | null;            // Branch/tag người dùng nhập — chỉ hiển thị
+  ref_label: string | null;            // Nhánh mặc định đã phân giải — chỉ hiển thị
 }
 
 // Bản đầy đủ — CHỈ SERVER (cache RAM, không bao giờ ghi đĩa / DB)
@@ -378,8 +373,7 @@ export interface LanguageAdapter {
 export interface GithubRepoInfo {
   owner: string;
   repo: string;
-  ref_path: string | null;            // Phần sau /tree/ hoặc /blob/ (chưa tách ref và subdir)
-  is_blob_link: boolean;              // /blob/ ⇒ subdir = thư mục chứa file
+  path_trimmed: boolean;              // Link có /tree/…, /blob/… ⇒ đã cắt về gốc repo, UI ghi chú "Chỉ hỗ trợ nhánh mặc định" (D-38)
   clean_url: string;                  // https://github.com/owner/repo
 }
 
@@ -422,7 +416,7 @@ export interface NodeAnalysisRaw {      // = responseSchema của lời gọi an
   weak_points: AnalysisWeakPoint[];
 }
 
-export interface NodeAnalysis extends NodeAnalysisRaw {  // Sau khi qua kiểm (21) — lưu ai_cache, dùng chung
+export interface NodeAnalysis extends NodeAnalysisRaw {  // Sau khi qua kiểm (21) — lưu ai_cache, dùng chung (D-37)
   node_id: string;
   skeleton_only: boolean;               // true ⇒ phần chữ bị bỏ sau 2 lần trượt gác, chỉ còn skills + khung bước
 }
@@ -456,19 +450,14 @@ export interface RepoOverviewView {
 
 // ---------- 5.3 enrich-node (đặt câu hỏi) ----------
 export type QuestionFocus = "FLOW" | "ARCHITECTURE" | "WEAKNESS" | "CHANGE";
-export type RunMode = "LEARN" | "REMEDIATION" | "DECAY_REVIEW";
+export type RunMode = "LEARN";          // D-35
 
 export interface QuestionPlanItem {
   question_index: number;               // 1..n
   skill: SWESkill;
   tier: LearnerTier;
   focus: QuestionFocus;
-  step_indices: number[];               // Các bước gửi cho AI và đóng vào token
-}
-
-export interface RemediationTarget {     // Đầu vào planNodeQuestions khi mode = REMEDIATION (22)
-  skill: SWESkill;
-  used_focuses: QuestionFocus[];        // focus của mọi câu đã hiện (ended_by ≠ "DROPPED") của kỹ năng này ở node, theo (started_at, question_index); phần tử cuối = câu gần nhất
+  step_indices: number[];               // Các bước gửi cho AI khi đặt câu hỏi và khi chấm
 }
 
 export interface GeneratedQuestionRaw {  // Phần tử của responseSchema lời gọi đặt câu hỏi
@@ -489,7 +478,6 @@ export interface QuestionPromptPayload {  // Gói gửi AI — CHỈ SERVER
   node_analysis: Pick<NodeAnalysis, "steps" | "strengths" | "architecture" | "weak_points">;
   invariants: {
     questions_plan: Array<Pick<QuestionPlanItem, "skill" | "tier" | "focus">>;
-    previous_questions: string[];         // REMEDIATION / DECAY_REVIEW: câu cũ của kỹ năng đó (để hỏi góc khác)
     forbidden_external_keywords: string[];
   };
 }
@@ -510,31 +498,7 @@ export interface GradingRaw {           // = responseSchema của lời gọi ch
   feedback: string;                     // ≤ CONFIG.FEEDBACK_MAX_SENTENCES câu
   detected_jargons: string[];
 }
-
-// ---------- 5.5 challenge_token ----------
-// Định dạng: "v1." + base64url(iv 12 byte) + "." + base64url(ciphertext ‖ tag) — AES-256-GCM, khóa CHALLENGE_TOKEN_KEY
-export interface ChallengeTokenPayload {
-  v: 1;
-  user_id: string;
-  session_id: string;
-  run_id: string;
-  node_id: string;
-  question_index: number;
-  mode: RunMode;
-  skill: SWESkill;
-  tier: LearnerTier;
-  focus: QuestionFocus;
-  feynman_question: string;
-  reference_answer: string;
-  must_have_points: string[];
-  fix: string;
-  steps: Array<{ step_index: number; layer: ArchitecturalLayer; file_path: string; function_name: string }>; // Toàn bộ bước của node (cho gợi ý CODE_POINTER)
-  step_indices: number[];
-  code_context: string;                 // Snippet các bước trong step_indices, đã che secret (D-14)
-  forbidden_external_keywords: string[];// Từ cấm của repo lúc cấp token — bộ chấm cần để gác gợi ý mà không phải dựng lại StaticEngineResult
-  issued_at: number;
-  exp: number;                          // issued_at + CONFIG.CHALLENGE_TOKEN_TTL_MS
-}
+// Đầu vào chấm đọc từ node_runs.questions (03), không có code_context (D-36)
 ```
 
 ---
@@ -564,11 +528,11 @@ export interface QuestionReveal { reference_answer: string; must_have_points: st
 
 export interface QuestionState {
   question_index: number;
-  feynman_question: string;             // Server đọc từ ai_cache theo RunQuestion.cache_key (không phải dữ liệu đáp án)
+  feynman_question: string;             // Server đọc từ node_runs.questions (D-36)
   skill: SWESkill;
   tier: LearnerTier;
   focus: QuestionFocus;
-  attempts_used: number;                // 0..MAX_ATTEMPTS_PER_QUESTION (REMEDIATION: ..REMEDIATION_MAX_ATTEMPTS)
+  attempts_used: number;                // 0..MAX_ATTEMPTS_PER_QUESTION
   finished: boolean;
   outcome: NodeOutcome | null;
   ended_by: "ANSWER" | "SKIP" | "DROPPED" | null;   // DROPPED = AI không đặt được câu (D-03), không cập nhật BKT
@@ -588,11 +552,8 @@ export interface NodeRunView {
 export interface NodeStateView {         // 1 node trong 1 phiên
   node_id: string;
   status: NodeStatus;
-  is_auto_mastered: boolean;            // Fast-Track
   has_warning: boolean;                 // Có node cha FAILED hoặc phân tích lỗi (soft-bypass)
   analysis_failed: boolean;             // D-03
-  remediation_runs: number;
-  can_remediate: boolean;
   last_run: NodeRunView | null;
 }
 
@@ -604,12 +565,11 @@ export interface SessionProgress {
 
 export interface SkillChange { skill: SWESkill; p_before: number; p_after: number; outcome: NodeOutcome }
 
-export type PersonaMode = "NEWBIE" | "MID_LEVEL" | "SENIOR_RUSTY" | "SENIOR_ACTIVE";
+export type PersonaMode = "NEWBIE" | "MID_LEVEL" | "SENIOR_RUSTY";
 export const PERSONAS: Record<PersonaMode, { initial_p_mastery: number; days_idle: number; label: string }> = {
   NEWBIE:        { initial_p_mastery: 0.25, days_idle: 0,  label: "Sinh viên năm 2" },
   MID_LEVEL:     { initial_p_mastery: 0.65, days_idle: 0,  label: "Mid-level dev" },
-  SENIOR_RUSTY:  { initial_p_mastery: 0.95, days_idle: 30, label: "Senior nghỉ 30 ngày (demo phai trí nhớ)" },
-  SENIOR_ACTIVE: { initial_p_mastery: 0.95, days_idle: 0,  label: "Senior đang luyện (demo Fast-Track)" },
+  SENIOR_RUSTY:  { initial_p_mastery: 0.95, days_idle: 30, label: "Senior nghỉ 30 ngày (demo mài mòn, D-35)" },
 };
 ```
 
@@ -636,20 +596,14 @@ export interface LearningSessionSummary {
   failed_count: number;
   total_nodes: number;
   can_resume: boolean;
-  resume_blocker: "ZIP_SOURCE" | "ENGINE_UPDATED" | null; // ZIP_SOURCE: nguồn ZIP hết cache RAM ⇒ kéo thả lại file; ENGINE_UPDATED ⇒ chỉ xem lịch sử (cách tính: 03 Mục 2)
+  resume_blocker: "ZIP_SOURCE" | "ENGINE_UPDATED" | null; // Cách tính: 03 Mục 2
 }
 
-export interface SyncReceipt {            // Server ký HMAC-SHA256 (RECEIPT_HMAC_KEY); client chỉ giữ hộ
-  receipt_id: string;                    // uuid
-  user_id: string;
-  session_id: string;
-  run_id: string;
-  question_index: number;
-  kind: "EVALUATE" | "REVEAL";
-  expected_attempts_used: number;        // Số lượt server đã đọc được ở bước kiểm (D-17)
-  observation: string;                   // JSON chuẩn hóa: student_answer, điểm, intent, points, is_passed — KHÔNG có điểm kỹ năng
-  issued_at: number;
-  signature: string;
+export interface RunStepRef {             // node_runs.steps — chỉ tên, KHÔNG có code (D-36)
+  step_index: number;
+  layer: ArchitecturalLayer;
+  file_path: string;
+  function_name: string;
 }
 
 export interface AttemptHistoryItem {
@@ -690,8 +644,8 @@ export interface ProgressResponse { progress: SessionProgress }
 
 // POST /api/ingest — JSON hoặc multipart/form-data (trường "archive" = file .zip, trường "subdir" tùy chọn)
 export type IngestRequest =
-  | { repo_url: string; subdir_override?: string }   // subdir_override: chọn lại thư mục khi repo là monorepo
-  | { session_id: string };                          // Mở lại phiên cũ
+  | { repo_url: string; subdir_override?: string }   // Chỉ link gốc repo (D-38); subdir_override: chọn lại thư mục khi repo là monorepo
+  | { session_id: string; restart?: boolean };       // Mở lại phiên cũ; restart = "Học lại từ đầu" ⇒ phiên mới cùng snapshot (D-42)
 export interface IngestResponse {
   session_id: string;
   result: ClientStaticEngineResult;
@@ -706,8 +660,8 @@ export interface AnalyzeNodeRequest { session_id: string; node_id: string }
 export interface AnalyzeNodeResponse {
   node_id: string;
   analysis: NodeAnalysisView | null;     // null ⇒ phân tích lỗi (analysis_failed = true)
-  node_state: NodeStateView;             // Đã xét Fast-Track nếu node đang mở
-  unlocked_node_ids: string[];           // Fast-Track dây chuyền
+  node_state: NodeStateView;
+  unlocked_node_ids: string[];           // Node con mở nhờ analysis_failed (D-03)
   token_used: number;
 }
 
@@ -723,22 +677,22 @@ export interface QuestionView {
   tier: LearnerTier;
   focus: QuestionFocus;
   feynman_question: string;
-  challenge_token: string;               // Rỗng nếu câu đã xong
-  state: QuestionState;
+  state: QuestionState;                  // Không có đáp án khi câu chưa xong
 }
 export interface EnrichNodeResponse {
   node_id: string;
-  run_id: string | null;                 // null ⇒ không tạo run: LEARN có kế hoạch rỗng ⇒ đã Fast-Track (03 Mục 6.1), questions = []
+  run_id: string;                        // Kế hoạch luôn ≥ 1 câu (D-34)
   mode: RunMode;
-  questions: QuestionView[];             // Run đang dở ⇒ trả lại đúng run đó (cấp token mới)
+  questions: QuestionView[];             // Run đang dở ⇒ trả lại đúng run đó
   node_state: NodeStateView;
   token_used: number;
 }
 
-// POST /api/evaluate-feynman
+// POST /api/evaluate-feynman — server đọc câu hỏi + đáp án từ DB theo (run_id, question_index) (D-36)
 export interface EvaluateFeynmanRequest {
   session_id: string;
-  challenge_token: string;
+  run_id: string;
+  question_index: number;
   student_answer: string;
   attempt_number: number;                // = attempts_used + 1 phía client; lệch ⇒ ERR_ATTEMPT_OUT_OF_SYNC
 }
@@ -759,30 +713,20 @@ export interface EvaluateFeynmanResponse {
   node_state: NodeStateView;
   unlocked_node_ids: string[];
   token_used: number;
-  sync_receipt: SyncReceipt | null;      // Chỉ khi ghi DB thất bại sau bước kiểm (D-17)
 }
 
 // POST /api/reveal — nút "Bỏ qua câu này"
-export interface RevealRequest { session_id: string; challenge_token: string }
+export interface RevealRequest { session_id: string; run_id: string; question_index: number }
 export interface RevealResponse {
   question: QuestionState;               // finished, outcome FAILED, ended_by SKIP, reveal có
-  skill_change: SkillChange | null;      // LEARN / DECAY_REVIEW: có; REMEDIATION: null
+  skill_change: SkillChange;             // BKT cập nhật FAILED
   node_state: NodeStateView;
   unlocked_node_ids: string[];
-  sync_receipt: SyncReceipt | null;
 }
 
 // POST /api/report-wrong — nút "Báo sai" (D-22)
 export interface ReportWrongRequest { session_id: string; run_id: string; question_index: number; note: string }
 export interface ReportWrongResponse { question: QuestionState; skill_change: SkillChange | null; node_state: NodeStateView }
-
-// POST /api/sync/replay
-export interface SyncReplayRequest { receipts: SyncReceipt[] }   // Sắp theo issued_at
-export interface SyncReplayResponse {
-  results: Array<{ receipt_id: string; status: "APPLIED" | "DUPLICATE" | "STALE" | "INVALID" }>;
-  progress: SessionProgress | null;
-  profile: LearnerCognitiveProfile;
-}
 
 // POST /api/demo/persona — chỉ khi DEMO_MODE=true
 export interface PersonaRequest { mode: PersonaMode }
@@ -795,8 +739,7 @@ export type PersonaResponse = MeResponse;
 
 ```typescript
 export type LearningErrorCode =
-  | "ERR_NODE_NOT_AVAILABLE"        // Node LOCKED, hoặc mode không hợp trạng thái node
-  | "ERR_MODE_NOT_ALLOWED"          // REMEDIATION / DECAY_REVIEW chưa đủ điều kiện (22)
+  | "ERR_NODE_NOT_AVAILABLE"        // Tạo run cho node không AVAILABLE
   | "ERR_ANALYSIS_NOT_READY"        // enrich khi node chưa có bản phân tích
   | "ERR_OVERVIEW_NOT_READY"        // Còn node chưa phân tích xong
   | "ERR_QUESTION_FINISHED"         // Nộp / bỏ qua câu đã xong
@@ -807,16 +750,14 @@ export type LearningErrorCode =
 export type AiErrorCode =
   | "ERR_AI_UNAVAILABLE"            // Timeout / 429 / 503 / JSON hỏng sau LLM_MAX_RETRIES — không tính lượt
   | "ERR_AI_REJECTED"               // Bị cổng gác chặn sau thử lại (overview / mọi câu hỏi hỏng)
-  | "ERR_TOKEN_QUOTA_EXCEEDED"      // Phiên đã dùng ≥ SESSION_TOKEN_QUOTA — khóa lời gọi AI mới
-  | "ERR_CHALLENGE_TOKEN_INVALID"   // Giải mã hỏng / sai user / sai session
-  | "ERR_CHALLENGE_TOKEN_EXPIRED";  // Quá exp ⇒ client gọi lại enrich-node để nhận token mới
+  | "ERR_TOKEN_QUOTA_EXCEEDED";     // Phiên đã dùng ≥ SESSION_TOKEN_QUOTA — khóa lời gọi AI mới
 
 export type PersistenceErrorCode =
-  | "ERR_UNAUTHENTICATED" | "ERR_SESSION_NOT_FOUND"
-  | "ERR_SESSION_SOURCE_EXPIRED"    // Phiên ZIP / ARCHIVE_HASH hết cache ⇒ mời upload lại; commit bị xóa khỏi GitHub
+  | "ERR_UNAUTHENTICATED"
+  | "ERR_SESSION_NOT_FOUND"         // Phiên / run không thuộc người gọi; phiên không dựng lại được (Q-12)
   | "ERR_SESSION_ENGINE_OUTDATED"   // Phiên tạo bằng engine_version khác ⇒ chỉ xem lịch sử
-  | "ERR_PERSISTENCE_UNAVAILABLE"   // Postgres lỗi ở bước kiểm (D-17)
-  | "ERR_RECEIPT_INVALID" | "ERR_DEMO_MODE_DISABLED";
+  | "ERR_PERSISTENCE_UNAVAILABLE"   // Postgres lỗi khi đọc hoặc ghi ⇒ nút "Thử lại" (D-40)
+  | "ERR_DEMO_MODE_DISABLED";
 
 export type ClientErrorCode = "ERR_CLIENT_NETWORK"; // Chỉ client tạo (fetch bị từ chối / body không phải JSON); server không bao giờ trả
 
@@ -836,12 +777,12 @@ export interface ApiError {
 
 | HTTP | Mã lỗi |
 | :-: | :-- |
-| 400 | `ERR_INVALID_GITHUB_URL`, `ERR_UPLOAD_INVALID`, `ERR_ANSWER_TOO_SHORT`, `ERR_ANSWER_TOO_LONG`, `ERR_ANSWER_DUPLICATE`, `ERR_CHALLENGE_TOKEN_INVALID`, `ERR_RECEIPT_INVALID` |
+| 400 | `ERR_INVALID_GITHUB_URL`, `ERR_UPLOAD_INVALID`, `ERR_ANSWER_TOO_SHORT`, `ERR_ANSWER_TOO_LONG`, `ERR_ANSWER_DUPLICATE` |
 | 401 | `ERR_UNAUTHENTICATED` |
 | 403 | `ERR_DEMO_MODE_DISABLED`, `ERR_REPORT_NOT_ALLOWED` |
 | 404 | `ERR_PREFLIGHT_404_OR_PRIVATE`, `ERR_BRANCH_NOT_FOUND`, `ERR_SESSION_NOT_FOUND` |
-| 409 | `ERR_ATTEMPT_OUT_OF_SYNC`, `ERR_NODE_NOT_AVAILABLE`, `ERR_MODE_NOT_ALLOWED`, `ERR_QUESTION_FINISHED`, `ERR_ANALYSIS_NOT_READY`, `ERR_OVERVIEW_NOT_READY` |
-| 410 | `ERR_SESSION_SOURCE_EXPIRED`, `ERR_SESSION_ENGINE_OUTDATED`, `ERR_CHALLENGE_TOKEN_EXPIRED` |
+| 409 | `ERR_ATTEMPT_OUT_OF_SYNC`, `ERR_NODE_NOT_AVAILABLE`, `ERR_QUESTION_FINISHED`, `ERR_ANALYSIS_NOT_READY`, `ERR_OVERVIEW_NOT_READY` |
+| 410 | `ERR_SESSION_ENGINE_OUTDATED` |
 | 413 | `ERR_STREAM_QUOTA_EXCEEDED` |
 | 422 | `ERR_EMPTY_REPOSITORY`, `ERR_UNSUPPORTED_LANGUAGE`, `ERR_NO_SOURCE_FILES_FOUND`, `ERR_NO_ARCHITECTURAL_SLICE`, `ERR_STREAM_CORRUPTED`, `ERR_AI_REJECTED` |
 | 429 | `ERR_GITHUB_RATE_LIMIT_CDN`, `ERR_TOKEN_QUOTA_EXCEEDED` |
@@ -849,7 +790,7 @@ export interface ApiError {
 | 503 | `ERR_AI_UNAVAILABLE`, `ERR_PERSISTENCE_UNAVAILABLE`, `ERR_SERVER_BUSY` |
 | 504 | `ERR_NETWORK_TIMEOUT`, `ERR_STREAM_TIMEOUT` |
 
-`retryable = true` với: `ERR_NETWORK_TIMEOUT`, `ERR_STREAM_TIMEOUT`, `ERR_GITHUB_RATE_LIMIT_CDN`, `ERR_SERVER_BUSY`, `ERR_AI_UNAVAILABLE`, `ERR_PERSISTENCE_UNAVAILABLE`, `ERR_CHALLENGE_TOKEN_EXPIRED`, `ERR_ATTEMPT_OUT_OF_SYNC`.
+`retryable = true` với: `ERR_NETWORK_TIMEOUT`, `ERR_STREAM_TIMEOUT`, `ERR_GITHUB_RATE_LIMIT_CDN`, `ERR_SERVER_BUSY`, `ERR_AI_UNAVAILABLE`, `ERR_PERSISTENCE_UNAVAILABLE`, `ERR_ATTEMPT_OUT_OF_SYNC`.
 
 ---
 
@@ -870,7 +811,6 @@ export interface ClientWorkbenchState {          // Zustand — bản sao CHỈ 
   active_step: number | null;                     // Bước đang tô ở Monaco
   last_failed_answers: Record<string, string>;    // `${run_id}:${question_index}` ⇒ câu vừa trượt (kiểm trùng ở client)
   is_offline_mode: boolean;
-  pending_receipts: SyncReceipt[];                // Bản duy nhất giữ ở localStorage
   server_clock_offset_ms: number;                 // server_now − Date.now() (tính decay trên client)
 }
 
