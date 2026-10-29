@@ -1,0 +1,12 @@
+pitch/KICH_BAN_DEMO.md | mã không còn trong spec/00_QUYET_DINH.md | Q-02b
+pitch/PHAN_BIEN_BGK.md | mã không còn trong spec/00_QUYET_DINH.md | Q-02d
+pitch/ROADMAP.md | mã không còn trong spec/00_QUYET_DINH.md | Q-02a
+spec/02_CONTRACTS.md | mục không tồn tại | Mục 6.1 → spec/02_CONTRACTS.md
+spec/03_API_VA_LUU_TRU.md | mục không tồn tại | `02` Mục 5.5 → spec/02_CONTRACTS.md
+spec/10_ENGINE_INGEST.md | mục không tồn tại | Mục 6.7 → spec/10_ENGINE_INGEST.md
+spec/11_ENGINE_DO_THI.md | mục không tồn tại | Mục 10.1 → spec/11_ENGINE_DO_THI.md
+spec/11_ENGINE_DO_THI.md | mục không tồn tại | Mục 10.2 → spec/11_ENGINE_DO_THI.md
+spec/20_AI_GOI_VA_PROMPT.md | mục không tồn tại | Mục 3.1 → spec/20_AI_GOI_VA_PROMPT.md
+spec/21_AI_KIEM_VA_DUYET.md | mục không tồn tại | Mục 6.2 → spec/21_AI_KIEM_VA_DUYET.md
+spec/22_BKT_VA_KE_HOACH_CAU_HOI.md | mục không tồn tại | Mục 5.3 → spec/22_BKT_VA_KE_HOACH_CAU_HOI.md
+spec/22_BKT_VA_KE_HOACH_CAU_HOI.md | mục không tồn tại | `02` Mục 5.3 → spec/02_CONTRACTS.md

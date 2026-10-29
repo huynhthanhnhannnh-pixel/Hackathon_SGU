@@ -1,0 +1,10 @@
+# Thư viện của công cụ kiểm (cài bằng npm install)
+.ai/tools/mmcheck/node_modules/
+
+# Worktree lạc / cài đặt cá nhân của Claude Code
+.claude/worktrees/
+.claude/settings.local.json
+
+# Hệ điều hành
+Thumbs.db
+.DS_Store

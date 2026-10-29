@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Shared rules for every AI (Claude, Antigravity, …), check commands and the task protocol: @AGENTS.md. Claude's role here is the planner/reviewer: write tasks in `.ai/tasks/`, verify with `.ai/tools/` scripts instead of re-reading whole files, commit only what passed.
+
 ## Repository state
 
 This is a **documentation repository** (Vietnamese) for the SimpliFey V2 Pro hackathon project (SGU 2026–2027, "Codebase Cognitive Twin"). There is no source code, build system or test suite here. The product is coded during the 21-hour challenge round (12:00 31/10 → 09:00 01/11/2026) in a **separate, initially empty** competition repo, by following `spec/`. Competition rules (`references/thele.md`): only commits made during the round count, no bulk commit of pre-written code, every member must commit. So: do not scaffold the implementation in this repo, and do not paste large code blocks from `spec/` into the competition repo in one commit.
