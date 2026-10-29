@@ -79,6 +79,9 @@ Chốt **phiên bản chính xác ở giờ H+0** bằng lệnh cài đặt, ghi
 | `@supabase/supabase-js`, `@supabase/ssr` | 2.x | Auth + DB |
 | `vitest` | 2.x hoặc 3.x | Test hàm thuần (`50`) |
 
+**Nguồn grammar `.wasm`** (`public/grammars/`, tên file theo `LanguageAdapter.wasm_grammar`): ưu tiên file `.wasm` phát hành sẵn của grammar chính thức (`tree-sitter-typescript`, `tree-sitter-python`, …) hoặc gói npm `tree-sitter-wasms`; không có ⇒ tự build bằng `npx tree-sitter build --wasm` (cần Emscripten hoặc Docker). Mọi grammar phải cùng ABI với bản `web-tree-sitter` đã pin.
+> ⚠️ **Phải kiểm chứng ở H+1:** nạp được grammar TS/JS + Python bằng `initParsers()` (`11` ENG-11). **Fallback:** lệch ABI ⇒ đổi bản `web-tree-sitter` cho khớp grammar, không đổi grammar.
+
 ---
 
 ## 4. Ba luồng song song & điểm nối
@@ -109,7 +112,7 @@ flowchart LR
 | Mốc | Giờ | Phải chạy được (Definition of Done của mốc) |
 | :-- | :-- | :-- |
 | **H+0** | 12:00 T7 | `create-next-app`, cài gói, `.env.local`, migration chạy trên Supabase; mỗi người commit ≥ 1 lần |
-| **H+1** | 13:00 | `contracts/*` xong; fixture shop-api; kiểm 3 giả định của `10` (comment EOCD có SHA, `archive/HEAD.zip`, model Gemini trả lời) |
+| **H+1** | 13:00 | `contracts/*` xong; fixture shop-api; kiểm 3 giả định ⚠️ của `10` (codeload trả đúng mã cho `HEAD`, `archive/HEAD.zip` chuyển hướng tới nhánh mặc định, comment EOCD có commit SHA); model Gemini trả lời (Q-01); nạp được grammar `.wasm` (Mục 3) |
 | **H+4** | 16:00 | UI hiện bản đồ từ fixture; `bkt-engine` + `plan` + `derive` qua test `50`; ingest tải + lọc repo demo trong RAM |
 | **H+8** | 20:00 | **Lát dọc 1:** dán link repo demo ⇒ engine thật ⇒ bản đồ thật ⇒ bấm node ⇒ Tab 1 từ `analyze-node` thật |
 | **H+12** | 00:00 CN | **Lát dọc 2:** enrich ⇒ nộp ⇒ chấm ⇒ gợi ý ⇒ BKT ⇒ đổi màu ⇒ mở khóa, ghi Postgres; Fast-Track; viền cam |
