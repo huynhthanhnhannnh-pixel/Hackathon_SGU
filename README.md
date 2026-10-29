@@ -17,7 +17,7 @@ Mô hình BKT ghi nhận năng lực 16 kỹ năng lâu dài: phần đã vững
 
 | Ai | Đọc |
 | :-- | :-- |
-| **Cả nhóm (bắt buộc)** | [`00_QUYET_DINH`](spec/00_QUYET_DINH.md) → [`01_KIEN_TRUC_VA_LUONG`](spec/01_KIEN_TRUC_VA_LUONG.md) → [`02_CONTRACTS`](spec/02_CONTRACTS.md) → [`03_API_VA_LUU_TRU`](spec/03_API_VA_LUU_TRU.md) → [`40_KE_HOACH_21H`](spec/40_KE_HOACH_21H.md) |
+| **Cả nhóm (bắt buộc)** | [`00_QUYET_DINH`](spec/00_QUYET_DINH.md) → [`01_KIEN_TRUC_VA_LUONG`](spec/01_KIEN_TRUC_VA_LUONG.md) → [`02_CONTRACTS`](spec/02_CONTRACTS.md) → [`03_API_VA_LUU_TRU`](spec/03_API_VA_LUU_TRU.md) → [`04_KIEN_TRUC_TRIEN_KHAI`](spec/04_KIEN_TRUC_TRIEN_KHAI.md) → [`40_KE_HOACH_21H`](spec/40_KE_HOACH_21H.md) |
 | **Người 1 — Lead, UI, DB** | + [`30_UI`](spec/30_UI.md), [`50_TEST_VA_FIXTURE`](spec/50_TEST_VA_FIXTURE.md) |
 | **Người 2 — Engine** | + [`10_ENGINE_INGEST`](spec/10_ENGINE_INGEST.md), [`11_ENGINE_DO_THI`](spec/11_ENGINE_DO_THI.md) |
 | **Người 3 — AI, BKT** | + [`20_AI_GOI_VA_PROMPT`](spec/20_AI_GOI_VA_PROMPT.md), [`21_AI_KIEM_VA_DUYET`](spec/21_AI_KIEM_VA_DUYET.md), [`22_BKT_VA_KE_HOACH_CAU_HOI`](spec/22_BKT_VA_KE_HOACH_CAU_HOI.md) |

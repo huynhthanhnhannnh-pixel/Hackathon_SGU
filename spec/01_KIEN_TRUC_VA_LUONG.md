@@ -125,20 +125,42 @@ sequenceDiagram
     U->>FE: Bấm node VÀNG
     FE->>FE: Tab 1 hiện ngay từ NodeAnalysisView
     FE->>BE: POST /api/enrich-node { session_id, node_id, mode: LEARN } (chạy nền)
-    BE->>DB: Đọc skill_states ⇒ planNodeQuestions
-    BE->>AI: Viết câu hỏi còn thiếu trong cache
-    BE->>DB: Tạo node_runs (kế hoạch cố định)
-    BE-->>FE: EnrichNodeResponse (n câu, mỗi câu 1 challenge_token)
-    loop Mỗi câu, tối đa MAX_ATTEMPTS_PER_QUESTION lượt
-        U->>FE: Viết câu trả lời ⇒ Nộp
-        FE->>BE: POST /api/evaluate-feynman
-        BE->>BE: Kiểm (token, độ dài, lượt, trùng, regex)
-        BE->>AI: Chấm (nếu không bị regex chặn)
-        BE->>DB: Transaction: attempt + (BKT nếu câu xong) + (chốt node nếu run xong) + mở khóa
-        BE-->>FE: Điểm, nhận xét, gợi ý nấc kế / đáp án nếu câu xong
+    alt Đã có run LEARN chưa xong (tải lại trang, tab khác)
+        BE-->>FE: Trả lại đúng run đó, token mới cho các câu chưa xong
+    else Chưa có run
+        BE->>DB: Đọc skill_states ⇒ planNodeQuestions (n câu, 1 câu / kỹ năng chưa thạo)
+        alt Kế hoạch rỗng (kỹ năng vừa vượt FAST_TRACK_MIN)
+            BE->>DB: Fast-Track
+            BE-->>FE: run_id null, không có câu ⇒ node miễn thi
+        else Có ít nhất 1 câu
+            BE->>AI: Viết câu hỏi còn thiếu trong cache (câu hỏng ⇒ gọi lại 1 lần ⇒ DROPPED)
+            alt Mọi câu DROPPED
+                BE-->>FE: ERR_AI_REJECTED ⇒ nút Thử lại, không tạo run
+            else Còn ít nhất 1 câu
+                BE->>DB: Tạo node_runs (kế hoạch cố định n câu)
+                BE-->>FE: EnrichNodeResponse (n câu, mỗi câu 1 challenge_token)
+            end
+        end
     end
-    FE->>FE: Đổi màu node theo node_state (không tự tính)
+    loop Mỗi câu chưa xong của run, theo question_index (bỏ câu DROPPED)
+        loop Tới khi câu này xong (đạt / hết lượt / bỏ qua)
+            U->>FE: Viết câu trả lời ⇒ Nộp
+            FE->>BE: POST /api/evaluate-feynman (token của câu này)
+            BE->>BE: Kiểm (token, độ dài, lượt, trùng, regex)
+            BE->>AI: Chấm (nếu không bị regex chặn)
+            BE->>DB: Transaction: attempt + (BKT nếu câu xong) + (chốt node nếu đây là câu cuối chưa xong của run) + mở khóa
+            BE-->>FE: Điểm, nhận xét, gợi ý nấc kế / đáp án nếu câu xong
+        end
+        Note over U,BE: Bỏ qua câu này ⇒ POST /api/reveal ⇒ câu xong, FAILED
+        Note over U,BE: Câu FAILED do nộp bài ⇒ Báo sai ⇒ POST /api/report-wrong (D-22) ⇒ 🚩
+        U->>FE: Xem đáp án ⇒ bấm Câu tiếp theo
+    end
+    FE->>FE: Tổng kết run ✅ ❌ 🚩, đổi màu node theo node_state (không tự tính)
 ```
+
+- **1 run = n câu cố định**, 1 câu cho mỗi kỹ năng chưa thạo của node (`22` BKT-41, BKT-42). Mỗi câu có 1 kỹ năng, 1 `challenge_token`, lượt và gợi ý riêng (Mục 7). Mọi token được cấp ngay khi tạo run, nên chuyển câu không gọi thêm API.
+- **Câu xong** ⇒ hiện đáp án và nút "Câu tiếp theo", không tự nhảy (`30` UI-54).
+- **Run xong** khi mọi câu không `DROPPED` đều xong ⇒ server chốt màu node (`22` Mục 8), trả `node_state` và `unlocked_node_ids` (`30` UI-57).
 
 ### 5.3. Ôn tập
 
@@ -162,16 +184,16 @@ stateDiagram-v2
     [*] --> LOCKED: Còn node cha chưa thông
     LOCKED --> AVAILABLE: Mọi node cha thông (COMPLETED / FAILED / phân tích lỗi)
     AVAILABLE --> COMPLETED: Fast-Track (mọi kỹ năng ≥ FAST_TRACK_MIN, không phải Capstone)
-    AVAILABLE --> COMPLETED: Run LEARN xong, không câu nào FAILED
-    AVAILABLE --> FAILED: Run LEARN xong, ≥ 1 câu FAILED (trượt hết lượt hoặc bỏ qua)
+    AVAILABLE --> COMPLETED: Run LEARN xong, không còn câu FAILED chưa 🚩 (BKT-72)
+    AVAILABLE --> FAILED: Run LEARN xong, ≥ 1 câu FAILED chưa 🚩 (trượt hết lượt hoặc bỏ qua)
     FAILED --> COMPLETED: Run REMEDIATION đạt hết kỹ năng đã trượt
-    FAILED --> COMPLETED: Báo sai làm mọi câu còn lại đều đạt (D-22)
+    FAILED --> COMPLETED: Báo sai làm mọi câu FAILED còn lại đều 🚩 hoặc đã ôn đạt (D-22)
 ```
 
 | Chuyển | Ai kích hoạt | Endpoint | Ghi gì | Client nhận |
 | :-- | :-- | :-- | :-- | :-- |
 | `LOCKED → AVAILABLE` | Server (suy ra) | Bất kỳ lệnh làm node cha xong | Không ghi (suy ra khi đọc, `03` Mục 5.1) | `unlocked_node_ids`, `node_state` |
-| `AVAILABLE → COMPLETED` (Fast-Track) | Server | `ingest`, `analyze-node`, sau khi run xong, `sync/replay` | `node_progress(status, is_auto_mastered)` | `unlocked_node_ids` |
+| `AVAILABLE → COMPLETED` (Fast-Track) | Server | `ingest`, `analyze-node`, `enrich-node` (kế hoạch `LEARN` rỗng), sau khi run xong, `sync/replay` | `node_progress(status, is_auto_mastered)` | `unlocked_node_ids` |
 | `AVAILABLE → COMPLETED / FAILED` | Server, khi câu cuối của run `LEARN` xong | `evaluate-feynman`, `reveal` | `node_runs.finished_at`, `node_progress.status` | `node_state` |
 | `FAILED → COMPLETED` | Server | `evaluate-feynman` (run `REMEDIATION`), `report-wrong` | `node_progress.status` | `node_state` |
 | Phân tích lỗi | Server | `analyze-node` | `node_progress.analysis_failed = true` | `analysis = null`, node con mở kèm tam giác |
@@ -180,12 +202,17 @@ Chuyển `FAILED → AVAILABLE` **không tồn tại** (D-16).
 
 ## 7. Vòng đời 1 câu hỏi (trong 1 run)
 
+Một run có n câu (Mục 5.2); bảng dưới áp riêng cho từng câu. Câu xong ⇒ người học bấm sang câu kế; câu cuối xong ⇒ run xong.
+
+Lượt tối đa: `CONFIG.MAX_ATTEMPTS_PER_QUESTION`; `REMEDIATION`: `CONFIG.REMEDIATION_MAX_ATTEMPTS`. Lượt nào là lượt tối đa thì áp dòng "Lượt cuối".
+
 | Lượt | Đạt (D-13) | Chưa đạt |
 | :-: | :-- | :-- |
 | 1 | Xong, `PASS_FIRST` (`REMEDIATION`: `PASS_AFTER_HINT`) ⇒ BKT | Gợi ý nấc 1 `CONCEPT`: hỏi khái niệm bị hiểu sai, chưa chỉ chỗ |
-| 2 | Xong, `PASS_AFTER_HINT` ⇒ BKT | `LEARN` / `DECAY_REVIEW`: gợi ý nấc 2 `CODE_POINTER` (chỉ bước). `REMEDIATION`: hết lượt ⇒ `FAILED`, không trừ BKT |
-| 3 | Xong, `PASS_AFTER_HINT` ⇒ BKT | Xong, `FAILED` ⇒ BKT, hiện đáp án |
+| 2 | Xong, `PASS_AFTER_HINT` ⇒ BKT | Gợi ý nấc 2 `CODE_POINTER` (chỉ bước) |
+| Lượt cuối | Xong, `PASS_AFTER_HINT` ⇒ BKT | Xong, `FAILED` ⇒ BKT (`REMEDIATION`: không trừ BKT), hiện đáp án |
 | Bất kỳ | — | "Bỏ qua câu này" ⇒ xong, `FAILED`, `ended_by = SKIP` ⇒ BKT (trừ `REMEDIATION`), hiện đáp án |
+| Sau khi xong | — | Câu `FAILED` do nộp bài ⇒ "Báo sai" ⇒ 🚩, hoàn BKT nếu kỹ năng chưa có cập nhật khác (D-22, `22` BKT-63); `REMEDIATION` chỉ 🚩 |
 
 - `intent = GIVE_UP` (gõ "chịu", "không biết") ⇒ tính 1 lượt trượt, vẫn nhận gợi ý nấc kế.
 - Regex tấn công khớp ⇒ tính 1 lượt, 0 điểm, `OFF_TOPIC`, không gợi ý, không gọi AI.

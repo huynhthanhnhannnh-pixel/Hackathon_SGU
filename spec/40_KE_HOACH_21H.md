@@ -95,6 +95,8 @@ flowchart LR
 
 ## 3. Công nghệ & phiên bản
 
+> Chi tiết kiến trúc triển khai, máy chủ Railway, chuẩn logging Pino, CI/CD và bảo mật vận hành: xem [`04_KIEN_TRUC_TRIEN_KHAI.md`](04_KIEN_TRUC_TRIEN_KHAI.md).
+
 Chốt **phiên bản chính xác ở giờ H+0** bằng lệnh cài đặt, ghi vào `package.json` (không dùng `latest`). Dòng khuyến nghị:
 
 | Gói | Dòng | Dùng cho |
@@ -113,7 +115,7 @@ Chốt **phiên bản chính xác ở giờ H+0** bằng lệnh cài đặt, ghi
 | `vitest` | 2.x hoặc 3.x | Test hàm thuần (`50`) |
 
 **Nguồn grammar `.wasm`** (`public/grammars/`, tên file theo `LanguageAdapter.wasm_grammar`): ưu tiên `.wasm` phát hành sẵn của grammar chính thức (`tree-sitter-typescript`, `tree-sitter-python`, …) hoặc gói npm `tree-sitter-wasms`; không có ⇒ tự build bằng `npx tree-sitter build --wasm` (cần Emscripten hoặc Docker). Mọi grammar phải cùng ABI với bản `web-tree-sitter` đã pin.
-> ⚠️ **Phải kiểm chứng ở H+1:** nạp được grammar TS/JS + Python bằng `initParsers()` (`11` ENG-11). **Fallback:** lệch ABI ⇒ đổi bản `web-tree-sitter` cho khớp grammar, không đổi grammar.
+> ⚠️ **Phải kiểm chứng ở H+1:** nạp được grammar TS/JS + Python bằng `initParsers()` (`11` ENG-11). **Fallback (D-32):** lệch ABI ⇒ đổi bản `web-tree-sitter` trong `package.json` cho khớp với grammar `.wasm` đã có sẵn, không tự build lại grammar.
 
 ---
 
@@ -208,6 +210,6 @@ Không bao giờ cắt: bản đồ tất định, Tab 1, câu hỏi + chấm + 
 | Model AI không dùng được / free tier cạn | Lỗi 404 / 429 ở H+1 | Đổi `CONFIG.LLM_MODEL` (Q-01); demo bằng offline |
 | Comment EOCD không có commit SHA | Kiểm H+1 thất bại | Dùng `ARCHIVE_HASH`; mở lại phiên GitHub phải tải lại (ghi vào `00`) |
 | Engine trễ | Không có lát dọc 1 ở H+8 | Người 1, 3 tiếp tục trên fixture; cắt theo Mục 6 bước 1 |
-| Tree-sitter WASM lệch ABI | Parser lỗi khi nạp grammar | Dùng grammar build sẵn cùng phiên bản `web-tree-sitter` |
+| Tree-sitter WASM lệch ABI | Parser lỗi khi nạp grammar | Đổi phiên bản `web-tree-sitter` trong `package.json` cho khớp grammar có sẵn, không tự build lại (D-32) |
 | Postgres / mạng hội trường chập chờn | Lỗi khi tập demo | Mạng di động riêng (thể lệ khuyến khích); offline mode |
 | Câu trả lời trên sân khấu bị chấm khác lần tập | Lệch trong 3 lần chạy thử | Chỉ dùng câu đã ổn định 3/3; còn lại dùng offline |
