@@ -370,7 +370,7 @@ Không kiểm entropy ký tự, không cắt câu trả lời.
 | N3 | Đáp án câu 1 | 201 truy vấn | ✅ | ✅ | P2 / P3 | Tự đếm trước: 1 + 200 |
 
 **GUARD-19 — Đóng băng vào `OfflineMockBundle`** (`02` Mục 10).
-- `scripts/record-bundle.ts` gọi **API thật** theo kịch bản demo sau vòng duyệt cuối (cache còn nguyên ⇒ ra đúng output đã duyệt) và ghi `public/demo/mock_bundle.json`: `recorded_from` (`repo`, `snapshot_id`, `engine_version`, `prompt_version`, `model`, `recorded_at`), `ingest`, `analyses`, `overview`, `enrich` (khóa `${node_id}:${mode}:${persona}`), `scripted_answers` (khóa `${node_id}:${question_index}:${attempt_number}`), `reveals`.
+- `scripts/record-bundle.ts` gọi **API thật** theo kịch bản demo sau vòng duyệt cuối (cache còn nguyên ⇒ ra đúng output đã duyệt) và ghi `public/demo/mock_bundle.json`: `recorded_from` (`repo`, `snapshot_id`, `engine_version`, `prompt_version`, `model`, `recorded_at`), `ingest`, `analyses`, `overview`, `enrich`, `scripted_answers`, `reveals` (khóa theo `02` Mục 10: mỗi persona × mode của kịch bản là một run riêng).
 - **Không bao giờ sửa tay output AI** — không trong `ai_cache`, không trong bundle, kể cả chỗ sai. Sửa prompt vài vòng vẫn sai ⇒ giữ nguyên, tính vào số đo; kịch bản demo có thể tránh chỗ đó nhưng không giấu trong số đo.
 
 **GUARD-20 — Số đo báo cáo** (điền số thật, nói đúng phạm vi):

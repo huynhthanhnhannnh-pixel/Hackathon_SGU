@@ -276,15 +276,15 @@ export function mainPath(graph: StaticEngineResult): string[];   // → RepoOver
 | T-ENG-22 | `POST /orders/checkout` · `GET /users/:id/orders` · `POST /orders` · `GET /orders/:id` · `GET /orders` · `DELETE /orders/:id` | Order Checkout · List User Orders · Create Order · Get Order · List Orders · Delete Order |
 | T-ENG-23 | `crawler/run.py` `main()`, crawler×4, page×3 · hai "Checkout" ở `cart/`, `payment/` | "Crawler / Page" · "Checkout (cart)", "Checkout (payment)", `id` không đổi |
 | T-ENG-25 | 1 file Express 5 route · `main.py` không route, 5 hàm gọi nhau | NORMAL 5 lát cắt · `PROCEDURAL` P1 |
-| T-ENG-27 | `main.py` 1 hàm 400 dòng: `input()`, `if … raise`, tính, `cursor.execute` | 4 node ảo Input → Validation → Compute & Output → Data Access; id node đầu `vnode-a7a80f` (`hash6("main.py#INPUT")`) |
+| T-ENG-27 | `main.py` 1 hàm 400 dòng: `input()`, `if … raise`, tính, `cursor.execute` | 4 node ảo Input → Validation → Compute & Output → Data Access; id node đầu `vnode-c5e5ae` (`hash6("main.py#INPUT")`) |
 | T-ENG-28 | 20 file bài tập, 0 cạnh, 0 entry, 6 hàm > 15 | `ALGORITHM_COLLECTION`: 6 `algo-*` (đều `prerequisites []`) + `vroot-algorithms` (`is_group_root`, `trace_steps []`), 6 cạnh vẽ từ vroot; Capstone là 1 node `algo-*` |
 | T-ENG-29 | 3 câu khởi tạo, `while` 20 dòng, `return` | `ALGO_SETUP` / `ALGO_EXECUTION` / `ALGO_TERMINATION` |
 | T-ENG-30 | `ALGORITHM_COLLECTION`, không hàm nào ≥ 5 | 3 hàm cao nhất + warning |
 | T-ENG-31 | File 40% byte trong `ERROR` · mọi file như vậy | Bỏ file, `parse_error 1`, không trong `file_index` · `ERR_NO_ARCHITECTURAL_SLICE` |
 | T-ENG-32 | `OrderService.checkout(userId, items)`, DTO field `qty` | Whitelist ⊇ `OrderService`, `checkout`, `OrderService.checkout`, `userId`, `items`, `qty`; sort; không `<module>` |
 | T-ENG-33 | `toClientResult` | Không `symbol_whitelist`, không `suspicious_instruction_files` |
-| T-ENG-35 | `mainPath`: cạnh `n-a→n-b→n-d`, `n-a→n-c→n-d`, `vroot-algorithms→n-a` | `["n-a","n-b","n-d"]` (hòa theo `id`; không có vroot) |
 | T-ENG-34 | `runEngine` 2 lần cùng zip (X-01) | `nodes`, `edges`, `symbol_whitelist` giống hệt khi `JSON.stringify` |
+| T-ENG-35 | `mainPath`: cạnh `n-a→n-b→n-d`, `n-a→n-c→n-d`, `vroot-algorithms→n-a` | `["n-a","n-b","n-d"]` (hòa theo `id`; không có vroot) |
 
 ---
 

@@ -441,7 +441,7 @@ Kết quả ghi `(index, skill, tier, focus, step_indices)`:
 | :-: | :-- | :-- | :-- |
 | P-A | Trace A | N3, hồ sơ rỗng, `LEARN` | `(1, DB_OPTIMIZATION, NOVICE, WEAKNESS, [2])`, `(2, LAYERED_SEPARATION, NOVICE, FLOW, [1,2,3])` |
 | P-B | Trace B | N2, `HTTP_ROUTING 0.5767`, `LEARN` | `(1, AUTH_SECURITY, NOVICE, WEAKNESS, [2])`, `(2, HTTP_ROUTING, PRACTITIONER, ARCHITECTURE, [1,2])` |
-| P-C | Kế hoạch N5 của Minh | N5, HTTP/DTO/AUTH 0.9532, DB 0.8413, TRANSACTION 0.5767, `LEARN` | `(1, TRANSACTION_INTEGRITY, PRACTITIONER, WEAKNESS, [3])`, `(2, DB_OPTIMIZATION, ARCHITECT, WEAKNESS, [3])` — bỏ `HTTP_ROUTING` |
+| P-C | Capstone, 2 kỹ năng chưa thạo | N5, HTTP/DTO/AUTH 0.9532, DB 0.8413, TRANSACTION 0.5767, `LEARN` | `(1, TRANSACTION_INTEGRITY, PRACTITIONER, WEAKNESS, [3])`, `(2, DB_OPTIMIZATION, ARCHITECT, WEAKNESS, [3])` — bỏ `HTTP_ROUTING` |
 | P-D | Capstone đã thạo hết | N5, `SENIOR_ACTIVE` (mọi kỹ năng 0.95, `practice_count 1`) | `(1, TRANSACTION_INTEGRITY, ARCHITECT, WEAKNESS, [3])` |
 | P-D2 | Node thường đã thạo | N3 với `isCapstone = false`, `SENIOR_ACTIVE` | `[]` (= `isFastTrack` `true`) |
 | P-E1 | Ôn node đỏ lần 1 | N2, AUTH 0.0791, HTTP 0.8413, `REMEDIATION`, `failedSkills = [{AUTH_SECURITY, used_focuses: [WEAKNESS]}]` | `(1, AUTH_SECURITY, NOVICE, FLOW, [1,2,3])` |

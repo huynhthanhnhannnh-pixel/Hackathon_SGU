@@ -617,7 +617,7 @@ export interface LearningSessionSummary {
   failed_count: number;
   total_nodes: number;
   can_resume: boolean;
-  resume_blocker: "ZIP_SOURCE" | "ENGINE_UPDATED" | null; // ZIP/ARCHIVE_HASH ⇒ phải upload lại; ENGINE_UPDATED ⇒ chỉ xem lịch sử
+  resume_blocker: "ZIP_SOURCE" | "ENGINE_UPDATED" | null; // ZIP_SOURCE: nguồn ZIP hết cache RAM ⇒ kéo thả lại file; ENGINE_UPDATED ⇒ chỉ xem lịch sử (cách tính: 03 Mục 2)
 }
 
 export interface SyncReceipt {            // Server ký HMAC-SHA256 (RECEIPT_HMAC_KEY); client chỉ giữ hộ
@@ -709,7 +709,7 @@ export interface QuestionView {
 }
 export interface EnrichNodeResponse {
   node_id: string;
-  run_id: string;
+  run_id: string | null;                 // null ⇒ không tạo run: LEARN có kế hoạch rỗng ⇒ đã Fast-Track (03 Mục 6.1), questions = []
   mode: RunMode;
   questions: QuestionView[];             // Run đang dở ⇒ trả lại đúng run đó (cấp token mới)
   node_state: NodeStateView;
@@ -861,9 +861,9 @@ export interface OfflineMockBundle {               // public/demo/mock_bundle.js
   ingest: IngestResponse;
   analyses: Record<string, NodeAnalysisView>;
   overview: RepoOverviewView;
-  enrich: Record<string, EnrichNodeResponse>;      // Khóa `${node_id}:${mode}:${persona}`
-  scripted_answers: Record<string, Array<{ answer: string; response: EvaluateFeynmanResponse }>>; // Khóa `${node_id}:${question_index}:${attempt_number}`
-  reveals: Record<string, RevealResponse>;         // Khóa `${node_id}:${question_index}`
+  enrich: Record<string, EnrichNodeResponse>;      // Khóa run R = `${node_id}:${mode}:${persona}`
+  scripted_answers: Record<string, Array<{ answer: string; response: EvaluateFeynmanResponse }>>; // Khóa `${R}:${question_index}:${attempt_number}`
+  reveals: Record<string, RevealResponse>;         // Khóa `${R}:${question_index}`
 }
 ```
 

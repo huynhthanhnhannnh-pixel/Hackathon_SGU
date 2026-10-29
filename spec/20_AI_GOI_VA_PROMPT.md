@@ -19,7 +19,7 @@
 | **AI-07** | **Đếm token:** sau **mỗi** request có `usageMetadata` (kể cả bị gác chặn): `tokens_used += promptTokenCount + candidatesTokenCount + (thoughtsTokenCount ?? 0)` bằng 1 câu `update` ngoài transaction (API-06, API-07). Lời gọi dùng chung qua in-flight map chỉ tính cho phiên khởi tạo. |
 | **AI-08** | **Cache:** khóa `03` Mục 3.3 (+ biến thể AI-22); chỉ ghi bản **đã qua kiểm** (D-15); `tokens_in/out` = tổng mọi request; trùng khóa ⇒ dùng chung 1 promise. |
 | **AI-09** | Văn bản AI: tiếng Việt, câu ngắn; tên hàm / biến / thuộc tính / file đặt trong `` ` `` (`21` GUARD-04); không markdown khác. |
-| **AI-10** | Response tới client theo danh sách trường cho phép (API-03): không có `misconception`, `points[].quote`, đáp án câu chưa xong, `code_context`, `suspicious_instruction_files`. |
+| **AI-10** | Response theo API-03 (`03`); riêng phần AI: không có `points[].quote`, `code_context`. |
 
 ---
 
@@ -246,7 +246,7 @@ export const OVERVIEW_SCHEMA = obj({                               // = RepoOver
 });
 ```
 
-**AI-21 — View.** `facts` do code tính: `archetype`, `framework` = `detected_framework`, `tech_stack`, `root_node_ids` (không có `prerequisites`, sort `id`), `main_path_node_ids` = `mainPath(graph)`: đường dài nhất (số node) trên đồ thị node hiển thị, bỏ `is_group_root`, cùng luật chọn và hòa với `11` ENG-114 bước (1) nhưng không cắt độ dài. `ai` = bản đã kiểm hoặc `null`.
+**AI-21 — View.** `facts` do code tính: `archetype`, `framework` = `detected_framework`, `tech_stack`, `root_node_ids` (không có `prerequisites`, sort `id`), `main_path_node_ids` = `mainPath(graph)` (`11` ENG-155). `ai` = bản đã kiểm hoặc `null`.
 
 ---
 
@@ -537,7 +537,7 @@ export function openChallengeToken(token: string, now: number): ChallengeTokenPa
 | grade | Gợi ý / feedback trượt gác · regex tấn công | Mẫu tĩnh AI-32 · `injectionGrading`, tính 1 lượt |
 | server | Thiếu `GEMINI_API_KEY`, `CHALLENGE_TOKEN_KEY` sai độ dài | Không khởi động |
 
-**AI-37 — Token, độ trễ, chi phí:** mục tiêu / ước lượng ở `02` Mục 1.1 (chưa đo). UI hiện `token_used` thật từ `usageMetadata`; chi phí hiển thị là ước lượng theo Q-05.
+**AI-37 — Token, độ trễ, chi phí:** mục tiêu ở `02` Mục 1.1 (chưa đo). UI hiện `token_used` thật từ `usageMetadata`.
 
 ---
 

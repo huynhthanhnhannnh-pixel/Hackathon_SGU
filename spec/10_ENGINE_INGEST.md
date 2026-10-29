@@ -324,7 +324,7 @@ Số liệu theo `CONFIG` hiện tại. Tên test bắt đầu bằng mã luật
 | T-ING-13 | 30 `.ts` trong `client/`, 30 trong `server/`, mỗi thư mục có `package.json` | `is_monorepo`, offset `"server/"`; 30 file `server/` nạp trước mọi file `client/`; `skipped.quota 10` |
 | T-ING-14 | `services/order/` 40 KB, `services/user/` 60 KB, mỗi thư mục có manifest | Offset `"services/user/"`, `is_monorepo`, 1 warning nêu `services/order/` |
 | T-ING-15 | Chỉ `backend/` 80% byte · chỉ `backend/` 60% · `api-docs/x.ts` | `"backend/"`, `is_monorepo false` · `""` · không là ứng viên |
-| T-ING-16 | FPS, scope `"server/"`: `server/src/controllers/order.controller.ts` 500 B · `client/src/App.tsx` 500 B · `server/tests/order.test.ts` 500 B · `index.ts` gốc 100 B | **5.2** · **2.3333** · **1.3333** · **2** |
+| T-ING-16 | FPS, scope `"server/"`: `server/src/controllers/order.controller.ts` 500 B · `client/src/App.tsx` 500 B · `server/tests/order.test.ts` 500 B · `index.ts` gốc 100 B | **5.25** · **2.3333** · **1.3333** · **2** |
 | T-ING-17 | `src/distance.ts`, `lib/builder.ts`, `bin/cli.js`, `dist/a.js`, `node_modules/x/i.js`, `a.min.js`, `types.d.ts`, `bin/Debug/app.dll`, symlink | Giữ 3 file đầu; còn lại `GARBAGE` |
 | T-ING-18 | Upload `src/a.ts` + `README.md` · GitHub `b-main/src/a.ts` + `b-main/README.md` | Cả hai ⇒ `src/a.ts` |
 | T-ING-19 | `../../etc/x.ts` · `a/../../x.ts` · tên non-UTF8 không cờ bit 11 | Loại cả 3 (cái cuối `skipped.binary`) |

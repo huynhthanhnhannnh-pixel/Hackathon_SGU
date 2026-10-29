@@ -32,7 +32,7 @@ N3 Danh sách SP ─────────────────────
 | N6 Gửi email | `ASYNC_CONCURRENCY`, `ERROR_HANDLING` | — |
 | N7 Báo cáo doanh thu | `DB_OPTIMIZATION`, `ALGORITHMIC_COMPLEXITY` | — |
 
-Khi dùng `shop-api` làm repo demo thật: các lát cắt cần **dùng chung hàm** đúng như cạnh trên để D-07 sinh ra cùng đồ thị. Cụ thể, N2 và N5 dùng chung `authMiddleware`; N4 và N5 dùng chung `cartService.getCart`; N1 và N2 dùng chung `userRepo.findById`; N3 và N5 dùng chung `productRepo`; N5 gọi tới hàm của N6/N7.
+Khi dùng `shop-api` làm repo demo thật: mỗi cạnh trên cần 2 lát cắt **dùng chung ≥ 1 hàm có thân viết trong repo** (D-07; method thư viện như `productRepo.findOne` của TypeORM không tính). Cụ thể: N2 và N5 dùng chung `authMiddleware`; N4 và N5 dùng chung `cartService.getCart`; N1 và N2 dùng chung một hàm của `src/repos/user.repo.ts`; N3 và N5 dùng chung một hàm của `src/repos/product.repo.ts`; N5 gọi một hàm của N6 và một hàm của N7. Code Mục 1.2 là bản rút gọn chỉ gồm các bước dùng trong kịch bản; repo thật thêm các hàm dùng chung trên thì số bước / số dòng lấy theo engine, cập nhật lại fixture Mục 1.2 và 2 ở H+8 (`40`).
 
 ### 1.2. Code các bước dùng trong kịch bản
 
@@ -149,7 +149,7 @@ Kỳ vọng sau `checkOverview`:
 - Ghi chú thứ 2 bị gạch, vì bản phân tích N7 không có điểm dở.
 - Phần còn lại giữ nguyên.
 
-### 2.3. Câu hỏi của N3 cho người mới (`NOVICE`, NOVICE)
+### 2.3. Câu hỏi của N3 cho người mới (2 câu, tier `NOVICE`)
 
 ```json
 { "questions": [
@@ -229,7 +229,7 @@ Trước đó: N1 đạt PF ở `HTTP_ROUTING` ⇒ 0.5767.
 | B3 | Q1 lượt 2: *"Hàm getProfile kiểm tra mật khẩu người dùng."* | Chưa đạt; gợi ý `CODE_POINTER`, `step_index = 2` |
 | B4 | Q1 lượt 3: *"Middleware kiểm tra user có tồn tại không."* | F; `AUTH_SECURITY` 0.25 → **0.0791**; `reveal` |
 | B5 | Q2 lượt 1 (đúng) | PF; `HTTP_ROUTING` 0.5767 → **0.8413**; run xong ⇒ N2 `FAILED`; N4 `AVAILABLE` với `has_warning = true` |
-| B6 | Học xong N3 (kịch bản A) ⇒ N2 có `can_remediate = true` | |
+| B6 | Đọc `node_state` của N2 sau B5 | `can_remediate = true` ngay: N1 đã `COMPLETED` ⇒ đủ `REMEDIATION_MIN_OTHER_FINISHED`. Ca `false`: node gốc là node đầu tiên học xong và `FAILED` ⇒ UI hiện "Học xong thêm một node khác…" |
 | B7 | `enrich-node` N2 `REMEDIATION` | Kế hoạch chỉ có `AUTH_SECURITY` · NOVICE · góc khác `WEAKNESS` (⇒ `FLOW`); tối đa `REMEDIATION_MAX_ATTEMPTS` lượt; `remediation_runs = 1` |
 | B8 | Lượt 1 sai ⇒ gợi ý `CODE_POINTER`; lượt 2 đúng | PAH; `AUTH_SECURITY` 0.0791 → **0.2008**; N2 ⇒ `COMPLETED` |
 | B8' | (Biến thể) lượt 2 cũng sai | Câu `FAILED`, **không** trừ BKT (vẫn 0.0791); N2 giữ `FAILED` |
@@ -251,13 +251,13 @@ Hồ sơ Minh (vừa luyện, Δt ≈ 0):
 
 | # | Thao tác | Kỳ vọng |
 | :-: | :-- | :-- |
-| C1 | `ingest` + phân tích xong N1 | N1 Fast-Track (2 kỹ năng ≥ 0.92) ⇒ N2 mở ⇒ N2 Fast-Track (dây chuyền) ⇒ N4 mở; N4 **không** Fast-Track (`STATE_MANAGEMENT` 0.25) |
+| C1 | `ingest` + phân tích xong N1, N2, N4 | N1 Fast-Track (2 kỹ năng ≥ 0.92) ⇒ N2 mở ⇒ N2 Fast-Track (dây chuyền, trong cùng `applyFastTrackCascade`) ⇒ N4 mở; N4 **không** Fast-Track (`STATE_MANAGEMENT` 0.25) |
 | C2 | N3 `LEARN` | Q1 `DB_OPTIMIZATION` · ARCHITECT · `WEAKNESS`; Q2 `LAYERED_SEPARATION` · NOVICE · `FLOW`. Q1 PF: 0.8413 → **0.9532**; Q2 PF: 0.25 → **0.5767** ⇒ N3 `COMPLETED` |
 | C3 | N4 `LEARN` | Chỉ hỏi `STATE_MANAGEMENT` · NOVICE · `FLOW` (`DTO_VALIDATION` đã thạo). PF ⇒ 0.5767; N4 `COMPLETED` ⇒ N5 mở |
 | C4 | N5 ★ `LEARN` | Bỏ `DB_OPTIMIZATION` (0.9532) và `HTTP_ROUTING`. Chỉ hỏi `TRANSACTION_INTEGRITY` · PRACTITIONER · `WEAKNESS`. PAH: 0.5767 → **0.7292** ⇒ N5 `COMPLETED` ⇒ N6, N7 mở |
 | C5 | (Biến thể) mọi kỹ năng của N5 ≥ `FAST_TRACK_MIN` | N5 vẫn hỏi **1 câu**: kỹ năng yếu nhất, tier ARCHITECT (Capstone không Fast-Track) |
 
-Minh gọi AI đặt câu hỏi ở 3 node (N3, N4, N5). N1 và N2 không tốn token.
+Minh gọi AI đặt câu hỏi ở 3 node (N3, N4, N5). N1 và N2 không tốn token đặt câu hỏi hay chấm.
 
 ### 3.4. Kịch bản D — Các đường trục trặc
 

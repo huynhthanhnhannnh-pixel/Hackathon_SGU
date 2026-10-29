@@ -1,6 +1,6 @@
 # 40 — KẾ HOẠCH CODE 21 GIỜ (12g00 31/10 → 09g00 01/11/2026)
 
-> Phạm vi: D-04 (toàn bộ spec). Đọc cùng `references/thele.md` (luật thi) và `00_QUYET_DINH.md` (câu hỏi mở Q-01 … Q-05).
+> Phạm vi: D-04 (toàn bộ spec). Đọc cùng `references/thele.md` (luật thi) và `00_QUYET_DINH.md` (câu hỏi mở Q-xx).
 > **Luật thi chi phối cách làm:** repo thi **trống** lúc bắt đầu, BTC chỉ nhận commit trong giờ thi, **cấm bulk-commit code viết sẵn**, **mọi thành viên phải có commit**. Spec này là tài liệu đọc, không phải code: không chép nguyên khối vào repo thi trong một commit.
 
 ---
@@ -9,7 +9,7 @@
 
 | Việc | Người | Hạn |
 | :-- | :-- | :-- |
-| Trả lời Q-01 … Q-05 trong `00_QUYET_DINH.md` | Như bảng Q | 30/10 |
+| Trả lời mọi Q-xx trong `00_QUYET_DINH.md` Mục 3 | Như bảng Q | 30/10 |
 | Hỏi BTC 4 câu Q-02 ở buổi họp online | Người 1 | 30/10 |
 | Tạo repo GitHub **public, trống**, thêm đủ thành viên làm collaborator, nộp link cho BTC | Người 1 | Trước giờ thi theo BTC |
 | Tạo project Supabase (vùng Singapore), bật Anonymous Sign-in + GitHub provider (cho phép manual linking) | Người 1 | 30/10 |
@@ -33,12 +33,12 @@
 │   ├── grammars/*.wasm                          # Grammar Tree-sitter (10, 11)
 │   └── demo/mock_bundle.json                    # OfflineMockBundle (ghi lại ở giờ H+17)
 └── src/
-    ├── contracts/{config,types}.ts              # 02 — viết đầu tiên, cả nhóm dùng
+    ├── contracts/{config,…}.ts · contracts/index.ts   # 02 — config.ts = Mục 1, mỗi Mục 2–10 một file, index.ts re-export; viết đầu tiên
     ├── app/
-    │   ├── layout.tsx · page.tsx                # 30
+    │   ├── layout.tsx · page.tsx · history/page.tsx   # 30
     │   └── api/
     │       ├── me/route.ts                      # GET, DELETE
-    │       ├── sessions/route.ts · sessions/[id]/history/route.ts
+    │       ├── sessions/route.ts · sessions/[id]/history/route.ts · sessions/[id]/progress/route.ts
     │       ├── ingest/route.ts · analyze-node/route.ts · analyze-overview/route.ts
     │       ├── enrich-node/route.ts · evaluate-feynman/route.ts · reveal/route.ts
     │       ├── report-wrong/route.ts · sync/replay/route.ts · demo/persona/route.ts
@@ -53,7 +53,7 @@
     │   ├── ai/{gemini,analyze,overview,questions,grade}.ts · ai/prompts/*.ts · ai/schemas.ts      # 20
     │   └── ai/guard/{text,names,forbidden,lines,analysis,overview,questions,followup,injection}.ts  # 21
     ├── lib/{bkt-engine,plan,derive,similarity}.ts   # 22 — hàm thuần dùng chung server + client
-    ├── lib/api.ts                               # Client gọi API có kiểu
+    ├── lib/{api,offline,messages}.ts            # Client gọi API có kiểu · bản Offline cùng chữ ký · bảng thông điệp lỗi (30)
     ├── store/workbench.ts                       # Zustand (30)
     └── components/{landing,header,canvas,code,cockpit}/*.tsx  # 30
 ```
@@ -85,7 +85,7 @@ Chốt **phiên bản chính xác ở giờ H+0** bằng lệnh cài đặt, ghi
 
 ```mermaid
 flowchart LR
-    C["H0–H1 · contracts/config.ts + types.ts (Người 1 gõ, 2 & 3 review)"] --> P1 & P2 & P3
+    C["H0–H1 · src/contracts/* (Người 1 gõ, 2 & 3 review)"] --> P1 & P2 & P3
     subgraph P1["Người 1 — UI + DB + API"]
       A1["Supabase migration, auth, /api/me"] --> A2["Store + canvas đọc fixture"] --> A3["Tab 1/2/Tổng quan"] --> A4["Route ingest/analyze/enrich/evaluate/reveal (nối lib của 2, 3)"] --> A5["sessions, history, sync, persona, offline"]
     end

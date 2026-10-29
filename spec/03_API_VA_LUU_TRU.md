@@ -29,13 +29,17 @@
 | 5 | `POST /api/ingest` | `IngestRequest` → `IngestResponse` | Upsert `learning_sessions`; Fast-Track (Mục 5.4) | — | Mọi `IngestionErrorCode`, `ERR_SESSION_SOURCE_EXPIRED`, `ERR_SESSION_ENGINE_OUTDATED` |
 | 6 | `POST /api/analyze-node` | `AnalyzeNodeRequest` → `AnalyzeNodeResponse` | `ai_cache`, `node_progress.analysis_failed`, Fast-Track, `tokens_used` | ✅ | `ERR_TOKEN_QUOTA_EXCEEDED` |
 | 7 | `POST /api/analyze-overview` | `AnalyzeOverviewRequest` → `AnalyzeOverviewResponse` | `ai_cache`, `tokens_used` | ✅ | `ERR_OVERVIEW_NOT_READY`, `ERR_TOKEN_QUOTA_EXCEEDED` |
-| 8 | `POST /api/enrich-node` | `EnrichNodeRequest` → `EnrichNodeResponse` | `node_runs` (tạo run), `ai_cache`, `tokens_used`, `last_active_at` | ✅ | `ERR_NODE_NOT_AVAILABLE`, `ERR_MODE_NOT_ALLOWED`, `ERR_ANALYSIS_NOT_READY`, `ERR_AI_REJECTED`, `ERR_AI_UNAVAILABLE` |
+| 8 | `POST /api/enrich-node` | `EnrichNodeRequest` → `EnrichNodeResponse` | `node_runs` (tạo run), `ai_cache`, `tokens_used`, `last_active_at` | ✅ | `ERR_NODE_NOT_AVAILABLE`, `ERR_MODE_NOT_ALLOWED`, `ERR_ANALYSIS_NOT_READY`, `ERR_AI_REJECTED`, `ERR_AI_UNAVAILABLE`, `ERR_TOKEN_QUOTA_EXCEEDED` |
 | 9 | `POST /api/evaluate-feynman` | `EvaluateFeynmanRequest` → `EvaluateFeynmanResponse` | Transaction Mục 6.2 | ✅ | `ERR_CHALLENGE_TOKEN_*`, `ERR_ANSWER_*`, `ERR_QUESTION_FINISHED`, `ERR_ATTEMPT_OUT_OF_SYNC`, `ERR_AI_UNAVAILABLE`, `ERR_TOKEN_QUOTA_EXCEEDED`, `ERR_PERSISTENCE_UNAVAILABLE` |
 | 10 | `POST /api/reveal` | `RevealRequest` → `RevealResponse` | Transaction Mục 6.3 | — | `ERR_CHALLENGE_TOKEN_*`, `ERR_QUESTION_FINISHED` |
 | 11 | `POST /api/report-wrong` | `ReportWrongRequest` → `ReportWrongResponse` | Mục 6.4 | — | `ERR_REPORT_NOT_ALLOWED` |
 | 12 | `POST /api/sync/replay` | `SyncReplayRequest` → `SyncReplayResponse` | Mục 6.5 | — | `ERR_RECEIPT_INVALID` |
 | 13 | `POST /api/demo/persona` | `PersonaRequest` → `PersonaResponse` | Ghi đè 16 dòng `skill_states` của **tài khoản hiện tại** | — | `ERR_DEMO_MODE_DISABLED` |
 | 14 | `GET /api/sessions/{id}/progress` | — → `ProgressResponse` | — (chỉ đọc DB, không engine, không AI) | — | `ERR_SESSION_NOT_FOUND` |
+
+Lỗi chung, không lặp ở cột "Lỗi riêng": mọi endpoint ⇒ `ERR_UNAUTHENTICATED` (API-04), `ERR_PERSISTENCE_UNAVAILABLE` (DB lỗi khi đọc); endpoint nhận `session_id` ⇒ `ERR_SESSION_NOT_FOUND` (API-05); endpoint gọi `getOrRebuildStaticResult` (`ingest { session_id }`, `analyze-node`, `analyze-overview`, `enrich-node`) ⇒ `ERR_SESSION_SOURCE_EXPIRED`, `ERR_SESSION_ENGINE_OUTDATED` (Mục 4).
+
+`GET /api/sessions` tính mỗi `LearningSessionSummary` khi đọc (không lưu): `completed_count` / `failed_count` đếm `node_progress.status`; `total_nodes = graph_skeleton.length`; `engine_version ≠ CONFIG.ENGINE_VERSION` ⇒ `can_resume = false`, `resume_blocker = "ENGINE_UPDATED"`; ngược lại nguồn `ZIP` mà cache RAM (Mục 4) không còn kết quả ⇒ `false`, `"ZIP_SOURCE"`; còn lại (mọi phiên `GITHUB`, kể cả `ARCHIVE_HASH` — D-26) ⇒ `true`, `null`.
 
 Liên kết GitHub không phải endpoint của mình: client gọi `supabase.auth.linkIdentity({ provider: "github" })` (scope mặc định `read:user`, không xin quyền repo private), sau đó gọi lại `GET /api/me` để server cập nhật `is_guest = false`.
 
@@ -62,7 +66,7 @@ create table profiles (
 create table skill_states (                            -- = CognitiveSkillState; thiếu dòng ⇒ P = BKT_P_L0
   user_id           uuid not null references profiles on delete cascade,
   skill             swe_skill not null,
-  p_mastery         double precision not null check (p_mastery between 0.01 and 0.99),
+  p_mastery         double precision not null check (p_mastery between 0.01 and 0.99),  -- = CONFIG.BKT_P_MIN / BKT_P_MAX
   last_practiced_at timestamptz not null,
   practice_count    int not null default 0,
   correct_count     int not null default 0,
@@ -113,14 +117,14 @@ create table question_attempts (                       -- Chỉ thêm, không s�
   id             bigint generated always as identity primary key,
   run_id         uuid not null references node_runs on delete cascade,
   question_index smallint not null,
-  attempt_number smallint not null check (attempt_number between 1 and 3),
+  attempt_number smallint not null check (attempt_number between 1 and 3),   -- = CONFIG.MAX_ATTEMPTS_PER_QUESTION
   skill          swe_skill not null,
   core_accuracy  smallint not null,
   simplicity     smallint not null,
   intent         text not null check (intent in ('ANSWER','GIVE_UP','OFF_TOPIC')),
   is_passed      boolean not null,
   points_covered boolean[] not null,
-  student_answer text not null check (char_length(student_answer) <= 2000),
+  student_answer text not null check (char_length(student_answer) <= 2000),  -- = CONFIG.ANSWER_MAX_CHARS
   receipt_id     uuid unique,                          -- Có giá trị khi ghi qua /api/sync/replay
   created_at     timestamptz not null default now()
 );
@@ -142,7 +146,7 @@ create table dispute_reports (                         -- Nút "Báo sai" (D-22)
   user_id        uuid not null references profiles on delete cascade,
   run_id         uuid not null references node_runs on delete cascade,
   question_index smallint not null,
-  note           text not null check (char_length(note) <= 500),
+  note           text not null check (char_length(note) <= 500),           -- = CONFIG.REPORT_NOTE_MAX_CHARS
   created_at     timestamptz not null default now()
 );
 ```
@@ -178,7 +182,7 @@ interface RunQuestion extends QuestionPlanItem {   // QuestionPlanItem: 02 Mục
 | `REPO_OVERVIEW` | `ov|{source}|{snapshot_id}|{subdir}|{engine_version}|{PROMPT_VERSION}|{LLM_MODEL}` |
 | `QUESTION` | `q|{source}|{snapshot_id}|{subdir}|{engine_version}|{node_id}|{skill}|{tier}|{focus}|{mode}|{PROMPT_VERSION}|{LLM_MODEL}` |
 
-`mode` nằm trong khóa câu hỏi để run ôn tập không lấy lại câu đã lộ đáp án. Với `REMEDIATION` / `DECAY_REVIEW`, lần ôn thứ n ≥ 2 của cùng (node, kỹ năng, tier, góc) thêm hậu tố `|v{n}` vào khóa (`20` AI-22) để không trúng lại câu cũ. Hai yêu cầu trùng khóa cùng lúc dùng chung một promise trong RAM (in-flight map), chỉ gọi AI 1 lần.
+`mode` nằm trong khóa câu hỏi để run ôn tập không lấy lại câu đã lộ đáp án. Với `REMEDIATION` / `DECAY_REVIEW`, khóa có thể thêm hậu tố `|v{n}` (n ≥ 2) để không trúng lại câu người học đã gặp; cách chọn `n`: `20` AI-22 (D-25). Hai yêu cầu trùng khóa cùng lúc dùng chung một promise trong RAM (in-flight map), chỉ gọi AI 1 lần.
 
 ---
 
@@ -187,7 +191,7 @@ interface RunQuestion extends QuestionPlanItem {   // QuestionPlanItem: 02 Mục
 - **Khóa phiên:** `(user_id, source, snapshot_id, subdir, engine_version)`.
   - GitHub: `snapshot_id` = commit SHA 40 hex đọc từ comment EOCD của zip codeload (`10` Mục snapshot). Comment không khớp `/^[0-9a-f]{40}$/` ⇒ `ARCHIVE_HASH` = SHA-256 của **toàn bộ** buffer zip.
   - Upload `.zip`: `ARCHIVE_HASH` = SHA-256 của buffer.
-- **Cache RAM `StaticEngineResult`:** LRU `CONFIG.INGESTION_CACHE_MAX_ENTRIES`, TTL `CONFIG.INGESTION_CACHE_TTL_MS`, hai tầng: alias `owner/repo@ref/subdir ⇒ snapshot_id` và kết quả `snapshot_id|subdir|engine_version ⇒ StaticEngineResult`.
+- **Cache RAM `StaticEngineResult`:** LRU `CONFIG.INGESTION_CACHE_MAX_ENTRIES`, TTL `CONFIG.INGESTION_CACHE_TTL_MS`, hai tầng: alias `owner/repo@{ref_path}/{subdir_override}` (link chưa phân giải, `10` ING-04) `⇒ snapshot_id` và kết quả `snapshot_id|subdir|engine_version ⇒ StaticEngineResult`.
 - **`getOrRebuildStaticResult(session)`:** trúng cache ⇒ dùng; trượt và `COMMIT_SHA` ⇒ tải `codeload.github.com/{owner}/{repo}/zip/{sha}` rồi chạy lại Tầng 0–2; trượt, `ARCHIVE_HASH` và nguồn `GITHUB` ⇒ tải lại zip theo `ref_label`, so SHA-256 toàn bộ buffer với `snapshot_id`: khớp ⇒ dùng, lệch ⇒ `ERR_SESSION_SOURCE_EXPIRED` "repo đã thay đổi" (D-26); trượt và nguồn `ZIP` ⇒ `ERR_SESSION_SOURCE_EXPIRED` (UI mời kéo thả lại file zip; server so SHA-256 khớp `snapshot_id` rồi mới gắn vào phiên cũ); codeload 404 (commit bị force-push xóa) ⇒ `ERR_SESSION_SOURCE_EXPIRED`.
 - **Kiểm tất định khi dựng lại:** khung đồ thị dựng lại phải trùng `graph_skeleton` đã lưu (so `node_id` + `prerequisites`). Lệch ⇒ ghi log lỗi và trả `ERR_SESSION_ENGINE_OUTDATED`.
 
@@ -230,14 +234,17 @@ Sau `ingest` (mở mới hoặc mở lại), sau `analyze-node` thành công, sa
 ```typescript
 // src/server/enrich.ts
 async function enrichNode(req: EnrichNodeRequest, userId: string): Promise<EnrichNodeResponse> {
+  const now = Date.now();
   const session = await getOwnedSession(req.session_id, userId);
+  const profile = await loadProfile(userId);                             // skill_states ⇒ LearnerCognitiveProfile
   const graph = await getOrRebuildStaticResult(session);
   const node = mustFindNode(graph, req.node_id);
+
+  const open = await db.findOpenRun(session.id, node.id, req.mode);      // TRƯỚC kiểm mode: run đã tạo hợp lệ thì luôn trả lại được
+  if (open) return buildEnrichResponse(open, issueTokensForUnfinished(open)); // Idempotent: cấp token mới (token hết hạn, tải lại trang)
+
   const state = await loadNodeState(session, node.id);                  // deriveNodeStates + node_progress
   assertModeAllowed(req.mode, state, profile, now);                      // Bảng dưới
-
-  const open = await db.findOpenRun(session.id, node.id, req.mode);
-  if (open) return buildEnrichResponse(open, issueTokensForUnfinished(open)); // Idempotent: cấp token mới
 
   const analysis = await aiCache.get(analysisKey(session, node.id));
   if (!analysis) throw ERR_ANALYSIS_NOT_READY;
@@ -246,15 +253,17 @@ async function enrichNode(req: EnrichNodeRequest, userId: string): Promise<Enric
   if (plan.length === 0) {
     if (req.mode !== "LEARN") throw ERR_MODE_NOT_ALLOWED;                // Không còn kỹ năng để ôn
     await db.tx(tx => applyFastTrackCascade(tx, session, profile, now)); // LEARN: kỹ năng vừa vượt FAST_TRACK_MIN
-    return buildEnrichResponse(null, []);
+    return buildEnrichResponse(null, []);                                // run_id = null, questions = [] (UI-58)
   }
   const questions: RunQuestion[] = await getOrGenerateQuestions(session, graph, node, analysis, plan, req.mode); // 20: ai_cache hoặc 1 lời gọi AI cho các câu thiếu; câu hỏng ⇒ gọi lại riêng 1 lần ⇒ vẫn hỏng ⇒ DROPPED
   if (questions.every(q => q.ended_by === "DROPPED")) throw ERR_AI_REJECTED;          // Không tạo run; UI hiện "Thử lại"
-  const run = await db.createRun(session.id, node.id, req.mode, questions);           // REMEDIATION ⇒ remediation_runs++ trong cùng transaction
+  const run = await db.createRun(session.id, node.id, req.mode, questions);           // REMEDIATION ⇒ remediation_runs++ trong cùng transaction; vi phạm node_runs_one_open (2 tab) ⇒ đọc lại run đang mở, trả như nhánh idempotent
   await db.touchSession(session.id);
   return buildEnrichResponse(run, issueTokensForUnfinished(run));
 }
 ```
+
+Điều kiện mode chỉ kiểm khi **tạo run mới** (không có run đang mở cùng `mode`):
 
 | `mode` | Điều kiện (sai ⇒ lỗi) |
 | :-- | :-- |
@@ -330,7 +339,7 @@ Khóa run ⇒ câu phải `outcome = FAILED`, `ended_by = ANSWER`, `disputed = f
 
 ### 6.5. `sync/replay`
 
-Với từng biên nhận theo `issued_at` tăng dần: kiểm chữ ký HMAC và `user_id` (sai ⇒ `INVALID`) ⇒ `receipt_id` đã có trong `question_attempts` ⇒ `DUPLICATE` ⇒ khóa run; `attempts_used ≠ expected_attempts_used` hoặc câu đã xong ⇒ `STALE` ⇒ ngược lại chạy lại bước 4 của 6.2 (hoặc 6.3) bằng `observation`, BKT **tính lại** trên điểm hiện tại ⇒ `APPLIED`. Cuối cùng chạy `applyFastTrackCascade` và trả `progress` + `profile` mới.
+Với từng biên nhận theo `issued_at` tăng dần: kiểm chữ ký HMAC và `user_id` (sai ⇒ `INVALID`) ⇒ `EVALUATE`: `receipt_id` đã có trong `question_attempts` ⇒ `DUPLICATE`; `REVEAL` (không sinh dòng `question_attempts`): câu đã `ended_by = SKIP` ⇒ `DUPLICATE` ⇒ khóa run; `attempts_used ≠ expected_attempts_used` hoặc câu đã xong ⇒ `STALE` ⇒ ngược lại chạy lại bước 4 của 6.2 (hoặc 6.3) bằng `observation`, BKT **tính lại** trên điểm hiện tại ⇒ `APPLIED`. Cuối cùng chạy `applyFastTrackCascade` và trả `progress` + `profile` mới.
 
 ### 6.6. `finalizeRunIfDone(tx, run, now)`
 
@@ -361,7 +370,7 @@ Sau khi đổi trạng thái: đặt `finished_at`, upsert `node_progress`, ch�
 
 ### 6.8. `demo/persona`
 
-`process.env.DEMO_MODE !== "true"` ⇒ `ERR_DEMO_MODE_DISABLED`. Ngược lại upsert đủ 16 dòng `skill_states`: `p_mastery = PERSONAS[mode].initial_p_mastery`, `last_practiced_at = now − days_idle · CONFIG.MS_PER_DAY`, `practice_count = 1`, `correct_count = 1`. Chỉ tài khoản đang đăng nhập; nhóm dùng tài khoản demo riêng, không dùng tài khoản thật của thành viên.
+`process.env[CONFIG.DEMO_MODE_ENV] !== "true"` ⇒ `ERR_DEMO_MODE_DISABLED`. Ngược lại upsert đủ 16 dòng `skill_states`: `p_mastery = PERSONAS[mode].initial_p_mastery`, `last_practiced_at = now − days_idle · CONFIG.MS_PER_DAY`, `practice_count = 1`, `correct_count = 1`. Chỉ tài khoản đang đăng nhập; nhóm dùng tài khoản demo riêng, không dùng tài khoản thật của thành viên.
 
 ---
 
