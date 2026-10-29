@@ -107,7 +107,7 @@ Nhóm muốn có số liệu pilot trước rồi mới đặt giá.
 Đ: Tree-sitter đọc cú pháp, lập danh bạ tên hàm; hệ thống phân giải import rồi nối từng lời gọi tới định nghĩa thật. Ngôn ngữ có bộ phân giải riêng thì cạnh khá chính xác với code viết theo mẫu phổ biến; ngôn ngữ khác nối bằng luật chung, cạnh gắn nhãn suy luận. Gọi động, DI qua cấu hình, reflection có thể làm sót cạnh; hệ thống không bịa cạnh để bù.
 
 **B3. "Hai file gọi vòng nhau (A gọi B, B gọi A) thì đồ thị có lặp vô tận không?"**
-Đ: Không ạ. Thuật toán Tarjan tìm các nhóm gọi vòng nhau và gộp mỗi nhóm thành một cụm, nên đồ thị sau khi gộp luôn không có chu trình. Thuật toán chạy tuyến tính theo số đỉnh và số cạnh.
+Đ: Không ạ. Tarjan tìm các nhóm gọi vòng nhau và gộp mỗi nhóm thành một cụm, nên đồ thị sau khi gộp luôn không có chu trình; chạy tuyến tính theo số đỉnh + cạnh.
 
 **B4. "Chạy PageRank trên code thì Controller không ai gọi tới phải xếp thấp nhất chứ?"**
 Đ: Dạ đúng. Nhóm đã tự tính: với chuỗi Controller → Service → Repository, PageRank hội tụ về khoảng 0,18 / 0,34 / 0,47, tức Repository cao nhất. Vì vậy:
@@ -131,7 +131,7 @@ AI khi đó hỏi kiểu thuật toán: chạy tay với input nhỏ, Big-O, tì
 Đ: Không ạ. Khi mẫu số bằng 0, hoặc lát cắt không có cú pháp trừu tượng, chỉ số được miễn trừ (`is_exempt`, D = 0, `BALANCED`). Chỉ số này chỉ là gợi ý phụ cho AI, không phải điểm của người học.
 
 **B9. "Sao không dùng LLM để dựng đồ thị cho nhanh?"**
-Đ: Bản đồ phải tất định để mở lại phiên theo commit: cùng repo, cùng commit thì ra cùng node và cùng tọa độ. Bản đồ cũng phải miễn phí. LLM không đáp ứng được cả hai điều đó, nên spec cấm dùng LLM để dựng đồ thị.
+Đ: Bản đồ phải tất định (cùng commit ⇒ cùng node, cùng tọa độ, để mở lại phiên) và miễn phí. LLM không đáp ứng được cả hai, nên spec cấm dùng LLM dựng đồ thị.
 
 **B10. "Repo private thì sao?"**
 Đ: Nén thành `.zip` rồi kéo thả vào. File chỉ nằm trong RAM và được định danh bằng SHA-256. Đăng nhập GitHub chỉ xin quyền đọc hồ sơ (`read:user`), không đọc được repo private. Đọc repo private qua GitHub App với quyền chỉ đọc nằm ở roadmap.

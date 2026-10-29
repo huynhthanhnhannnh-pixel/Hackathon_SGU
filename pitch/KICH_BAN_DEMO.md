@@ -14,7 +14,7 @@
 | **Bản đồ của `shop-api`** | N1 Đăng ký → N2 Xem hồ sơ → N4 Giỏ hàng → N5 Thanh toán ★ → N6 Gửi email, N7 Báo cáo doanh thu. N3 Danh sách sản phẩm → N5. ★ là Capstone. Node gốc là N1 và N3. Khi chạy engine thật, đồ thị engine sinh ra là chuẩn. |
 | **Tài khoản** | Dùng 1 tài khoản khách **mới**, mở trong cửa sổ ẩn danh mới. Server demo bật `DEMO_MODE=true`. Không dùng tài khoản thật của thành viên (`03` Mục 6.8). |
 | **Mạng** | Dùng mạng di động riêng của nhóm (thể lệ khuyến khích). Wi-Fi hội trường chỉ để dự phòng. |
-| **Tên nút** | Theo đặc tả giao diện khi có. Bên dưới dùng nhãn đã xuất hiện trong spec: "đang phân tích…", "Bỏ qua câu này", "Ôn bài", "Tiếp tục học", tab X-Ray / Feynman / Tổng quan. |
+| **Tên nút** | Theo [`../spec/30_UI.md`](../spec/30_UI.md): "Quét repo", "đang phân tích…", "Bắt đầu trả lời (n câu) →", "Bỏ qua câu này", "Ôn bài", "Tiếp tục học", tab X-Ray / Feynman / Tổng quan; `Ctrl+Enter` để nộp. |
 
 **Phân vai**
 
@@ -47,12 +47,13 @@
 
 ### ⏱ 0:35 – 1:05 · Dán link → bản đồ — Người 1 nói, Người 2 bấm
 
-**Thao tác (Người 2):** bấm ô "Dán link GitHub" → `Ctrl+V` link repo demo (đã copy sẵn) → bấm "Quét dự án".
+**Thao tác (Người 2):** bấm vào ô link → `Ctrl+V` link repo demo (đã copy sẵn) → bấm "Quét repo".
 **Màn hình phải thấy:**
-- Cột trái hiện 7 node. N1 và N3 màu vàng, các node còn lại xám, viền đứt. N5 có dấu ★.
-- Đồng hồ đo hiện thời gian tải + dựng bản đồ (`ingest_ms + engine_ms`) và 0 token.
+- Lớp phủ đang quét có đồng hồ chạy thật; quét xong thì cột trái hiện 7 node. N1 và N3 màu vàng, các node còn lại xám, viền đứt. N5 có dấu ★.
+- Header hiện "Bản đồ … ms · 0 token" (số đo ở máy chủ, `ingest_ms + engine_ms`).
+- Cột phải tự mở tab Tổng quan, phần do code biết hiện ngay. Chưa nói tới tab này; quay lại ở phút 4:20.
 
-> "Bước này máy đọc code bằng thuật toán, không gọi AI, nên không tốn token. Đồng hồ ở góc đang hiện **[Người 2 đọc số thật]** giây. Mục tiêu của nhóm là dưới 1,5 giây với repo cỡ đồ án.
+> "Bước này máy đọc code bằng thuật toán, không gọi AI, nên không tốn token. Đồng hồ trên đầu trang đang hiện **[Người 2 đọc số thật, đổi ra giây]**. Mục tiêu của nhóm là dưới 1,5 giây với repo cỡ đồ án.
 > Mỗi ô là một **luồng nghiệp vụ đi xuyên nhiều file**. Ví dụ 'Danh sách sản phẩm' đi từ route, qua service, xuống repository; một ô không phải là một file. Mũi tên là thứ tự học: ô vàng học được ngay, ô xám phải chờ các ô đứng trước."
 
 *Nếu số đo vượt 1,5 giây, nói thẳng: "Hôm nay đo được X giây, chậm hơn mục tiêu; nhóm báo đúng số đo."*
@@ -79,7 +80,7 @@
 
 ### ⏱ 2:05 – 3:20 · Tab 2 Feynman: sai → gợi ý → đúng → BKT → xanh — Người 3 nói, Người 2 gõ
 
-**Thao tác 1:** bấm tab **Feynman** → hiện "Câu 1/2 · DB_OPTIMIZATION". Người 2 gõ câu **A** (Mục 3) → bấm "Nộp".
+**Thao tác 1:** cuối Tab 1 bấm **"Bắt đầu trả lời (2 câu) →"** → tab Feynman hiện "Câu 1/2 · DB_OPTIMIZATION · NOVICE". Người 2 gõ câu **A** (Mục 3) → bấm "Nộp" (hoặc `Ctrl+Enter`).
 **Màn hình:**
 - Kết quả: chưa đạt.
 - Gợi ý nấc 1 (`CONCEPT`), hỏi lại về chỗ hiểu sai và chưa chỉ vị trí.
@@ -214,7 +215,7 @@ Lúc đó các ô sẽ hiện "đang phân tích…" thật, mỗi lần tối �
 - [ ] Bật mạng di động; laptop cắm sạc; thử máy chiếu; zoom trình duyệt để chữ ở cột đang dùng đọc được từ cuối phòng.
 - [ ] Server deploy đang chạy, `DEMO_MODE=true`, `GET /api/me` trả lời bình thường.
 - [ ] Nạp sẵn grammar bằng cách quét **một repo khác**. Không quét repo demo trong 10 phút (`INGESTION_CACHE_TTL_MS`) trước giờ lên, để số trên đồng hồ là một lần tải và dựng thật, không phải trúng cache RAM.
-- [ ] Mở cửa sổ ẩn danh mới để có tài khoản khách mới với tiến độ trống; chọn persona `NEWBIE`.
+- [ ] Mở cửa sổ ẩn danh mới để có tài khoản khách mới với tiến độ trống (hoặc dùng "Xóa tài khoản" trên tài khoản demo cũ, vì đổi persona **không** xóa tiến độ node); chọn persona `NEWBIE`.
 - [ ] Copy sẵn link repo demo; mở file ghi chú câu A–C ở cửa sổ phụ.
 - [ ] Mở sẵn tab video dự phòng; tắt thông báo của hệ điều hành và ứng dụng chat.
 - [ ] Đồng hồ đo và bộ đếm token đang hiện trên giao diện.

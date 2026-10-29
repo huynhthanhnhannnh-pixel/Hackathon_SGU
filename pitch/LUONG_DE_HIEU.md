@@ -93,7 +93,7 @@ Bạn gõ câu trả lời (ít nhất 15 ký tự). Dùng thuật ngữ hay ví
 - Tính điểm, đếm lượt, mở khóa đều làm ở **máy chủ**; trình duyệt chỉ hiển thị, không tự sửa điểm được.
 
 ### Bước 9 — Miễn thi (Fast-Track ⚡)
-Khi một ô mở ra, nếu **mọi kỹ năng** của ô đó bạn đều đã ≥ 0,92 thì ô tự chuyển **xanh nhạt ⚡**, không hỏi, không gọi AI. Ô sau đó có thể mở tiếp theo dây chuyền. Riêng **ô khó nhất repo (Capstone ★)** không bao giờ được miễn, luôn hỏi ít nhất 1 câu. Người giỏi vì thế học nhanh hơn và tốn ít tiền AI hơn.
+Ô vừa mở mà **mọi kỹ năng** của nó bạn đều ≥ 0,92 thì tự chuyển **xanh nhạt ⚡**, không hỏi, không gọi AI, và ô sau có thể mở tiếp theo dây chuyền. **Ô khó nhất repo (Capstone ★)** không bao giờ được miễn. Người giỏi học nhanh hơn và tốn ít tiền AI hơn.
 
 ### Bước 10 — Quên và ôn
 - Điểm **phai dần** khi không luyện (chu kỳ bán rã 14 ngày, không thấp hơn 0,25), tính mỗi lần đọc nên không bị trừ chồng. Ví dụ: 0,95 sau 30 ngày còn ~0,41.

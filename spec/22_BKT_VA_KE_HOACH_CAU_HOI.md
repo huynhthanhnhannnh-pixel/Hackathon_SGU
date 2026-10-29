@@ -296,7 +296,7 @@ import { CONFIG } from "@/contracts/config";
 import type { SWESkill, LearnerTier, NodeOutcome, RunMode, CognitiveSkillState,
               LearnerCognitiveProfile, SkillChange } from "@/contracts";
 type SkillMap = LearnerCognitiveProfile["skills"];          // bí danh cục bộ
-export const MS_PER_DAY = 86_400_000;                         // hằng đơn vị
+// Đổi mili-giây ⇒ ngày: dùng CONFIG.MS_PER_DAY
 
 export function getDecayedMastery(state: CognitiveSkillState | undefined, now: number): number;                 // BKT-20
 export function tierOf(p: number): LearnerTier;                                                                 // BKT-22

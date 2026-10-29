@@ -75,7 +75,7 @@ export function authMiddleware(req, res, next) {
     res.status(401).json({ message: 'Unauthorized' });
   }
 }
-// Bước 3 · BUSINESS_LOGIC · src/services/user.service.ts dòng 10–12
+// Bước 3 · DATA_ACCESS · src/services/user.service.ts dòng 10–12  (ENG-82: tự gọi repository TypeORM)
 async getProfile(id) {
   return userRepo.findOne({ where: { id }, select: ['id', 'name', 'email'] });
 }
@@ -89,7 +89,7 @@ router.post('/checkout', authMiddleware, async (req, res) => {
   res.status(201).json(order);
 });
 // Bước 2 · MIDDLEWARE · src/middlewares/auth.middleware.ts dòng 3–12 (như N2)
-// Bước 3 · BUSINESS_LOGIC · src/services/order.service.ts dòng 20–29
+// Bước 3 · DATA_ACCESS · src/services/order.service.ts dòng 20–29  (ENG-82: tự gọi repository TypeORM, không qua hàm repo nào trong repo)
 async checkout(userId, items) {
   for (const item of items) {
     const product = await productRepo.findOne({ where: { id: item.productId } });

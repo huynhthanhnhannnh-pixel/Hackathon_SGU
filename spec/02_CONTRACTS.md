@@ -97,6 +97,9 @@ export const CONFIG = {
   LLM_THINKING_BUDGET: 0,
   LLM_TIMEOUT_MS: 10000,              // Một lời gọi
   LLM_MAX_RETRIES: 1,                 // Lỗi mạng / 429 / 503 / JSON hỏng / bị cổng gác chặn ⇒ gọi lại 1 lần
+  LLM_RETRY_DELAY_MS: 500,            // Chờ trước khi gọi lại sau 429 / 503
+  LLM_RETRY_JITTER_MS: 100,           // Cộng ngẫu nhiên [0, JITTER)
+  GRADING_QUOTE_MIN_CHARS: 3,         // Đoạn trích (đã chuẩn hóa) ngắn hơn ⇒ ý đó không tính (D-13)
   LLM_MAX_OUTPUT_TOKENS: { ANALYZE: 900, OVERVIEW: 600, QUESTIONS: 900, GRADE: 500 },
   ANALYZE_CONCURRENCY: 3,             // Số lời gọi analyze-node chạy cùng lúc / phiên
   SESSION_TOKEN_QUOTA: 80000,         // Tổng token vào + ra / phiên học, đếm ở server
@@ -142,6 +145,16 @@ export const CONFIG = {
   // ---------- Lưu trữ (03_API_VA_LUU_TRU) ----------
   DB_RETRY_DELAYS_MS: [100, 300],     // Thử lại tối đa 2 lần
   DEMO_MODE_ENV: "DEMO_MODE",         // Biến môi trường bật /api/demo/persona
+
+  REPORT_NOTE_MAX_CHARS: 500,         // = check char_length(note) của dispute_reports
+
+  // ---------- Giao diện (30_UI) ----------
+  UI_PANE_WIDTHS_PCT: [25, 45, 30],
+  UI_PRESENTATION_FOCUS_PCT: 60,      // Cột đang chọn ở chế độ trình chiếu; 2 cột còn lại chia phần còn lại
+  UI_PRESENTATION_FONT_SCALE: 1.25,
+
+  // ---------- Đơn vị ----------
+  MS_PER_DAY: 86_400_000,
 } as const;
 ```
 
@@ -264,6 +277,7 @@ export interface HybridArchitecturalNode {
   rank_score: number;                  // PageRank + ingress bonus của file entry
   is_vip_algorithm: boolean;
   is_capstone: boolean;                // Đúng 1 node / đồ thị (D-12)
+  is_group_root: boolean;              // vroot-* chỉ để hiển thị (D-24): trace_steps rỗng, không học, không là prerequisite
   uncle_bob: UncleBobMetrics;
   trace_steps: ExecutionTraceStep[];   // Tổng dòng snippet ≤ CONFIG.NODE_MAX_LINES
   dto_snippet: string;                 // Khai báo kiểu dữ liệu mà các step dùng (≤ 30 dòng), "" nếu không có
@@ -433,6 +447,11 @@ export interface QuestionPlanItem {
   step_indices: number[];               // Các bước gửi cho AI và đóng vào token
 }
 
+export interface RemediationTarget {     // Đầu vào planNodeQuestions khi mode = REMEDIATION (22)
+  skill: SWESkill;
+  used_focuses: QuestionFocus[];        // focus của mọi câu đã hiện (ended_by ≠ "DROPPED") của kỹ năng này ở node, theo (started_at, question_index); phần tử cuối = câu gần nhất
+}
+
 export interface GeneratedQuestionRaw {  // Phần tử của responseSchema lời gọi đặt câu hỏi
   skill: SWESkill;
   feynman_question: string;
@@ -493,6 +512,7 @@ export interface ChallengeTokenPayload {
   steps: Array<{ step_index: number; layer: ArchitecturalLayer; file_path: string; function_name: string }>; // Toàn bộ bước của node (cho gợi ý CODE_POINTER)
   step_indices: number[];
   code_context: string;                 // Snippet các bước trong step_indices, đã che secret (D-14)
+  forbidden_external_keywords: string[];// Từ cấm của repo lúc cấp token — bộ chấm cần để gác gợi ý mà không phải dựng lại StaticEngineResult
   issued_at: number;
   exp: number;                          // issued_at + CONFIG.CHALLENGE_TOKEN_TTL_MS
 }
@@ -525,6 +545,7 @@ export interface QuestionReveal { reference_answer: string; must_have_points: st
 
 export interface QuestionState {
   question_index: number;
+  feynman_question: string;             // Server đọc từ ai_cache theo RunQuestion.cache_key (không phải dữ liệu đáp án)
   skill: SWESkill;
   tier: LearnerTier;
   focus: QuestionFocus;
@@ -645,6 +666,9 @@ export interface SessionsResponse { sessions: LearningSessionSummary[] }
 // GET /api/sessions/{session_id}/history
 export interface HistoryResponse { items: AttemptHistoryItem[] }
 
+// GET /api/sessions/{session_id}/progress — chỉ đọc DB (graph_skeleton + node_progress + node_runs ⇒ deriveNodeStates), không chạy engine, không AI
+export interface ProgressResponse { progress: SessionProgress }
+
 // POST /api/ingest — JSON hoặc multipart/form-data (trường "archive" = file .zip, trường "subdir" tùy chọn)
 export type IngestRequest =
   | { repo_url: string; subdir_override?: string }   // subdir_override: chọn lại thư mục khi repo là monorepo
@@ -655,6 +679,7 @@ export interface IngestResponse {
   progress: SessionProgress;
   analyses: Record<string, NodeAnalysisView>;        // Node đã có trong ai_cache (trúng cache ⇒ khỏi gọi analyze-node)
   resumed: boolean;
+  from_cache: boolean;                               // true ⇒ ingest_ms / engine_ms là số đo của lần dựng gốc (UI ghi "kết quả đã lưu")
 }
 
 // POST /api/analyze-node
@@ -774,7 +799,9 @@ export type PersistenceErrorCode =
   | "ERR_PERSISTENCE_UNAVAILABLE"   // Postgres lỗi ở bước kiểm (D-17)
   | "ERR_RECEIPT_INVALID" | "ERR_DEMO_MODE_DISABLED";
 
-export type ErrorCode = IngestionErrorCode | LearningErrorCode | AiErrorCode | PersistenceErrorCode;
+export type ClientErrorCode = "ERR_CLIENT_NETWORK"; // Chỉ client tạo (fetch bị từ chối / body không phải JSON); server không bao giờ trả
+
+export type ErrorCode = IngestionErrorCode | LearningErrorCode | AiErrorCode | PersistenceErrorCode | ClientErrorCode;
 
 export interface ApiError {
   error: {
@@ -782,6 +809,8 @@ export interface ApiError {
     message: string;                 // Tiếng Việt, hiển thị được ngay (bảng thông điệp: 30_UI Mục lỗi)
     retryable: boolean;
     details?: Record<string, string | number | boolean>;
+    // ERR_UNSUPPORTED_LANGUAGE ⇒ details.language; ERR_NO_SOURCE_FILES_FOUND ⇒ details.hint ∈
+    // "submodule" | "only_unsupported" | "only_manifests" | "no_code" | "empty_subdir" (10 ING-80, ING-131)
   };
 }
 ```

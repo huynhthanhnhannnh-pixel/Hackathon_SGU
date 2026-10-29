@@ -26,6 +26,8 @@
 .
 ├── package.json · tsconfig.json · next.config.ts · tailwind.config.ts · .env.example
 ├── supabase/migrations/0001_init.sql            # 03 Mục 3
+├── scripts/{review-run,record-bundle}.ts        # Duyệt tay output AI + ghi mock_bundle (21)
+├── review/                                      # Bảng kiểm & kết quả duyệt tay (21) — không chứa code repo demo
 ├── queries/<language>.scm                       # Truy vấn Tree-sitter (11)
 ├── public/
 │   ├── grammars/*.wasm                          # Grammar Tree-sitter (10, 11)
@@ -48,7 +50,8 @@
     │   ├── engine/index.ts                      # runEngine()
     │   ├── engine/ingest/*.ts                   # 10
     │   ├── engine/graph/*.ts · engine/graph/resolvers/*.ts   # 11
-    │   └── ai/{gemini,analyze,overview,questions,grade}.ts · ai/prompts/*.ts · ai/schemas.ts · ai/guard/*.ts  # 20, 21
+    │   ├── ai/{gemini,analyze,overview,questions,grade}.ts · ai/prompts/*.ts · ai/schemas.ts      # 20
+    │   └── ai/guard/{text,names,forbidden,lines,analysis,overview,questions,followup,injection}.ts  # 21
     ├── lib/{bkt-engine,plan,derive,similarity}.ts   # 22 — hàm thuần dùng chung server + client
     ├── lib/api.ts                               # Client gọi API có kiểu
     ├── store/workbench.ts                       # Zustand (30)

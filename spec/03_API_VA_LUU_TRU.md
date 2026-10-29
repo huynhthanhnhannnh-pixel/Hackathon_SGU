@@ -35,6 +35,7 @@
 | 11 | `POST /api/report-wrong` | `ReportWrongRequest` → `ReportWrongResponse` | Mục 6.4 | — | `ERR_REPORT_NOT_ALLOWED` |
 | 12 | `POST /api/sync/replay` | `SyncReplayRequest` → `SyncReplayResponse` | Mục 6.5 | — | `ERR_RECEIPT_INVALID` |
 | 13 | `POST /api/demo/persona` | `PersonaRequest` → `PersonaResponse` | Ghi đè 16 dòng `skill_states` của **tài khoản hiện tại** | — | `ERR_DEMO_MODE_DISABLED` |
+| 14 | `GET /api/sessions/{id}/progress` | — → `ProgressResponse` | — (chỉ đọc DB, không engine, không AI) | — | `ERR_SESSION_NOT_FOUND` |
 
 Liên kết GitHub không phải endpoint của mình: client gọi `supabase.auth.linkIdentity({ provider: "github" })` (scope mặc định `read:user`, không xin quyền repo private), sau đó gọi lại `GET /api/me` để server cập nhật `is_guest = false`.
 
@@ -177,7 +178,7 @@ interface RunQuestion extends QuestionPlanItem {   // QuestionPlanItem: 02 Mục
 | `REPO_OVERVIEW` | `ov|{source}|{snapshot_id}|{subdir}|{engine_version}|{PROMPT_VERSION}|{LLM_MODEL}` |
 | `QUESTION` | `q|{source}|{snapshot_id}|{subdir}|{engine_version}|{node_id}|{skill}|{tier}|{focus}|{mode}|{PROMPT_VERSION}|{LLM_MODEL}` |
 
-`mode` nằm trong khóa câu hỏi để run ôn tập không lấy lại câu đã lộ đáp án. Hai yêu cầu trùng khóa cùng lúc dùng chung một promise trong RAM (in-flight map), chỉ gọi AI 1 lần.
+`mode` nằm trong khóa câu hỏi để run ôn tập không lấy lại câu đã lộ đáp án. Với `REMEDIATION` / `DECAY_REVIEW`, lần ôn thứ n ≥ 2 của cùng (node, kỹ năng, tier, góc) thêm hậu tố `|v{n}` vào khóa (`20` AI-22) để không trúng lại câu cũ. Hai yêu cầu trùng khóa cùng lúc dùng chung một promise trong RAM (in-flight map), chỉ gọi AI 1 lần.
 
 ---
 
@@ -187,7 +188,7 @@ interface RunQuestion extends QuestionPlanItem {   // QuestionPlanItem: 02 Mục
   - GitHub: `snapshot_id` = commit SHA 40 hex đọc từ comment EOCD của zip codeload (`10` Mục snapshot). Comment không khớp `/^[0-9a-f]{40}$/` ⇒ `ARCHIVE_HASH` = SHA-256 của **toàn bộ** buffer zip.
   - Upload `.zip`: `ARCHIVE_HASH` = SHA-256 của buffer.
 - **Cache RAM `StaticEngineResult`:** LRU `CONFIG.INGESTION_CACHE_MAX_ENTRIES`, TTL `CONFIG.INGESTION_CACHE_TTL_MS`, hai tầng: alias `owner/repo@ref/subdir ⇒ snapshot_id` và kết quả `snapshot_id|subdir|engine_version ⇒ StaticEngineResult`.
-- **`getOrRebuildStaticResult(session)`:** trúng cache ⇒ dùng; trượt và `COMMIT_SHA` ⇒ tải `codeload.github.com/{owner}/{repo}/zip/{sha}` rồi chạy lại Tầng 0–2; trượt và `ARCHIVE_HASH` ⇒ `ERR_SESSION_SOURCE_EXPIRED` (UI mời kéo thả lại file zip; server so SHA-256 khớp `snapshot_id` rồi mới gắn vào phiên cũ); codeload 404 (commit bị force-push xóa) ⇒ `ERR_SESSION_SOURCE_EXPIRED`.
+- **`getOrRebuildStaticResult(session)`:** trúng cache ⇒ dùng; trượt và `COMMIT_SHA` ⇒ tải `codeload.github.com/{owner}/{repo}/zip/{sha}` rồi chạy lại Tầng 0–2; trượt, `ARCHIVE_HASH` và nguồn `GITHUB` ⇒ tải lại zip theo `ref_label`, so SHA-256 toàn bộ buffer với `snapshot_id`: khớp ⇒ dùng, lệch ⇒ `ERR_SESSION_SOURCE_EXPIRED` "repo đã thay đổi" (D-26); trượt và nguồn `ZIP` ⇒ `ERR_SESSION_SOURCE_EXPIRED` (UI mời kéo thả lại file zip; server so SHA-256 khớp `snapshot_id` rồi mới gắn vào phiên cũ); codeload 404 (commit bị force-push xóa) ⇒ `ERR_SESSION_SOURCE_EXPIRED`.
 - **Kiểm tất định khi dựng lại:** khung đồ thị dựng lại phải trùng `graph_skeleton` đã lưu (so `node_id` + `prerequisites`). Lệch ⇒ ghi log lỗi và trả `ERR_SESSION_ENGINE_OUTDATED`.
 
 ---
@@ -196,7 +197,7 @@ interface RunQuestion extends QuestionPlanItem {   // QuestionPlanItem: 02 Mục
 
 ### 5.1. `deriveNodeStates(skeleton, progressRows): Record<node_id, NodeStateView-lite>`
 
-Duyệt node theo thứ tự tô-pô (hòa ⇒ `node_id` tăng dần):
+Node `is_group_root` (D-24) không có trong `graph_skeleton` và không bao giờ là node cha. Duyệt các node còn lại theo thứ tự tô-pô (hòa ⇒ `node_id` tăng dần):
 1. Dòng `node_progress` có `status` ≠ null ⇒ dùng `status` đó.
 2. Ngược lại ⇒ `AVAILABLE` nếu mọi node cha **đã thông**, nếu không ⇒ `LOCKED`. Node gốc luôn thỏa.
    - Node cha **đã thông** khi trạng thái của nó ∈ {`COMPLETED`, `FAILED`} **hoặc** (nó `AVAILABLE` **và** `analysis_failed = true`) — D-03 #20.
@@ -240,12 +241,14 @@ async function enrichNode(req: EnrichNodeRequest, userId: string): Promise<Enric
 
   const analysis = await aiCache.get(analysisKey(session, node.id));
   if (!analysis) throw ERR_ANALYSIS_NOT_READY;
-  const plan = planNodeQuestions(analysis, profile.skills, now, req.mode, node.is_capstone, failedSkillsOf(session, node.id)); // 22
-  if (plan.length === 0) {                                               // Kỹ năng vừa vượt FAST_TRACK_MIN
-    await db.tx(tx => applyFastTrackCascade(tx, session, profile, now));
+  const targets = req.mode === "REMEDIATION" ? remediationTargetsOf(await db.finishedRuns(session.id, node.id)) : []; // 22
+  const plan = planNodeQuestions(analysis, profile.skills, now, req.mode, node.is_capstone, targets, node.trace_steps.length); // 22
+  if (plan.length === 0) {
+    if (req.mode !== "LEARN") throw ERR_MODE_NOT_ALLOWED;                // Không còn kỹ năng để ôn
+    await db.tx(tx => applyFastTrackCascade(tx, session, profile, now)); // LEARN: kỹ năng vừa vượt FAST_TRACK_MIN
     return buildEnrichResponse(null, []);
   }
-  const questions = await getOrGenerateQuestions(session, graph, node, analysis, plan); // ai_cache hoặc 1 lời gọi AI cho các câu thiếu; câu hỏng ⇒ gọi lại riêng 1 lần ⇒ vẫn hỏng ⇒ DROPPED
+  const questions: RunQuestion[] = await getOrGenerateQuestions(session, graph, node, analysis, plan, req.mode); // 20: ai_cache hoặc 1 lời gọi AI cho các câu thiếu; câu hỏng ⇒ gọi lại riêng 1 lần ⇒ vẫn hỏng ⇒ DROPPED
   if (questions.every(q => q.ended_by === "DROPPED")) throw ERR_AI_REJECTED;          // Không tạo run; UI hiện "Thử lại"
   const run = await db.createRun(session.id, node.id, req.mode, questions);           // REMEDIATION ⇒ remediation_runs++ trong cùng transaction
   await db.touchSession(session.id);
@@ -269,7 +272,7 @@ async function evaluateFeynman(req: EvaluateFeynmanRequest, userId: string): Pro
   // 1. Token & đầu vào (0 token, 0 DB)
   const t = openChallengeToken(req.challenge_token);                     // Sai ⇒ ERR_CHALLENGE_TOKEN_INVALID; quá exp ⇒ _EXPIRED
   if (t.user_id !== userId || t.session_id !== req.session_id) throw ERR_CHALLENGE_TOKEN_INVALID;
-  validateAnswerLength(req.student_answer);                              // ERR_ANSWER_TOO_SHORT / _TOO_LONG
+  validateAnswerLength(req.student_answer);                              // src/lib/similarity.ts, dùng chung với client: số ký tự không phải khoảng trắng < ANSWER_MIN_CHARS ⇒ _TOO_SHORT; độ dài thô > ANSWER_MAX_CHARS ⇒ _TOO_LONG
 
   // 2. Đọc trạng thái KHÔNG khóa — DB lỗi ở đây ⇒ ERR_PERSISTENCE_UNAVAILABLE, không gọi AI (D-17)
   const { run, skill, session } = await readForGrading(t);              // run + skill_states(t.skill) + learning_sessions
@@ -280,11 +283,11 @@ async function evaluateFeynman(req: EvaluateFeynmanRequest, userId: string): Pro
 
   // 3. Chấm (ngoài transaction)
   const maxAttempts = t.mode === "REMEDIATION" ? CONFIG.REMEDIATION_MAX_ATTEMPTS : CONFIG.MAX_ATTEMPTS_PER_QUESTION;
-  const grading = INJECTION_REGEX.test(req.student_answer)              // 21: chỉ bắt mẫu câu lệnh
+  const grading = isInjection(req.student_answer)                       // 21: chuẩn hóa NFC rồi chỉ bắt mẫu câu lệnh
     ? injectionGrading(t)                                               // 0 điểm, OFF_TOPIC, không gợi ý, 0 token — VẪN tính 1 lượt
     : await gradeWithAI(t, req.student_answer, req.attempt_number, maxAttempts, session); // Quota ⇒ ERR_TOKEN_QUOTA_EXCEEDED; hỏng ⇒ ERR_AI_UNAVAILABLE (không tính lượt)
   const isPassed = decidePass(grading, t.must_have_points, req.student_answer);        // D-13
-  const followUp = decideFollowUp(grading, req.attempt_number, maxAttempts, isPassed, t); // 20, 21: verifyFollowUp, mẫu tĩnh
+  const followUp = decideFollowUp(grading, req.attempt_number, maxAttempts, isPassed, t, req.student_answer); // 20, 21: verifyFollowUp, mẫu tĩnh
 
   // 4. Transaction ngắn
   try {
@@ -323,7 +326,7 @@ Mở token như 6.2 bước 1 ⇒ khóa run ⇒ câu chưa xong (ngược lại 
 
 ### 6.4. `report-wrong` — "Báo sai" (D-22)
 
-Khóa run ⇒ câu phải `outcome = FAILED`, `ended_by = ANSWER`, `disputed = false` (ngược lại `ERR_REPORT_NOT_ALLOWED`) ⇒ `disputed = true` ⇒ nếu `skill_states.p_mastery` của kỹ năng đúng bằng `p_after` (sai số 1e-9) thì đặt lại `p_mastery = p_before`, `practice_count -= 1` ⇒ insert `dispute_reports` ⇒ tính lại màu node (Mục 6.6, câu `disputed` bị bỏ qua) ⇒ `ReportWrongResponse`.
+Khóa run ⇒ câu phải `outcome = FAILED`, `ended_by = ANSWER`, `disputed = false` (ngược lại `ERR_REPORT_NOT_ALLOWED`) ⇒ `disputed = true` ⇒ nếu `skill_states.p_mastery` của kỹ năng đúng bằng `p_after` (sai số 1e-9) thì đặt lại `p_mastery = p_before` (`p_before` là điểm **đã decay** dùng làm tiên nghiệm lúc cập nhật), `practice_count -= 1`, giữ nguyên `last_practiced_at` và `correct_count` (`revertSkillChange`, `22`) ⇒ insert `dispute_reports` ⇒ tính lại màu node (Mục 6.6, câu `disputed` bị bỏ qua) ⇒ `ReportWrongResponse`.
 
 ### 6.5. `sync/replay`
 
@@ -358,7 +361,7 @@ Sau khi đổi trạng thái: đặt `finished_at`, upsert `node_progress`, ch�
 
 ### 6.8. `demo/persona`
 
-`process.env.DEMO_MODE !== "true"` ⇒ `ERR_DEMO_MODE_DISABLED`. Ngược lại upsert đủ 16 dòng `skill_states`: `p_mastery = PERSONAS[mode].initial_p_mastery`, `last_practiced_at = now − days_idle·86 400 000`, `practice_count = 1`, `correct_count = 1`. Chỉ tài khoản đang đăng nhập; nhóm dùng tài khoản demo riêng, không dùng tài khoản thật của thành viên.
+`process.env.DEMO_MODE !== "true"` ⇒ `ERR_DEMO_MODE_DISABLED`. Ngược lại upsert đủ 16 dòng `skill_states`: `p_mastery = PERSONAS[mode].initial_p_mastery`, `last_practiced_at = now − days_idle · CONFIG.MS_PER_DAY`, `practice_count = 1`, `correct_count = 1`. Chỉ tài khoản đang đăng nhập; nhóm dùng tài khoản demo riêng, không dùng tài khoản thật của thành viên.
 
 ---
 
@@ -388,3 +391,4 @@ Sau khi đổi trạng thái: đặt `finished_at`, upsert `node_progress`, ch�
 | `CHALLENGE_TOKEN_KEY` | AES-256-GCM `challenge_token` | 32 byte, base64; đổi khóa ⇒ mọi token cũ thành `INVALID` |
 | `RECEIPT_HMAC_KEY` | Ký `SyncReceipt` | 32 byte, base64 |
 | `DEMO_MODE` | Bật `/api/demo/persona` | `"true"` chỉ ở máy demo |
+| `NEXT_PUBLIC_DEMO_MODE` | Client chỉ dùng để hiện menu Persona | Đặt cùng giá trị với `DEMO_MODE`; server vẫn kiểm `DEMO_MODE` |

@@ -2,6 +2,8 @@
 ## TÀI LIỆU HUẤN LUYỆN KỸ NGHỆ THUẬT TOÁN CHO ĐỘI HÌNH THỰC CHIẾN HACKATHON 24H
 ### *Bản Chuẩn Hóa 100%: Loại bỏ Văn Mẫu, Minh Họa Từng Bước Chạy Tay Bằng Số (Numerical Dry-Run)*
 
+> ⚠️ **Tài liệu minh họa, không phải đặc tả.** Một số ví dụ chạy tay (khóa SymbolTable, PageRank chưa có số hạng dangling, điểm Cognitive Complexity, cách chọn Hub và lát cắt) theo phiên bản cũ. Khi lệch, luật chuẩn ở `spec/11_ENGINE_DO_THI.md` và `spec/22_BKT_VA_KE_HOACH_CAU_HOI.md`.
+
 ---
 
 | **Thuộc tính** | **Thông số kỹ thuật học thuật** |
@@ -530,10 +532,10 @@ $$P_{\text{node}}(u) = \min_{k \in \mathcal{K}_u} P(L_t, k)$$
 Giả sử sinh viên từng đạt đỉnh cao với $P(L_{\text{last}}) = 0.95$.
 Sau $\Delta t = 30 \text{ ngày}$ không ôn tập, với chu kỳ bán rã $h = 14 \text{ ngày}$:
 
-$$P(L_{\text{current}}) = P(L_{\text{last}}) \times 2^{-\frac{\Delta t}{h}} = 0.95 \times 2^{-\frac{30}{14}} = 0.95 \times 2^{-2.143}$$
-$$2^{-2.143} \approx 0.2264 \implies P(L_{\text{current}}) = 0.95 \times 0.2264 = \mathbf{0.215} < 0.45$$
+$$P(L_{\text{current}}) = P(L_0) + \big(P(L_{\text{last}}) - P(L_0)\big) \times 2^{-\frac{\Delta t}{h}} = 0.25 + 0.70 \times 2^{-\frac{30}{14}}$$
+$$2^{-2.143} \approx 0.2264 \implies P(L_{\text{current}}) = 0.25 + 0.70 \times 0.2264 = \mathbf{0.4085} < 0.45$$
 
-* **Hiện tượng:** Điểm số tụt từ $0.95$ xuống còn **$0.215$ (Rớt về lại Tier 1)**!
+* **Hiện tượng:** Điểm số tụt từ $0.95$ xuống còn **$0.4085$ (Rớt về lại Tier 1)**. Decay kéo về sàn $P(L_0) = 0.25$, không tụt dưới sàn (công thức chuẩn: `spec/22_BKT_VA_KE_HOACH_CAU_HOI.md`).
 * **Giao diện:** Node đổi sang viền **VÀNG CAM (Decay Warning)**. AI kích hoạt câu hỏi ôn tập điểm mù cũ ngay lập tức khi người học quay lại!
 
 ---
