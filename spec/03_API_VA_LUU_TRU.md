@@ -47,6 +47,20 @@ Liên kết GitHub không phải endpoint của mình: client gọi `supabase.au
 
 ## 3. Lược đồ Postgres (`supabase/migrations/0001_init.sql`)
 
+```mermaid
+erDiagram
+  profiles ||--o{ skill_states : "điểm kỹ năng"
+  profiles ||--o{ learning_sessions : "phiên học"
+  learning_sessions ||--o{ node_progress : "trạng thái node"
+  learning_sessions ||--o{ node_runs : "lần học, ôn"
+  node_runs ||--o{ question_attempts : "lượt trả lời"
+  profiles ||--o{ dispute_reports : "người báo"
+  node_runs ||--o{ dispute_reports : "run bị báo"
+  ai_cache {
+    text cache_key PK
+  }
+```
+
 ```sql
 create type swe_skill as enum (
   'HTTP_ROUTING','DTO_VALIDATION','AUTH_SECURITY','DEPENDENCY_INJECTION',
@@ -274,6 +288,24 @@ async function enrichNode(req: EnrichNodeRequest, userId: string): Promise<Enric
 `issueToken` đóng `ChallengeTokenPayload` (`02` Mục 5.5) với `code_context` = snippet các bước trong `step_indices`, `exp = now + CHALLENGE_TOKEN_TTL_MS`.
 
 ### 6.2. `evaluate-feynman` — kiểm ⇒ chấm ⇒ khóa ⇒ ghi (D-18)
+
+```mermaid
+flowchart TD
+  A["POST /api/evaluate-feynman"] --> B{"1 · Token, độ dài"}
+  B -- "sai" --> EB["ERR_CHALLENGE_TOKEN_* · ERR_ANSWER_TOO_*<br/>không tính lượt"]
+  B -- "đúng" --> C{"2 · Đọc DB, không khóa"}
+  C -- "DB lỗi" --> EC["ERR_PERSISTENCE_UNAVAILABLE<br/>không gọi AI, không tính lượt"]
+  C -- "câu đã xong · lệch lượt · trùng lần trước" --> ED["ERR_QUESTION_FINISHED · ERR_ATTEMPT_OUT_OF_SYNC<br/>ERR_ANSWER_DUPLICATE · không tính lượt"]
+  C -- "hợp lệ" --> D{"3 · isInjection?"}
+  D -- "có" --> D1["injectionGrading<br/>0 token, vẫn tính 1 lượt"]
+  D -- "không" --> D2["gradeWithAI"]
+  D2 -- "hết quota · AI hỏng" --> EE["ERR_TOKEN_QUOTA_EXCEEDED · ERR_AI_UNAVAILABLE<br/>không tính lượt"]
+  D1 --> F["decidePass + decideFollowUp"]
+  D2 -- "có kết quả" --> F
+  F --> G{"4 · Transaction ngắn<br/>khóa run · ghi lượt · câu xong ⇒ BKT · finalizeRunIfDone"}
+  G -- "ghi xong" --> OK["EvaluateFeynmanResponse"]
+  G -- "DB lỗi sau DB_RETRY_DELAYS_MS" --> RC["5 · Response kèm biên nhận ký<br/>đồng bộ lại qua sync/replay"]
+```
 
 ```typescript
 // src/server/evaluate.ts

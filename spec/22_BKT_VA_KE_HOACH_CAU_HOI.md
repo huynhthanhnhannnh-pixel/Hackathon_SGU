@@ -112,6 +112,24 @@ Mẫu số luôn > 0 vì $S, G^{*} \in (0, 1)$.
 
 Chạy ở server khi tạo run (D-02); kế hoạch cố định suốt run (D-16). Đầu vào: bản phân tích đã kiểm, `profile.skills`, `now`, `mode`, `node.is_capstone`, `failedSkills` (= `remediationTargetsOf` các run của node; mode khác truyền `[]`), `stepCount` (= `node.trace_steps.length`).
 
+```mermaid
+flowchart TD
+  M{"mode (BKT-41)"} -- "LEARN" --> L["Kỹ năng của node có điểm đã decay dưới FAST_TRACK_MIN<br/>tier theo điểm"]
+  M -- "REMEDIATION" --> R["Kỹ năng trong failedSkills<br/>tier NOVICE"]
+  M -- "DECAY_REVIEW" --> D["decayingSkills (BKT-24)<br/>tier theo điểm"]
+  L --> E{"Còn kỹ năng?"}
+  E -- "không · node thường" --> FT["Kế hoạch rỗng ⇒ Fast-Track (BKT-32)"]
+  E -- "không · Capstone" --> CP["1 câu cho kỹ năng yếu nhất, tier ARCHITECT (BKT-31)"]
+  E -- "có" --> O["Xếp thứ tự câu (BKT-42)"]
+  R --> O
+  D --> O
+  O --> F["Chọn góc focus (BKT-44, BKT-46, BKT-47)"]
+  CP --> F
+  F --> X["NOVICE_SECOND_QUESTION bật, chỉ LEARN ⇒ thêm câu thứ 2 (BKT-49)"]
+  X --> S["Chọn bước gửi AI step_indices (BKT-48)"]
+  S --> P["Kế hoạch QuestionPlanItem · cố định suốt run (D-16)"]
+```
+
 ### 6.1. Chọn kỹ năng và tier
 
 | ID | Luật |

@@ -11,6 +11,19 @@
 
 Thứ tự: `GITHUB_URL` ⇒ Mục 1 → 2 → 3 → 4; `GITHUB_COMMIT` ⇒ Mục 4; `ZIP_UPLOAD` ⇒ Mục 4 (upload). Sau đó: 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13.
 
+```mermaid
+flowchart TB
+  U["GITHUB_URL"] --> S1["1 · Phân tích link"]
+  S1 --> C{"Trúng cache alias? (ING-04)"}
+  C -- "có" --> HIT["Trả kết quả cache, bỏ Mục 2–13"]
+  C -- "không" --> S2["2 · Thăm dò repo"] --> S3["3 · Phân giải ref"] --> S4["4 · Tải về hoặc nhận upload, chỉ trong RAM"]
+  GC["GITHUB_COMMIT"] --> S4
+  ZU["ZIP_UPLOAD"] --> S4
+  S4 --> S5["5 · Định danh phiên bản"] --> S6["6 · Mục lục zip, đường dẫn"] --> S7["7 · Phân loại entry"] --> S8["8 · Phạm vi monorepo, chọn file"]
+  S8 --> S9["9 · Giải nén, lọc nội dung"] --> S10["10 · Định dạng đặc biệt"] --> S11["11 · Che secret, gắn cờ injection"] --> S12["12 · Vân tay dự án"] --> S13["13 · Kết quả rỗng, mã lỗi"]
+  S13 --> OUT["IngestOutput ⇒ buildGraph (11)"]
+```
+
 ```typescript
 // nội bộ — src/server/engine/index.ts
 type IngestSource =

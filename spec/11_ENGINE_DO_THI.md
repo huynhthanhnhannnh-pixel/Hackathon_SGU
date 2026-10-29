@@ -11,6 +11,29 @@
 
 Giai đoạn (một danh sách, dùng cho log/warning): **G1 `PARSE`** (Mục 1) → **G2 `SYMBOLS`** (2) → **G3 `CALLGRAPH`** (3) → **G4 `ENTRIES`** (4) → **G5 `MODE`** (5) → **G6 `RANK`** (6) → **G7 `COMPLEXITY`** (7) → **G8 `CANDIDATES`** (8–10) → **G9 `ASSEMBLE`** (11) → **G10 `UNCLE_BOB`** (12) → **G11 `NAMING`** (13, khử trùng) → **G12 `LAYOUT`** (14) → **G13 `OUTPUT`** (15).
 
+```mermaid
+flowchart TB
+  subgraph A["Đọc code"]
+    direction LR
+    G1["G1 PARSE · Mục 1"] --> G2["G2 SYMBOLS · 2"]
+  end
+  subgraph B["Đồ thị gọi hàm"]
+    direction LR
+    G3["G3 CALLGRAPH · 3"] --> G4["G4 ENTRIES · 4"] --> G5["G5 MODE · 5<br/>NORMAL hay suy biến"] --> G6["G6 RANK · 6<br/>Tarjan, PageRank"] --> G7["G7 COMPLEXITY · 7"]
+  end
+  subgraph C["Dựng node"]
+    direction LR
+    G8["G8 CANDIDATES · 8–10<br/>lát cắt, node thuật toán, suy biến"] --> G9["G9 ASSEMBLE · 11<br/>id, cạnh, budget, Capstone"] --> G10["G10 UNCLE_BOB · 12"] --> G11["G11 NAMING · 13"]
+  end
+  subgraph D["Xuất"]
+    direction LR
+    G12["G12 LAYOUT · 14"] --> G13["G13 OUTPUT · 15"]
+  end
+  IN["IngestOutput (10)"] --> A
+  A --> B --> C --> D
+  D --> OUT["StaticEngineResult"]
+```
+
 ```typescript
 // nội bộ — graph/* (FunctionInfo = SymbolDefinition + params, locals, complexity)
 interface ExternalCall { caller: string; line: number; receiver_chain: string[]; method: string; import_source: string | null }

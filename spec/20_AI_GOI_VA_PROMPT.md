@@ -53,6 +53,23 @@ ai.models.generateContent({ model: CONFIG.LLM_MODEL, contents: [{ role: "user", 
 
 Vòng gọi lại của mỗi lời gọi (AI-15, AI-19, AI-22, AI-27) chạy `await retryDelay(prev)` trước request kế tiếp. Request cuối `TRANSIENT` / `INVALID_JSON` / `FATAL` ⇒ nhánh "AI không dùng được"; request cuối `GUARD` ⇒ nhánh "bị gác chặn" (Mục 9). `SessionRow` = dòng `learning_sessions` (kiểu nội bộ server).
 
+```mermaid
+flowchart TD
+  S["Một lời gọi logic"] --> K{"Trúng ai_cache? (AI-08)"}
+  K -- "có" --> HIT["Dùng bản đã kiểm · 0 token"]
+  K -- "không · lời gọi chấm không có cache" --> Q{"Còn quota? (AI-06)"}
+  Q -- "hết" --> EQ["ERR_TOKEN_QUOTA_EXCEEDED · không gọi"]
+  Q -- "còn" --> R["Request JSON theo schema (AI-11)"]
+  R --> T{"Kết quả (AI-12)"}
+  T -- "JSON hợp lệ" --> G{"Cổng gác (21)"}
+  G -- "qua" --> OK["Ghi ai_cache, trừ lời gọi chấm · trả kết quả"]
+  G -- "bị chặn" --> GB["Theo luật từng lời gọi (Mục 4–7)<br/>gọi lại · bản khung · DROPPED · mẫu tĩnh"]
+  T -- "TRANSIENT · INVALID_JSON" --> M{"Còn lượt?<br/>tối đa 1 + LLM_MAX_RETRIES request"}
+  M -- "còn" --> W["retryDelay, không kiểm lại quota"] --> R
+  M -- "hết" --> UN["Nhánh AI không dùng được (Mục 9)"]
+  T -- "FATAL 400 · 401 · 403 · 404" --> UN
+```
+
 ---
 
 ## 3. Đóng gói dữ liệu (`prompts/common.ts`)
@@ -472,6 +489,20 @@ export function decideFollowUp(g: GradingRaw, attempt: number, maxAttempts: numb
 ```
 
 `intent` `GIVE_UP` / `OFF_TOPIC` do AI gắn vẫn nhận gợi ý theo `expected`; chỉ regex tấn công mới không có gợi ý.
+
+Gợi ý sau mỗi lượt chưa đạt (đạt ở lượt nào cũng xong câu, không gợi ý):
+
+```mermaid
+flowchart LR
+  subgraph LD["LEARN, DECAY_REVIEW · tối đa MAX_ATTEMPTS_PER_QUESTION lượt"]
+    direction TB
+    L1["Lượt 1 chưa đạt"] -- "gợi ý CONCEPT" --> L2["Lượt 2 … áp chót chưa đạt"] -- "gợi ý CODE_POINTER" --> L3["Lượt cuối chưa đạt"] -- "không gợi ý" --> LDONE["Câu xong · mở đáp án"]
+  end
+  subgraph RM["REMEDIATION · tối đa REMEDIATION_MAX_ATTEMPTS lượt"]
+    direction TB
+    R1["Lượt trước cuối chưa đạt"] -- "gợi ý CODE_POINTER" --> R2["Lượt cuối chưa đạt"] -- "không gợi ý" --> RDONE["Câu xong · mở đáp án"]
+  end
+```
 
 **AI-32 — Mẫu tĩnh.** `staticHint("CONCEPT", t)` — **không lộ vị trí**, theo `t.focus`:
 

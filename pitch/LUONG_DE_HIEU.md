@@ -33,6 +33,18 @@
 
 ## 3. Từ lúc dán link đến lúc xong một ô
 
+```mermaid
+flowchart TD
+  B1["1 · Mở web, có tài khoản khách"] --> B2["2 · Dán link hoặc kéo .zip"] --> B3["3 · Máy vẽ bản đồ<br/>không AI, 0 token"] --> B4["4 · AI phân tích từng ô<br/>qua cổng gác"]
+  B4 --> B5["5 · Bấm ô vàng: Tab X-Ray"] --> B6["6 · Tab Feynman: câu hỏi"] --> B7{"7 · Nộp bài"}
+  B7 -- "chưa đạt, còn lượt" --> HINT["Gợi ý nấc 1, nấc 2"] --> B7
+  B7 -- "đạt, hết lượt hoặc bỏ qua" --> B8["8 · Ghi điểm BKT, ô đổi màu, mở ô sau"]
+  B8 --> B9["9 · Ô mà mọi kỹ năng đã vững: miễn thi ⚡"]
+  B8 --> B10["10 · Lâu không ôn: viền cam, Ôn bài"]
+  B4 --> B11["11 · Tab Tổng quan"]
+  B8 --> B12["12 · Hôm khác: Tiếp tục học"]
+```
+
 ### Bước 1 — Mở web
 Lần đầu vào, bạn được tạo ngay một **tài khoản khách**, không phải đăng ký. Nếu từng học rồi, trang hiện danh sách **"Tiếp tục học"**. Muốn học tiếp trên máy khác thì bấm liên kết GitHub. Hệ thống chỉ xin quyền đọc hồ sơ, không đọc repo của bạn.
 

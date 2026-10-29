@@ -18,6 +18,20 @@
 | grade | `verifyFollowUp` (GUARD-13), GUARD-14 | gợi ý, feedback, thuật ngữ | Mẫu tĩnh (`20` AI-32); không gọi lại |
 | câu trả lời | GUARD-15, GUARD-16 | regex tấn công, độ dài, trùng | `injectionGrading` / lỗi `ERR_ANSWER_*` (không tính lượt) |
 
+Năm lớp chặn ảo giác và sinh nhầm, theo thứ tự dữ liệu đi qua (file này là lớp 3–5):
+
+```mermaid
+flowchart TB
+  L1["1 · Đầu vào sạch<br/>code thuần dựng bản đồ · chỉ gửi lát cắt đã che secret<br/>dữ liệu bọc trong thẻ · danh mục đóng<br/>(INV-02 · 20 AI-03, AI-04, AI-13, AI-14)"]
+  L2["2 · Ép khuôn khi gọi<br/>JSON theo schema · temperature 0<br/>không chắc thì để trống · bằng chứng trước điểm<br/>(20 AI-02, AI-11, AI-16, AI-29)"]
+  L3["3 · Cổng gác bằng code<br/>tên · bước bằng chứng · danh mục · từ cấm · số dòng · câu hỏi<br/>sai ⇒ gọi lại 1 lần ⇒ bản khung / DROPPED<br/>(Mục 2–5 · 20 AI-12)"]
+  L4["4 · Server quyết chấm<br/>regex tấn công · Đạt cần trích dẫn có thật<br/>gợi ý lộ đáp án ⇒ mẫu tĩnh<br/>(Mục 6–8 · 20 AI-30, AI-32)"]
+  L5["5 · Người duyệt + nhãn trung thực<br/>duyệt tay, đóng băng · Nhận định của AI · Báo sai<br/>(Mục 9–11)"]
+  R["Vẫn lọt: sai nghĩa với tên có thật · đáp án mẫu sai · chấm lệch (GUARD-21)"]
+  L1 --> L2 --> L3 --> L4 --> L5
+  L5 -.-> R
+```
+
 ---
 
 ## 2. Công cụ chung
