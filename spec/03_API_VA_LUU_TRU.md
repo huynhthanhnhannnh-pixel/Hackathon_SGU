@@ -260,7 +260,7 @@ Câu hỏi không cache: mỗi run sinh mới và lưu trong `node_runs`; chấm
 | :-- | :-- |
 | Trúng cache | Dùng kết quả đó |
 | Trượt, `COMMIT_SHA` | Tải `codeload.github.com/{owner}/{repo}/zip/{sha}` rồi chạy lại Tầng 0–2 |
-| Trượt, `ARCHIVE_HASH` | Không dựng lại được ⇒ `ERR_SESSION_NOT_FOUND` (Q-12). Nguồn `ZIP`: UI mời kéo thả lại đúng file; trùng khóa phiên ⇒ mở lại phiên đó |
+| Trượt, `ARCHIVE_HASH` | Không dựng lại được ⇒ `ERR_SESSION_NOT_FOUND` (Q-12, V-5). Nguồn `ZIP` chỉ best-effort: UI báo "phiên upload không mở lại được, hãy upload lại .zip" (`30` Mục 10); trùng khóa phiên ⇒ mở lại phiên đó |
 | codeload 404 theo SHA (commit bị force-push xóa) | `ERR_SESSION_NOT_FOUND` (Q-12); phiên chỉ còn xem lịch sử |
 
 Kiểm tất định khi dựng lại: khung đồ thị dựng lại phải trùng `graph_skeleton` đã lưu (so `node_id` + `prerequisites`). Lệch ⇒ ghi log lỗi và trả `ERR_SESSION_ENGINE_OUTDATED`.
@@ -357,11 +357,12 @@ async function evaluateFeynman(req: EvaluateFeynmanRequest, userId: string): Pro
 
   // 3. Chấm (ngoài transaction)
   const maxAttempts = CONFIG.MAX_ATTEMPTS_PER_QUESTION;
+  const t = { ...q, steps: run.steps, forbidden_external_keywords: run.forbidden_external_keywords }; // GradeContext (20 AI-27)
   const grading = isInjection(req.student_answer)                       // 21: chuẩn hóa NFC rồi chỉ bắt mẫu câu lệnh
     ? injectionGrading(q)                                               // 0 điểm, OFF_TOPIC, không gợi ý, 0 token — VẪN tính 1 lượt
-    : await gradeWithAI(q, run.steps, req.student_answer, req.attempt_number, maxAttempts, session); // 20: không code_context (D-36); quota ⇒ ERR_TOKEN_QUOTA_EXCEEDED; hỏng ⇒ ERR_AI_UNAVAILABLE
+    : await gradeWithAI(t, req.student_answer, req.attempt_number, maxAttempts, session); // 20: không code_context (D-36); quota ⇒ ERR_TOKEN_QUOTA_EXCEEDED; hỏng ⇒ ERR_AI_UNAVAILABLE
   const isPassed = decidePass(grading, q.must_have_points, req.student_answer);        // D-13
-  const followUp = decideFollowUp(grading, req.attempt_number, maxAttempts, isPassed, q, run.steps, run.forbidden_external_keywords, req.student_answer); // 20, 21
+  const followUp = decideFollowUp(grading, req.attempt_number, maxAttempts, isPassed, t, req.student_answer); // 20, 21
 
   // 4. Transaction ngắn — DB lỗi sau CONFIG.DB_RETRY_DELAYS_MS ⇒ ERR_PERSISTENCE_UNAVAILABLE, bỏ kết quả chấm (D-40)
   return withDbRetry(() => db.tx(async (tx) => {

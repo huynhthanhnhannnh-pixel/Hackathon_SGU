@@ -255,7 +255,7 @@ export function checkAnalysis(raw: NodeAnalysisRaw, node: HybridArchitecturalNod
 ```typescript
 interface QuestionCheck { item: QuestionPlanItem; question: GeneratedQuestionRaw | null; errors: string[] }   // nội bộ
 export function checkQuestions(raw: { questions: GeneratedQuestionRaw[] }, items: QuestionPlanItem[], node: HybridArchitecturalNode,
-  graph: StaticEngineResult, analysis: NodeAnalysis, previous: string[]): QuestionCheck[];
+  graph: StaticEngineResult, analysis: NodeAnalysis): QuestionCheck[];
 ```
 
 Câu thứ `i` của `raw` ứng với `items[i]` (theo vị trí). Câu qua khi mọi mục sau đúng:
@@ -270,11 +270,10 @@ Câu thứ `i` của `raw` ứng với `items[i]` (theo vị trí). Câu qua khi
 | Q6 | `WEAKNESS`: lấy điểm dở cùng `skill`; từ cuối của `symbol` (sau `norm`) ∈ `identWords(feynman_question + reference_answer)` (câu hỏi **hoặc** đáp án). Không có điểm dở cùng kỹ năng ⇒ hỏng |
 | Q7 | `FLOW`: `flowSteps(reference_answer) ≥ min(CONFIG.FLOW_ANSWER_MIN_STEPS, item.step_indices.length)` |
 | Q8 | `CHANGE`: ≥ 1 chuỗi backtick trong `reference_answer` là file của node (`f === b` hoặc `f.endsWith("/" + b)`, `f ∈ node.files`) |
-| Q9 | `normText(feynman_question)` không trùng câu nào trong `previous` |
 
 `flowSteps`: `common` = từ có trong code **mọi** bước của `step_indices` (khi có ≥ 2 bước). Bước `s` được tính khi có chuỗi backtick `b` trong `reference_answer` sao cho `b` là file của bước `s`, **hoặc** một từ dạng tên (không thuộc `LANGUAGE_WORDS`) của `b` nằm trong `identWords(function_name + snippet của s) \ common`.
 
-`ARCHITECTURE` không có kiểm riêng ngoài Q1–Q5, Q9. Code không kiểm: câu có đúng trọng tâm, có lộ đáp án, có lặp Tab 1, đáp án có đúng (GUARD-21 ⇒ duyệt tay).
+`ARCHITECTURE` không có kiểm riêng ngoài Q1–Q5. Code không kiểm: câu có đúng trọng tâm, có lộ đáp án, có lặp Tab 1, đáp án có đúng (GUARD-21 ⇒ duyệt tay).
 
 ---
 
@@ -467,7 +466,7 @@ Fixture `50` Mục 1–2; `tech_stack = ["express","typeorm","pg","zod","jsonweb
 | GUARD-11 | `50` 2.2 ⇒ gạch nhận xét N7; giữ phần còn lại. `MIDDLEWARE` gán thêm N3 ⇒ N3 bị bỏ khỏi mục đó. `summary` có "dòng 5" ⇒ `null` |
 | GUARD-12 | `50` 2.3 (Q1 `WEAKNESS` bước `[2]`, Q2 `FLOW` bước `[1,2,3]`) ⇒ cả 2 qua |
 | GUARD-12 | Q1 `reference_answer` có "Redis" ⇒ Q1 hỏng (Q5). Q1 không có `findById` ở câu hỏi lẫn đáp án ⇒ hỏng (Q6). Q1 có "dòng 9" (bước 1, ngoài `[2]`) hoặc "dòng 30" ⇒ hỏng (Q4); "dòng 16–18" ⇒ qua |
-| GUARD-12 | Q2 đáp án chỉ có `` `findOne` `` ⇒ 1 bước < 2 ⇒ hỏng (Q7). Câu `CHANGE` không nêu file ⇒ hỏng; nêu `` `product.controller.ts` `` ⇒ qua. 1 ý bắt buộc ⇒ hỏng. Câu trùng `previous` ⇒ hỏng |
+| GUARD-12 | Q2 đáp án chỉ có `` `findOne` `` ⇒ 1 bước < 2 ⇒ hỏng (Q7). Câu `CHANGE` không nêu file ⇒ hỏng; nêu `` `product.controller.ts` `` ⇒ qua. 1 ý bắt buộc ⇒ hỏng |
 | GUARD-04 | Phạm vi N3 / N2: `findOne`, `jwt.verify`, `JWT_SECRET`, `user_id` (code `userId`), `'Hết hàng'`, `201`, `for` ⇒ hợp lệ; `redisClient`, `verifyToken` ⇒ không |
 | GUARD-05 | `` `userService.fooBar` ``: node `STRUCTURAL` ⇒ hợp lệ; node `RESOLVED` ⇒ không. `symbolInStep("fooBar")` ở node `STRUCTURAL` ⇒ vẫn `false` |
 | GUARD-06 | Stack trên ⇒ cấm đủ 12 công nghệ. Thêm `ioredis` ⇒ redis hết cấm; `@aws-sdk/client-s3` ⇒ aws hết cấm; `mongoose` ⇒ mongodb hết cấm. Code bước có chú thích "dùng redis" ⇒ redis hết cấm cho node đó |

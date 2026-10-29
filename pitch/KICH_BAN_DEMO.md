@@ -121,6 +121,8 @@
 
 *Nếu lúc duyệt tay ở H+17 cổng gác đã chặn thật một câu AI bịa tên trên repo demo thì chiếu bản ghi đó (`review/run-*.json`) thay cho test, và nói rõ "đây là lần chặn thật lúc [giờ] sáng nay". Không có thì dùng test và nói rõ là dữ liệu mẫu.*
 
+*Terminal lỗi hoặc không chuyển được cửa sổ ⇒ mở ảnh chụp kết quả test đã chụp sẵn (Mục 5) và nói rõ đó là ảnh chụp.*
+
 ### ⏱ 3:50 – 4:20 · Persona `SENIOR_RUSTY` → kỹ năng "đang mài mòn" — Người 3
 
 **Thao tác:** quay lại trình duyệt → menu Persona → "Senior nghỉ 30 ngày" → bấm node Danh sách sản phẩm → Tab X-Ray, phần Kỹ năng.
@@ -150,7 +152,7 @@
 
 ## 3. Câu trả lời đã chuẩn bị
 
-Câu hỏi do AI sinh mới mỗi lần mở Tab 2 (không cache câu hỏi, D-37). Nội dung bên dưới lấy theo fixture (`50` Mục 2.3–2.4). **Ở H+17, sinh câu hỏi 3 lần, chép lại câu hỏi thật và chỉnh câu trả lời cho khớp;** câu hỏi lệch ý giữa các lần ⇒ đoạn đó chạy Offline. Mỗi ô "Lần thử" chỉ đánh ☑ khi kết quả đúng như cột "Kỳ vọng".
+Câu hỏi online do AI sinh mới mỗi lần mở Tab 2 (không cache câu hỏi, D-37), nên câu trả lời soạn sẵn **lấy theo câu hỏi trong Offline bundle đã duyệt** (`mock_bundle.json`, ghi từ API thật ở Mục 5; nội dung bên dưới theo fixture `50` Mục 2.3–2.4), không theo một lần sinh câu hỏi trực tiếp. **Ở H+17, sinh câu hỏi online 3 lần;** câu hỏi lệch ý với bundle ⇒ đoạn đó chạy Offline. Mỗi ô "Lần thử" chỉ đánh ☑ khi kết quả đúng như cột "Kỳ vọng".
 
 | # | Node · câu · lượt | Câu gõ | Kỳ vọng | Lần thử 1 · 2 · 3 |
 | :-: | :-- | :-- | :-- | :-: |
@@ -173,7 +175,7 @@ Câu hỏi do AI sinh mới mỗi lần mở Tab 2 (không cache câu hỏi, D-3
 | Tải repo chậm hoặc lỗi | Quá 5 giây chưa có bản đồ; lỗi `ERR_STREAM_TIMEOUT` / `ERR_NETWORK_TIMEOUT` | Bấm thử lại 1 lần; vẫn lỗi ⇒ `Ctrl+Shift+D` | Câu chuyển chế độ (bên dưới) |
 | AI lỗi khi chấm | Thông báo "Thử lại" (`ERR_AI_UNAVAILABLE`), không mất lượt | Bấm "Thử lại" 1 lần; vẫn lỗi ⇒ Offline cho phần còn lại | "AI đang quá tải; lỗi này không tính lượt của người học." |
 | Chấm khác lần tập | Đạt/chưa đạt khác kỳ vọng ở Mục 3 | Không cãi, đi tiếp. Màu node đã lệch kịch bản ⇒ Offline | "Kết quả này khác lần tập. Đây đúng là giới hạn nhóm nêu: chấm bằng AI chưa được hiệu chuẩn với giảng viên." |
-| Test cổng gác không chạy | Terminal báo lỗi hoặc treo | Mở ảnh chụp kết quả test đã chụp lúc H+19 | "Đây là kết quả của đúng lệnh này, chụp lúc [giờ] sáng nay." |
+| Test cổng gác không chạy | Terminal báo lỗi, treo, hoặc không chuyển được cửa sổ | Mở ảnh chụp kết quả test đã chụp lúc H+19 (Mục 5) | "Đây là kết quả của đúng lệnh này, chụp lúc [giờ] sáng nay." |
 | Persona đổi mà bảng kỹ năng không đổi | Không thấy nhãn "đang mài mòn" | `F5`; vẫn không ⇒ Offline | — |
 | Mất mạng hẳn hoặc Postgres lỗi | `ERR_PERSISTENCE_UNAVAILABLE`, không tải được gì | `Ctrl+Shift+D` | Câu chuyển chế độ |
 | Máy treo | — | Mở video dự phòng ở máy thứ hai | "Đây là video quay màn hình bản chạy thật lúc [giờ] sáng nay." |

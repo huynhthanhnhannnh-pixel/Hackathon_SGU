@@ -9,7 +9,7 @@
 - Hàm thuần: BKT và planner không I/O, không `Date.now()`, tính bằng `number`, chỉ làm tròn khi hiển thị (4 chữ số).
 - 1 chế độ `LEARN`: hỏi kỹ năng chưa thạo; không có ôn tập (D-35).
 - Không Fast-Track (D-34): mọi kỹ năng của node đã thạo (≥ `CONFIG.FAST_TRACK_MIN`) ⇒ vẫn hỏi 1 câu cho kỹ năng có điểm thấp nhất.
-- Mài mòn (D-35, chỉ hiển thị): điểm đã decay < điểm gốc ⇒ nhãn "đang mài mòn", thanh kỹ năng nhạt dần; không có nút ôn.
+- Mài mòn (D-35, chỉ hiển thị): bậc của điểm đã decay thấp hơn bậc của điểm gốc ⇒ nhãn "đang mài mòn"; thanh kỹ năng nhạt dần liên tục; không có nút ôn.
 
 Luồng thích ứng BKT:
 
@@ -39,7 +39,7 @@ flowchart LR
 - **Không làm tròn khi lưu (BKT-02):** Tính và lưu bằng `number` (double); `skill_states.p_mastery` là `double precision`. Chỉ làm tròn khi hiển thị (4 chữ số). Test so với kỳ vọng, sai số < 5·10⁻⁵.
 - **Kỹ năng chưa có dòng `skill_states` (BKT-03):** đọc là `p_mastery = CONFIG.BKT_P_L0`, `practice_count = 0`, `correct_count = 0`, không decay.
 - **Kỹ năng của node = `NodeAnalysis.skills`:** (qua kiểm `21`, giữ thứ tự). Không bảng dấu hiệu bằng code, không `primary_skill`: mỗi **câu** đúng 1 `skill`. Node thiếu phân tích (`analysis_failed`) ⇒ không lập kế hoạch (D-03).
-- **Mọi quyết định dùng điểm đã decay tại `now`:** tier, chọn kỹ năng, thứ tự câu. Riêng nhãn mài mòn so điểm đã decay với `p_mastery` (BKT-24).
+- **Mọi quyết định dùng điểm đã decay tại `now`:** tier, chọn kỹ năng, thứ tự câu. Riêng nhãn mài mòn so bậc của điểm đã decay với bậc của `p_mastery` (BKT-24).
 
 ### 1.1. Ai gọi hàm nào
 
@@ -114,8 +114,8 @@ Mẫu số luôn > 0 vì $S, G^{*} \in (0, 1)$.
 - **Decay chỉ tính khi đọc:** không bao giờ ghi đè `p_mastery`. `p_mastery` chỉ đổi qua `updateSkill` hoặc `revertSkillChange`.
 - **`tierOf(p)` (BKT-22):** xác định cho mọi `p`: `p < CONFIG.TIER_PRACTITIONER_MIN` ⇒ `NOVICE`; `p < CONFIG.TIER_ARCHITECT_MIN` ⇒ `PRACTITIONER`; còn lại (kể cả `p ≥ CONFIG.FAST_TRACK_MIN`) ⇒ `ARCHITECT`. Luôn gọi với điểm đã decay.
 - **`overallTier(skills, now)` (BKT-23):** (D-20, chỉ hiển thị) = `tierOf` của **trung bình** điểm đã decay trên các kỹ năng có `practice_count > 0`; không có kỹ năng nào ⇒ `NOVICE`. Server tính khi trả `MeResponse`.
-- **Mài mòn (BKT-24, D-35 — chỉ hiển thị):** `isDecaying(state, now)` = có state **và** `getDecayedMastery(state, now) < state.p_mastery`. Ở bảng kỹ năng (`30`), mỗi kỹ năng có state: thanh kỹ năng vẽ theo điểm đã decay và nhạt dần khi điểm đã decay xa điểm gốc; `isDecaying` ⇒ nhãn "đang mài mòn". Không đổi trạng thái / màu node, không tạo run, không có nút ôn.
-- **Hệ quả (BKT-25):** vừa cập nhật thì $\Delta t = 0$ ⇒ điểm decay = điểm gốc ⇒ hết nhãn mài mòn. Điểm gốc ≤ `CONFIG.DECAY_FLOOR` không bao giờ mài mòn (BKT-20).
+- **Mài mòn (BKT-24, D-35 — chỉ hiển thị):** `isDecaying(state, now)` = có state **và** `tierOf(getDecayedMastery(state, now)) < tierOf(state.p_mastery)` (thứ tự `NOVICE < PRACTITIONER < ARCHITECT`; ngưỡng `CONFIG.TIER_*`, không thêm hằng số). Ở bảng kỹ năng (`30`), mỗi kỹ năng có state: thanh kỹ năng vẽ theo điểm đã decay và nhạt dần **liên tục** theo tỉ lệ điểm đã decay / `p_mastery`; `isDecaying` ⇒ nhãn "đang mài mòn". Đã decay nhưng chưa rớt bậc ⇒ chỉ thanh nhạt, không nhãn. Không đổi trạng thái / màu node, không tạo run, không có nút ôn.
+- **Hệ quả (BKT-25):** vừa cập nhật thì $\Delta t = 0$ ⇒ điểm decay = điểm gốc ⇒ cùng bậc ⇒ hết nhãn mài mòn. Điểm gốc ≤ `CONFIG.DECAY_FLOOR` không bao giờ mài mòn (BKT-20).
 ---
 
 ## 5. Kế hoạch không rỗng (D-34) & Capstone
@@ -399,9 +399,11 @@ Tier chuỗi `PASS_FIRST`: `NOVICE → PRACTITIONER → ARCHITECT → đã thạ
 | # | State | Kỳ vọng |
 | :-: | :-- | :-- |
 | 1 | 0.5767 @0 | `false` |
-| 2 | 0.5767 @10 | `true` (điểm đã decay 0.4491) |
-| 3 | 0.0791 @30 | `false` (≤ sàn) |
-| 4 | State thiếu | `false` |
+| 2 | 0.5767 @9 | `false` (đã decay 0.4592, vẫn `PRACTITIONER` — chưa rớt bậc) |
+| 3 | 0.5767 @10 | `true` (0.4491: `PRACTITIONER` ⇒ `NOVICE`) |
+| 4 | 0.8413 @7 | `true` (0.6681: `ARCHITECT` ⇒ `PRACTITIONER`) |
+| 5 | 0.0791 @30 | `false` (≤ sàn) |
+| 6 | State thiếu | `false` |
 
 ### T-PLAN — `planNodeQuestions` (`now = T0`, hồ sơ @0 trừ khi ghi khác)
 

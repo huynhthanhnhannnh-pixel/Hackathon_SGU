@@ -236,7 +236,7 @@ Mỗi kỹ năng chỉ có vài quan sát trên một repo, nên điểm là ư�
 | "Hỗ trợ hơn 100 ngôn ngữ", "liên kết chính xác 100%" | "Đã kiểm chứng TS/JS và Python; ngôn ngữ khác có grammar thì cạnh suy luận, chưa kiểm chứng" |
 | "Duolingo dùng BKT" | Không nhắc. BKT: Corbett & Anderson 1995, Cognitive Tutor |
 | "Program slicing", "inter-procedural slicing" | "Scoped Call-Chain Slicing" |
-| "< 1.000đ/phiên", "~400 token", "< $0.002", "≈ $0.03/phiên", "1.000 SV < $15/tháng" | Ước lượng mới ở bảng trên |
+| "< 1.000đ/phiên", "~400 token", "< $0.002", "1.000 SV < $15/tháng" | "Người đầu tiên học 1 repo ~0,05 USD; người học sau cùng repo ~0,03 USD (câu hỏi không cache, D-37) — ước lượng, chưa đo" (`02` Mục 1.1) |
 | "AI chỉ gọi 2 lần", "1 lời gọi mỗi node" | "4 lời gọi AI" |
 | "Pha 1 giấu điểm dở" | "Tab 1 hiện điểm dở, gắn nhãn 'Nhận định của AI'; đáp án chỉ mở khi câu xong" |
 | "0 ms", "mở tức thì nhờ tải trước" | Không nói; tính năng tải trước đã bỏ |

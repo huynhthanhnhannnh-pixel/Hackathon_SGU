@@ -176,6 +176,7 @@ Không bao giờ cắt: bản đồ tất định, Tab 1, câu hỏi + chấm + 
 - [ ] Sửa `attempt_number` trong request ⇒ `ERR_ATTEMPT_OUT_OF_SYNC`, không lộ đáp án.
 - [ ] `Ctrl+Shift+D` ⇒ chế độ offline chạy hết kịch bản demo, nhãn offline luôn hiện.
 - [ ] Mọi test `50` xanh (`npx vitest run`).
+- [ ] Repo thi có test tên bắt đầu bằng `GUARD-04` (`21` Test bắt buộc, `50` Mục 2.1), chạy xanh (`npx vitest run -t "GUARD-04"` — dùng cho demo cổng gác).
 
 ---
 

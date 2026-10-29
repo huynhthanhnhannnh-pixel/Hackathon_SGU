@@ -12,7 +12,7 @@ SimpliFey V2 Pro biến một repo GitHub public (hoặc file `.zip`) thành **b
 3. đặt câu hỏi Feynman cho đúng các kỹ năng người học còn yếu;
 4. chấm câu trả lời và gợi ý 3 nấc.
 
-Mô hình **BKT** ghi nhận năng lực của 16 kỹ năng lâu dài trong Postgres. Từ đó có Fast-Track (miễn thi phần đã vững) và cảnh báo khi trí nhớ phai.
+Mô hình **BKT** ghi nhận năng lực của 16 kỹ năng lâu dài trong Postgres. Từ đó server chọn kỹ năng cần hỏi — kỹ năng đã thạo vẫn bị hỏi 1 câu, không node nào được miễn (D-34) — và bảng kỹ năng hiện "đang mài mòn" khi trí nhớ phai, chỉ hiển thị (D-35).
 
 ---
 
@@ -24,13 +24,13 @@ Mô hình **BKT** ghi nhận năng lực của 16 kỹ năng lâu dài trong Pos
 | **INV-02** | **Code thuần trước, AI sau.** Bản đồ (Tầng 0–2) không gọi AI, mục tiêu < 1.5 s. AI chỉ chạy ở **4 lời gọi**: `analyze-node`, `analyze-overview`, `enrich-node` (đặt câu hỏi), `evaluate-feynman` (chấm). Không có Intent Router, không có Actor-Critic nhiều lượt. |
 | **INV-03** | **Zero-Trust:** không `git clone`, không chạy code người dùng; chỉ phân tích tĩnh. Tải từ `codeload.github.com` sau HEAD probe; file zip upload chỉ nằm trong RAM. |
 | **INV-04** | **Zero-Disk cho mã nguồn:** code, `snippet`, `StaticEngineResult`, `code_context` không bao giờ ghi đĩa hay DB. Postgres chỉ chứa dữ liệu học tập + khung đồ thị không code + văn bản AI đã qua kiểm (API-01). |
-| **INV-05** | **Server là nơi ghi duy nhất** của tiến độ học: lập kế hoạch câu hỏi, BKT, đếm lượt, mở khóa, Fast-Track, quyết định mở đáp án. Client giữ bản sao chỉ đọc. `localStorage` chỉ giữ `SyncReceipt` và tiện ích giao diện, không giữ hồ sơ người học. |
+| **INV-05** | **Server là nơi ghi duy nhất** của tiến độ học: lập kế hoạch câu hỏi, BKT, đếm lượt, mở khóa, quyết định mở đáp án. Client giữ bản sao chỉ đọc. `localStorage` chỉ giữ tiện ích giao diện, không giữ hồ sơ người học. |
 | **INV-06** | **Tab 1 (X-Ray)** hiện luồng, kiến trúc, điểm hay **và điểm dở** do AI tìm, gắn nhãn "Nhận định của AI". Tab 1 **không** nêu con số theo tình huống, cách sửa, tình huống biên — đó là thứ câu hỏi hỏi. |
-| **INV-07** | **Đáp án** (`reference_answer`, `must_have_points`, `fix`) chỉ nằm ở server (`ai_cache`) và trong `challenge_token` mã hóa; chỉ gửi xuống client khi câu **xong** (đạt / hết lượt / bỏ qua). |
+| **INV-07** | **Đáp án** (`reference_answer`, `must_have_points`, `fix`) chỉ nằm ở server: cột câu hỏi của `node_runs` (`03` Mục 3.1), client không có quyền đọc bảng này (RLS, `03`); chỉ gửi xuống client khi câu **xong** (đạt / hết lượt / bỏ qua). |
 | **INV-08** | **Mọi văn bản AI phải qua cổng gác trước khi hiển thị** (`21`). Cổng gác chặn tên bịa, kỹ năng ngoài danh mục, công nghệ ngoài repo; nó **không** kiểm được nghĩa đúng/sai. Không bao giờ tuyên bố "diệt 100% ảo giác". Câu hỏi hỏng ⇒ gọi lại 1 lần ⇒ bỏ câu đó; **không có** câu dự phòng dựng từ AST. |
 | **INV-09** | **Đa ngôn ngữ theo tầng** (Language Registry): `RESOLVED` (có `ImportResolver`: TS/JS, Python, Java, Go, Dart) cạnh chính xác; `STRUCTURAL` (có grammar Tree-sitter) cạnh `INFERRED`, không bảo đảm 100%; `UNSUPPORTED` ⇒ `ERR_UNSUPPORTED_LANGUAGE`. Chỉ TS/JS và Python được kiểm chứng cho bản thi. Không regex fallback, không dùng LLM để dựng đồ thị. |
 | **INV-10** | **Engine tất định:** cùng repo + cùng commit + cùng `ENGINE_VERSION` ⇒ cùng đồ thị, cùng `node_id`, cùng tọa độ (D-10). Mọi vòng lặp duyệt theo khóa đã sort. |
-| **INV-11** | **Màu & lớp hiển thị:** nền `#0F172A`; `AVAILABLE` `#F59E0B`; `COMPLETED` `#10B981`; `FAILED` `#EF4444` (vẫn mở node con — soft-bypass); `LOCKED` xám, viền đứt. Fast-Track (xanh nhạt + ⚡), tam giác cảnh báo, viền cam decay, "đang phân tích…" là **lớp hiển thị**, không phải trạng thái FSM. |
+| **INV-11** | **Màu & lớp hiển thị:** nền `#0F172A`; `AVAILABLE` `#F59E0B`; `COMPLETED` `#10B981`; `FAILED` `#EF4444` (vẫn mở node con — soft-bypass); `LOCKED` xám, viền đứt. Tam giác cảnh báo, "đang phân tích…" (trên node) và "đang mài mòn" (bảng kỹ năng, D-35) là **lớp hiển thị**, không phải trạng thái FSM. |
 | **INV-12** | **Mọi con số nằm ở `CONFIG`** (`02` Mục 1); mọi kiểu nằm ở `02`. File khác chỉ nhắc tên. |
 | **INV-13** | **Định vị:** không tuyên bố tự phát minh Compound AI, BKT, PageRank, Tree-sitter repo-map (Aider đã có). Điểm mới là **cách kết hợp và ứng dụng** vào học kiến trúc mã nguồn. |
 
@@ -43,12 +43,12 @@ flowchart LR
     subgraph Browser["Trình duyệt (Next.js client, Zustand chỉ đọc)"]
         UI["Buồng lái 3 cột<br/>ReactFlow · Monaco · Tab X-Ray / Feynman / Tổng quan"]
     end
-    subgraph Server["Tiến trình Node.js sống lâu (Next.js route handlers)"]
+    subgraph Server["Vercel Functions (Next.js route handlers, D-27)"]
         API["/api/* (03)"]
         ENG["Engine Tầng 0–2<br/>(10, 11) — RAM"]
         AI["AI client + cổng gác<br/>(20, 21)"]
         BKT["bkt-engine + planNodeQuestions<br/>(22)"]
-        CACHE["LRU StaticEngineResult<br/>(RAM, 10 phút)"]
+        CACHE["LRU StaticEngineResult<br/>(RAM 1 instance, INGESTION_CACHE_TTL_MS,<br/>không được dựa vào)"]
     end
     GH[("codeload.github.com")]
     GEM[("Gemini API")]
@@ -74,7 +74,7 @@ flowchart LR
 | 3a | `analyze-node`: kỹ năng + bằng chứng, mẫu kiến trúc, giải thích từng bước, điểm hay, điểm dở — cache dùng chung | AI | `20`, `21` |
 | 3b | `analyze-overview`: tổng quan repo từ các bản phân tích (không gửi code) | AI | `20`, `21` |
 | 4 | `enrich-node`: server lập kế hoạch câu hỏi theo hồ sơ người học, AI viết câu hỏi + đáp án | AI | `20`, `21`, `22` |
-| 5 | `evaluate-feynman`: AI chấm + gợi ý 3 nấc; server quyết Đạt, cập nhật BKT, mở khóa, Fast-Track | AI + 0 | `20`, `21`, `22`, `03` |
+| 5 | `evaluate-feynman`: AI chấm + gợi ý 3 nấc; server quyết Đạt, cập nhật BKT, mở khóa | AI + 0 | `20`, `21`, `22`, `03` |
 
 ---
 
@@ -161,7 +161,7 @@ sequenceDiagram
 ### 5.3. Không ôn tập — hiển thị mài mòn (D-35)
 
 - Không có run ôn: node đỏ giữ đỏ, node xanh giữ xanh.
-- Bảng kỹ năng hiện thanh kỹ năng nhạt dần theo điểm đã decay và nhãn "đang mài mòn" khi điểm đã decay thấp hơn điểm gốc. Chỉ hiển thị, không có nút ôn (`22`, `30`).
+- Bảng kỹ năng hiện thanh kỹ năng nhạt dần theo điểm đã decay và nhãn "đang mài mòn" khi bậc của điểm đã decay thấp hơn bậc của điểm gốc (`22` BKT-24). Chỉ hiển thị, không có nút ôn (`22`, `30`).
 
 ### 5.4. Mở lại phiên
 

@@ -221,6 +221,7 @@ Biến thể kiểm D-13: giữ nguyên lượt 2 nhưng đổi `quote` của ý
 
 Chung cho mọi kịch bản:
 - Đồng hồ hệ thống cố định.
+- `ingest` repo mẫu bằng **link GitHub** (phiên `COMMIT_SHA`, dựng lại theo SHA — D-39). Upload `.zip` chỉ có ca best-effort D19 (Q-12).
 - Kỹ năng chưa có dòng `skill_states` ⇒ P = 0.25.
 - "PF" = `PASS_FIRST`, "PAH" = `PASS_AFTER_HINT`, "F" = `FAILED`.
 
@@ -234,7 +235,7 @@ Chung cho mọi kịch bản:
 | A4 | Nộp Q1 lượt 1 (2.4) | Chưa đạt; gợi ý `CONCEPT`; `attempts_used = 1`; BKT chưa đổi |
 | A5 | Nộp Q1 lượt 2 | Đạt, PAH; `DB_OPTIMIZATION` 0.25 → **0.4202**; Q1 có `reveal` |
 | A6 | Nộp Q2 lượt 1 (đúng) | PF; `LAYERED_SEPARATION` 0.25 → **0.5767**; run xong ⇒ N3 `COMPLETED`; `unlocked_node_ids` = [] (N5 còn chờ N4) |
-| A7 | Đọc lại trạng thái | Bảng kỹ năng: `DB_OPTIMIZATION` 0.4202, `LAYERED_SEPARATION` 0.5767; **chưa** có nhãn "đang mài mòn" (Δt = 0, BKT-24) |
+| A7 | Đọc lại trạng thái | Bảng kỹ năng: `DB_OPTIMIZATION` 0.4202, `LAYERED_SEPARATION` 0.5767; **chưa** có nhãn "đang mài mòn" (Δt = 0 ⇒ không rớt bậc, BKT-24) |
 
 ### 3.2. Kịch bản B — Lan, N2: câu 1 trượt 3 lần, câu 2 đạt ⇒ ĐỎ
 
@@ -298,6 +299,7 @@ Minh gọi AI đặt câu hỏi ở cả 5 node đã học (N1–N5); node mà m
 | D16 | Gọi lại `enrich-node` khi run N3 đang dở | Cùng `run_id`, cùng câu hỏi, `attempts_used` giữ nguyên; không gọi AI |
 | D17 | Tài khoản B gửi `run_id` của người A | `ERR_SESSION_NOT_FOUND` (API-05); không gọi AI, không lộ đáp án |
 | D18 | "Báo sai" Q1 của B4 ngay sau khi trượt | Q1 🚩; `AUTH_SECURITY` trở lại 0.25; N2 tính lại màu: Q2 đạt ⇒ `COMPLETED` |
+| D19 | Best-effort zip (Q-12): upload `.zip` repo mẫu, xóa cache RAM, mở lại phiên | `resume_blocker = "ZIP_SOURCE"`; `ingest { session_id }` ⇒ `ERR_SESSION_NOT_FOUND`; UI "Phiên upload không mở lại được — hãy upload lại file .zip."; kéo thả lại đúng file ⇒ mở lại phiên đó |
 
 ### 3.5. Kịch bản E — Huy quay lại sau 30 ngày (mài mòn, chỉ hiển thị)
 
@@ -310,7 +312,7 @@ Trạng thái ban đầu của Huy: N3 `COMPLETED`.
 
 | # | Thao tác | Kỳ vọng |
 | :-: | :-- | :-- |
-| E1 | Đọc trạng thái | N3 vẫn XANH, không viền, không nút ôn. Bảng kỹ năng: `DB_OPTIMIZATION` thanh theo 0.4092, `LAYERED_SEPARATION` theo 0.6681, cả hai nhãn "đang mài mòn" (BKT-24, D-35) |
+| E1 | Đọc trạng thái | N3 vẫn XANH, không viền, không nút ôn. Bảng kỹ năng: `DB_OPTIMIZATION` thanh theo 0.4092, `LAYERED_SEPARATION` theo 0.6681, cả hai nhãn "đang mài mòn" vì rớt bậc (`ARCHITECT` ⇒ `NOVICE`, `ARCHITECT` ⇒ `PRACTITIONER`; BKT-24, D-35) |
 | E2 | "Học lại từ đầu" ⇒ phiên mới; `enrich-node` N3 `LEARN` | Điểm kỹ năng giữ nguyên (D-42). Kế hoạch: Q1 `DB_OPTIMIZATION` · NOVICE (theo 0.4092) · `WEAKNESS`; Q2 `LAYERED_SEPARATION` · PRACTITIONER · `ARCHITECTURE`; câu hỏi sinh mới (D-37) |
 | E3a | Q1 đúng ngay | PF: 0.4092 → **0.7324**; nhãn "đang mài mòn" của `DB_OPTIMIZATION` tắt (Δt = 0) |
 | E3b | Q1 đúng sau gợi ý | PAH: → **0.5854** |
@@ -333,6 +335,6 @@ Trạng thái ban đầu của Huy: N3 `COMPLETED`.
 | X-01 | Tất định (INV-10) | Chạy engine 2 lần trên cùng zip ⇒ `JSON.stringify(result.nodes, result.edges)` giống hệt |
 | X-02 | Không rò trường (API-03) | Quét mọi response trong kịch bản A–E: không có `misconception`, `quote`, `symbol_whitelist`, `suspicious_instruction_files`, `reference_answer` / `must_have_points` của câu chưa xong |
 | X-03 | Không lưu code (INV-04) | Dump Postgres sau kịch bản A–E: không có chuỗi nào trùng một dòng code dài ≥ 40 ký tự của repo mẫu ngoài `ai_cache` (chỉ được chứa tên/biểu thức ngắn) |
-| X-04 | Mở lại phiên | Xóa cache RAM ⇒ `ingest { session_id }` ⇒ cùng `graph_skeleton`, tiến độ còn nguyên |
+| X-04 | Mở lại phiên | Phiên link GitHub: xóa cache RAM ⇒ `ingest { session_id }` ⇒ cùng `graph_skeleton`, tiến độ còn nguyên |
 | X-05 | RLS | Dùng anon key của người A đọc `skill_states` của B ⇒ 0 dòng; đọc `ai_cache` ⇒ 0 dòng; mọi lệnh ghi từ client ⇒ bị từ chối |
 | X-06 | Offline | `Ctrl+Shift+D` ⇒ chạy hết kịch bản demo không có mạng; không có request tới `/api/*` học tập |
