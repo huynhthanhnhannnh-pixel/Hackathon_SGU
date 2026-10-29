@@ -13,7 +13,7 @@
 1. **Máy vẽ bản đồ bài học** từ chính code của bạn, không dùng AI nên không tốn tiền. Mỗi ô trên bản đồ là một **luồng nghiệp vụ**, ví dụ "Đặt hàng" đi từ file nhận yêu cầu, qua file xử lý, xuống file lưu dữ liệu. Ô không phải là một file.
 2. **AI đọc từng ô** và viết ra: ô này dùng kỹ năng gì, chỗ nào viết hay, chỗ nào chưa tốt.
 3. **AI hỏi bạn** mỗi kỹ năng một câu, bám đúng dòng code. Bạn trả lời bằng lời của mình. Sai thì có gợi ý, đúng thì ô chuyển xanh.
-4. **Hệ thống ghi nhớ** bạn vững 16 kỹ năng kỹ nghệ phần mềm tới đâu. Kỹ năng đã rất vững thì được miễn thi; lâu không ôn thì được nhắc.
+4. **Hệ thống ghi nhớ** bạn vững 16 kỹ năng kỹ nghệ phần mềm tới đâu. Kỹ năng đã rất vững thì chỉ bị hỏi 1 câu khó; lâu không luyện thì thanh kỹ năng nhạt dần như "mài mòn".
 
 **Nguyên tắc:** code thuần làm trước (miễn phí, nhanh), AI làm sau và chỉ ở những chỗ cần.
 
@@ -27,7 +27,7 @@
 | Cột giữa — **Code** | Đoạn code thật của bước đang xem, tô sáng đúng dòng |
 | Cột phải — **3 tab** | **X-Ray** (đọc hiểu) · **Feynman** (trả lời câu hỏi) · **Tổng quan** (nhìn cả repo) |
 
-**Dấu hiệu phụ** (không đổi trạng thái ô): ⚡ xanh nhạt = miễn thi · viền cam = kiến thức đang phai · tam giác vàng = ô đứng trước chưa vững · "đang phân tích…" = AI đang đọc ô này.
+**Dấu hiệu phụ** (không đổi trạng thái ô): tam giác vàng = ô đứng trước chưa vững · "đang phân tích…" = AI đang đọc ô này.
 
 ---
 
@@ -39,8 +39,8 @@ flowchart TD
   B4 --> B5["5 · Bấm ô vàng: Tab X-Ray"] --> B6["6 · Tab Feynman: câu hỏi"] --> B7{"7 · Nộp bài"}
   B7 -- "chưa đạt, còn lượt" --> HINT["Gợi ý nấc 1, nấc 2"] --> B7
   B7 -- "đạt, hết lượt hoặc bỏ qua" --> B8["8 · Ghi điểm BKT, ô đổi màu, mở ô sau"]
-  B8 --> B9["9 · Ô mà mọi kỹ năng đã vững: miễn thi ⚡"]
-  B8 --> B10["10 · Lâu không ôn: viền cam, Ôn bài"]
+  B8 --> B9["9 · Ô mà mọi kỹ năng đã vững: vẫn hỏi 1 câu khó"]
+  B8 --> B10["10 · Lâu không luyện: kỹ năng mài mòn"]
   B4 --> B11["11 · Tab Tổng quan"]
   B8 --> B12["12 · Hôm khác: Tiếp tục học"]
 ```
@@ -49,12 +49,12 @@ flowchart TD
 Lần đầu vào, bạn được tạo ngay một **tài khoản khách**, không phải đăng ký. Nếu từng học rồi, trang hiện danh sách **"Tiếp tục học"**. Muốn học tiếp trên máy khác thì bấm liên kết GitHub. Hệ thống chỉ xin quyền đọc hồ sơ, không đọc repo của bạn.
 
 ### Bước 2 — Dán link hoặc kéo thả `.zip`
-Hệ thống nhận repo GitHub **public**. Repo private thì nén thành `.zip` (≤ 15 MB) rồi kéo thả vào.
+Hệ thống nhận **link gốc** của repo GitHub **public** (`https://github.com/<chủ>/<repo>`) và đọc nhánh mặc định. Link tới nhánh hay thư mục con (`/tree/…`, `/blob/…`) được tự cắt về gốc, kèm ghi chú "Chỉ hỗ trợ nhánh mặc định". Repo private thì nén thành `.zip` (≤ 4,5 MB) rồi kéo thả vào.
 
 ### Bước 3 — Máy đọc code và vẽ bản đồ (không AI, 0 token)
 Máy chủ làm việc như một thủ thư nhận một thùng sách:
 1. **Gõ cửa trước:** hỏi GitHub repo có tồn tại, có công khai không, rồi mới tải.
-2. **Tải vào RAM, không ghi ổ cứng.** Vứt rác (thư viện cài sẵn, ảnh, file build); giữ tối đa 50 file code quan trọng nhất.
+2. **Tải vào RAM, không ghi ổ cứng.** Vứt rác (thư viện cài sẵn, ảnh, file build); giữ tối đa 100 file code quan trọng nhất.
 3. **Che mật khẩu, khóa bí mật** lỡ để trong code, trước khi gửi bất cứ thứ gì cho AI.
 4. **Đọc ngữ pháp từng file** (Tree-sitter) và lập **danh bạ**: hàm nào nằm ở file nào.
 5. **Nối dây:** lần theo lời gọi hàm để biết A gọi B; hai hàm gọi vòng nhau thì gộp thành một cụm, nên bản đồ không bao giờ có vòng lặp vô tận.
@@ -75,16 +75,16 @@ Tab 1 hiện ngay từ bản phân tích: kỹ năng, kiểu kiến trúc, luồ
 
 ### Bước 6 — Tab Feynman: mỗi kỹ năng chưa vững một câu
 Trong lúc bạn đọc Tab 1, máy chủ lập kế hoạch câu hỏi:
-- **Kỹ năng nào:** chỉ kỹ năng của ô mà bạn **chưa vững** (< 0,92), mỗi kỹ năng một câu; kỹ năng có điểm dở hỏi trước.
+- **Kỹ năng nào:** chỉ kỹ năng của ô mà bạn **chưa vững** (< 0,92), mỗi kỹ năng một câu; kỹ năng có điểm dở hỏi trước. Nếu mọi kỹ năng của ô bạn đều đã vững thì vẫn hỏi **1 câu** ở mức Kiến trúc sư cho kỹ năng điểm thấp nhất.
 - **Sâu cỡ nào:** theo điểm của chính kỹ năng đó: Mới học (< 0,45), Thực hành (0,45–0,75), Kiến trúc sư (≥ 0,75).
 - **Góc nào:** **Luồng** (dữ liệu đi qua đâu), **Kiến trúc** (dùng lại được gì), **Điểm dở** (hậu quả, cách sửa), **Thay đổi** (đổi chỗ này thì sửa file nào).
 
-Ví dụ: *"Cửa hàng có 200 sản phẩm. Mở trang danh sách 1 lần thì database nhận bao nhiêu truy vấn? Chỉ ra dòng code tạo ra chúng."* AI viết câu hỏi kèm **đáp án mẫu**, 2–3 **ý bắt buộc** và **cách sửa**; đáp án được **niêm phong** trong "phong bì" mã hóa (`challenge_token`) mà trình duyệt cầm hộ nhưng không đọc được.
+Ví dụ: *"Cửa hàng có 200 sản phẩm. Mở trang danh sách 1 lần thì database nhận bao nhiêu truy vấn? Chỉ ra dòng code tạo ra chúng."* AI viết câu hỏi kèm **đáp án mẫu**, 2–3 **ý bắt buộc** và **cách sửa**. Câu hỏi được sinh mới cho bạn, và đáp án được **cất ở cơ sở dữ liệu trên máy chủ**; trình duyệt không đọc được cho tới khi câu xong.
 
 ### Bước 7 — Nộp bài, chấm, gợi ý
 Bạn gõ câu trả lời (ít nhất 15 ký tự). Dùng thuật ngữ hay ví dụ đời thường đều được; điều quan trọng là **giải thích đúng và chỉ đúng chỗ trong code**.
 
-- Máy chủ mở phong bì, đưa AI chấm với câu hỏi, đoạn code, đáp án mẫu, ý bắt buộc và câu trả lời của bạn.
+- Máy chủ lấy câu hỏi, đáp án mẫu, ý bắt buộc từ cơ sở dữ liệu rồi đưa AI chấm cùng câu trả lời của bạn (không gửi lại code).
 - **Máy chủ tự quyết đạt**, không lấy nguyên điểm AI: điểm ≥ 70, là câu trả lời thật (không phải "chịu"), và mọi ý bắt buộc có đoạn trích mà code kiểm là có thật trong câu bạn viết.
 - **Chưa đạt thì có gợi ý theo lượt:**
 
@@ -104,13 +104,13 @@ Bạn gõ câu trả lời (ít nhất 15 ký tự). Dùng thuật ngữ hay ví
 - **Ô xanh** khi mọi câu đạt; **ô đỏ** khi có ≥ 1 câu trượt. Ô đỏ **vẫn mở** ô phía sau, kèm tam giác vàng. Ô khóa mở khi **mọi ô đứng trước** đã xong (xanh hoặc đỏ).
 - Tính điểm, đếm lượt, mở khóa đều làm ở **máy chủ**; trình duyệt chỉ hiển thị, không tự sửa điểm được.
 
-### Bước 9 — Miễn thi (Fast-Track ⚡)
-Ô vừa mở mà **mọi kỹ năng** của nó bạn đều ≥ 0,92 thì tự chuyển **xanh nhạt ⚡**, không hỏi, không gọi AI, và ô sau có thể mở tiếp theo dây chuyền. **Ô khó nhất repo (Capstone ★)** không bao giờ được miễn. Người giỏi học nhanh hơn và tốn ít tiền AI hơn.
+### Bước 9 — Ô đã vững vẫn hỏi 1 câu
+Không có ô nào được miễn. Ô mà **mọi kỹ năng** của nó bạn đều ≥ 0,92 thì chỉ hỏi **1 câu** ở mức khó nhất, cho kỹ năng bạn có điểm thấp nhất. Người giỏi học nhanh hơn nhưng vẫn phải chứng minh mình hiểu ô đó.
 
-### Bước 10 — Quên và ôn
+### Bước 10 — Quên và "mài mòn"
 - Điểm **phai dần** khi không luyện (chu kỳ bán rã 14 ngày, không thấp hơn 0,25), tính mỗi lần đọc nên không bị trừ chồng. Ví dụ: 0,95 sau 30 ngày còn ~0,41.
-- Ô xanh có **viền cam** khi một kỹ năng **từng vững** (≥ 0,45) nay phai dưới 0,45. **"Ôn bài"** hỏi đúng kỹ năng đang phai; kết quả chỉ cập nhật điểm, ô vẫn xanh.
-- Ô **đỏ** có **"Ôn lại"** sau khi bạn xong ít nhất 1 ô khác: hỏi lại kỹ năng đã trượt ở góc khác; đạt hết thì ô xanh, trượt thì không bị trừ thêm.
+- Giống cách Duolingo cho thấy kỹ năng "mài mòn" khi lâu không luyện, ở bảng kỹ năng của SimpliFey **thanh kỹ năng nhạt dần** theo điểm đã phai và hiện nhãn **"đang mài mòn"**. Đây chỉ là hiển thị: không có nút ôn, màu ô trên bản đồ không đổi; lần sau gặp kỹ năng đó, câu hỏi sẽ ở mức dễ hơn vì điểm đã giảm.
+- Ô **đỏ** giữ đỏ. Muốn làm lại cả repo thì bấm **"Học lại từ đầu"**: tạo phiên mới, tiến độ ô làm lại, **điểm kỹ năng giữ nguyên**.
 
 ### Bước 11 — Tab Tổng quan
 Phần **do code biết**: loại dự án, công nghệ, ô bắt đầu, luồng chính. Phần **do AI viết**: kiến trúc chung, vai trò từng tầng, nhận xét chung, có nhãn "Nhận định của AI"; nhận xét chê một ô mà bản phân tích ô đó không có điểm dở thì bị gạch.
@@ -124,11 +124,11 @@ Bấm repo trong "Tiếp tục học". Máy chủ tải lại **đúng commit** 
 
 | Chuyện xảy ra | Hệ thống làm gì |
 | :-- | :-- |
-| Link sai, repo private, repo rỗng, quá lớn | Báo lỗi tiếng Việt dễ hiểu, gợi ý cách khác (dùng `.zip`, dán link thư mục con) |
+| Link sai, repo private, repo rỗng, quá lớn | Báo lỗi tiếng Việt dễ hiểu, gợi ý cách khác (dùng `.zip` chỉ chứa thư mục mã nguồn) |
 | Repo viết bằng ngôn ngữ chưa được kiểm chứng | Vẫn vẽ bản đồ nếu có bộ đọc ngữ pháp; mũi tên **nét đứt** = suy luận, có thể chưa đúng |
 | Repo không chia tầng (code dồn một chỗ) hoặc chỉ là tập bài thuật toán | Chuyển sang chế độ đặc biệt: mỗi hàm phức tạp thành một ô, AI hỏi kiểu thuật toán (chạy tay, độ phức tạp, tình huống biên) |
 | AI phân tích một ô bị lỗi | Ô giữ vàng, có "Thử lại phân tích"; ô sau vẫn mở, kèm tam giác |
-| Hết hạn mức token / cơ sở dữ liệu lỗi | Khóa lời gọi AI mới và báo rõ / trả kết quả kèm biên nhận có chữ ký, hiện "Chưa đồng bộ", tự gửi lại sau |
+| Hết hạn mức token / cơ sở dữ liệu lỗi | Khóa lời gọi AI mới và báo rõ / báo lỗi kèm nút "Thử lại", lượt đó không bị tính |
 | Mất mạng lúc demo | `Ctrl+Shift+D` mở **chế độ Offline**: dữ liệu **ghi lại từ một lần chạy thật**, đã duyệt tay; nhãn Offline luôn hiện; không lưu tiến độ |
 
 ---
@@ -137,10 +137,10 @@ Bấm repo trong "Tiếp tục học". Máy chủ tải lại **đúng commit** 
 
 | Dữ liệu | Ở đâu | Bao lâu |
 | :-- | :-- | :-- |
-| Code của repo | **RAM máy chủ**, không bao giờ ghi ổ cứng hay cơ sở dữ liệu | Trong lúc xử lý; bản đồ có code giữ trong RAM khoảng 10 phút |
+| Code của repo | **RAM máy chủ**, không bao giờ ghi ổ cứng hay cơ sở dữ liệu | Trong lúc xử lý; bản đồ có code giữ trong RAM chỉ để nhanh hơn, có thể mất bất cứ lúc nào — mất thì tải lại đúng commit |
 | Tài khoản, điểm 16 kỹ năng, phiên học (mã commit + khung bản đồ **không có code**), tiến độ, câu trả lời của bạn | Cơ sở dữ liệu Postgres (Supabase), chỉ máy chủ được ghi | Tới khi bạn xóa tài khoản |
-| Bản phân tích, tổng quan, câu hỏi + đáp án (chữ AI đã qua kiểm) | Postgres, dùng chung; trình duyệt không đọc trực tiếp được | Lâu dài, theo phiên bản repo |
-| Đáp án của câu đang làm | Trong "phong bì" mã hóa do trình duyệt giữ hộ | 24 giờ |
+| Bản phân tích, tổng quan (chữ AI đã qua kiểm) | Postgres, dùng chung; trình duyệt không đọc trực tiếp được | Lâu dài, theo phiên bản repo |
+| Câu hỏi + đáp án mẫu của lượt học (chữ, không có code) | Postgres, riêng phiên của bạn; đáp án chỉ trả về khi câu đã xong | Theo phiên học |
 | Code gửi AI | Mỗi lần tối đa 100 dòng của một ô, đã che bí mật | SimpliFey không lưu lại |
 
 ---
@@ -167,8 +167,7 @@ Bấm repo trong "Tiếp tục học". Máy chủ tải lại **đúng commit** 
 | **Cổng gác** | Đoạn code kiểm chữ AI viết trước khi hiện: tên có thật, không bịa công nghệ |
 | **Feynman** | Học bằng cách tự giải thích lại bằng lời của mình |
 | **BKT** | Công thức xác suất ước lượng "bạn đã thật sự vững kỹ năng này chưa", cập nhật sau mỗi câu |
-| **Fast-Track ⚡** | Miễn thi ô mà mọi kỹ năng bạn đã ≥ 0,92 |
-| **Capstone ★** | Ô khó nhất repo, không bao giờ được miễn |
-| **Decay / viền cam** | Điểm phai khi lâu không luyện; viền cam nhắc ôn |
+| **Capstone ★** | Ô khó nhất repo |
+| **Decay / mài mòn** | Điểm phai khi lâu không luyện; thanh kỹ năng nhạt dần, nhãn "đang mài mòn", chỉ để bạn biết |
 | **Commit** | Một phiên bản cố định của repo; mở lại phiên là tải lại đúng phiên bản này |
 | **Persona** | Hồ sơ người học giả lập, chỉ dùng khi demo |

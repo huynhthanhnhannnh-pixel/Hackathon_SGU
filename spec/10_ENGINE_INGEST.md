@@ -19,7 +19,7 @@ flowchart TB
   U["GITHUB_URL"] --> S1["1 · Phân tích link"]
   S1 --> C{"Trúng cache alias? (ING-04)"}
   C -- "có" --> HIT["Trả kết quả cache, bỏ Mục 2–13"]
-  C -- "không" --> S2["2 · Thăm dò repo"] --> S3["3 · Phân giải ref"] --> S4["4 · Tải về hoặc nhận upload, chỉ trong RAM"]
+  C -- "không" --> S2["2 · Thăm dò repo"] --> S3["3 · Tìm nhánh mặc định"] --> S4["4 · Tải về hoặc nhận upload, chỉ trong RAM"]
   GC["GITHUB_COMMIT"] --> S4
   ZU["ZIP_UPLOAD"] --> S4
   S4 --> S5["5 · Định danh phiên bản"] --> S6["6 · Mục lục zip, đường dẫn"] --> S7["7 · Phân loại entry"] --> S8["8 · Phạm vi monorepo, chọn file"]
@@ -29,7 +29,7 @@ flowchart TB
 
 | Mục | Nội dung | File chính |
 | :-: | :-- | :-- |
-| 0–3 | Luồng, link, probe & ref | `index.ts`, `url.ts`, `probe.ts`, `refs.ts` |
+| 0–3 | Luồng, link, probe & nhánh mặc định | `index.ts`, `url.ts`, `probe.ts`, `refs.ts` |
 | 4–6 | Tải về, snapshot & zip | `download.ts`, `snapshot.ts`, `unzip.ts` |
 | 7–9 | Phân loại, scope & giải nén | `prune.ts`, `priority.ts`, `unzip.ts` |
 | 10–13 | Định dạng, secret, vân tay, lỗi | `special.ts`, `secrets.ts`, `fingerprint.ts` |
@@ -45,7 +45,7 @@ Thứ tự: `GITHUB_URL` ⇒ Mục 1–4; `GITHUB_COMMIT` / `ZIP_UPLOAD` ⇒ M�
 // nội bộ — src/server/engine/index.ts
 type IngestSource =
   | { kind: "GITHUB_URL"; repo_url: string; subdir_override: string | null }
-  | { kind: "GITHUB_COMMIT"; owner: string; repo: string; sha: string; subdir: string }  // getOrRebuildStaticResult (03 §4)
+  | { kind: "GITHUB_COMMIT"; owner: string; repo: string; sha: string; subdir: string }  // getOrRebuildStaticResult (03 §4) — luôn đúng SHA của phiên (D-39)
   | { kind: "ZIP_UPLOAD"; file_name: string; bytes: Uint8Array; subdir_override: string | null };
 
 interface VirtualFileOrigin {           // nội bộ — SourceMapStore
@@ -71,7 +71,7 @@ export async function runIngest(src: IngestSource, signal: AbortSignal): Promise
 - **Zero-Disk (ING-01):** Buffer zip, file, manifest chỉ ở RAM, không ghi file tạm. `finally`: hủy timer, stream, bỏ tham chiếu buffer.
 - **Tất định (ING-02):** Duyệt path đã sort (`Array.prototype.sort`); Map chèn path tăng dần; không dùng thời gian thực/ngẫu nhiên. Cùng buffer + `IngestSource` ⇒ cùng `IngestOutput`.
 - **`ingest_ms` (ING-03):** = `performance.now()` cuối Mục 13 − lúc `runIngest` bắt đầu (sau `CONFIG.MAX_CONCURRENT_INGESTIONS`, `03` §6.7), làm tròn ms. Chỉ hiển thị.
-- **Cache (ING-04):** `GITHUB_URL`: tra alias `owner/repo@ref_path/subdir` (`03` §4); trúng ⇒ trả cache, bỏ Mục 2–13.
+- **Cache (ING-04):** `GITHUB_URL`: tra alias `owner/repo` + `subdir_override` của link đã chuẩn hóa (`03` §4); trúng ⇒ trả cache, bỏ Mục 2–13. Cache RAM chỉ để nhanh, không được dựa vào (D-27).
 
 ---
 
@@ -86,7 +86,7 @@ export function parseGithubUrl(raw: string): GithubRepoInfo;   // lỗi ⇒ Inge
 1. `trim()`; cắt từ `?` hoặc `#` đầu tiên (ING-10).
 2. Chuẩn hóa theo thứ tự (ING-11): `git@github.com:` ⇒ `https://github.com/`; `http://` ⇒ `https://`; thiếu scheme bắt đầu `github.com/` hoặc `www.github.com/` ⇒ thêm `https://`; bỏ `www.`; bỏ `/` cuối.
 3. Host khác `github.com` ⇒ `ERR_INVALID_GITHUB_URL` (ING-12).
-4. Khớp `^https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?)(?:\.git)?(?:/(tree|blob)/(.+)|/[^/]+(?:/.*)?)?$` (ING-13), không khớp ⇒ `ERR_INVALID_GITHUB_URL`. `owner` = nhóm 1; `repo` = nhóm 2; `ref_path` = nhóm 4 sau `decodeURIComponent`, giữ `/` bên trong (tên nhánh được chứa `/`), có đoạn `..` ⇒ lỗi, không có `tree|blob` ⇒ `null` (trang con `/pulls`… bị bỏ qua); `is_blob_link` = nhóm 3 là `blob`; `clean_url` = `https://github.com/{owner}/{repo}`.
+4. **Chỉ link gốc repo (D-38).** Khớp `^https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?)(?:\.git)?(?:/(tree|blob)(?:/.*)?|/[^/]+(?:/.*)?)?$` (ING-13), không khớp ⇒ `ERR_INVALID_GITHUB_URL`. `owner` = nhóm 1; `repo` = nhóm 2; mọi phần sau tên repo bị cắt bỏ, không đọc nhánh / thư mục từ link; `path_trimmed` = có nhóm 3 (`/tree/…` hoặc `/blob/…`) ⇒ UI ghi chú "Chỉ hỗ trợ nhánh mặc định"; trang con khác (`/pulls`…) bị bỏ qua, `path_trimmed = false`; `clean_url` = `https://github.com/{owner}/{repo}`. Thư mục con chỉ chọn qua `subdir_override` (ING-80).
 
 ---
 
@@ -104,23 +104,23 @@ export async function probeRepo(info: GithubRepoInfo): Promise<{ result: ProbeRe
 
 ---
 
-## 3. Phân giải ref — `refs.ts`
+## 3. Tìm nhánh mặc định — `refs.ts`
 
-**Mục đích:** tìm ref tải được và thư mục con. **Input:** `owner`, `repo`, `GithubRepoInfo`. **Output:** `ResolvedRef`.
+**Mục đích:** tìm URL tải nhánh mặc định (D-38). **Input:** `owner`, `repo`. **Output:** `ResolvedRef`.
 
 ```typescript
-interface ResolvedRef { download_url: string; ref: string | null; ref_label: string | null; subdir: string }  // nội bộ; ref null = nhánh mặc định chưa biết tên
-export async function resolveRef(owner: string, repo: string, info: GithubRepoInfo): Promise<ResolvedRef>;
+interface ResolvedRef { download_url: string; ref: string | null; ref_label: string | null }  // nội bộ; ref null = nhánh mặc định chưa biết tên
+export async function resolveRef(owner: string, repo: string): Promise<ResolvedRef>;
 async function refExists(owner: string, repo: string, ref: string): Promise<boolean>;
 ```
 
 1. **Kiểm 1 ref (ING-30):** `HEAD https://codeload.github.com/{owner}/{repo}/zip/{ref}`, timeout `CONFIG.PREFLIGHT_TIMEOUT_MS`: 200 ⇒ có; 404 ⇒ không; 429/403 ⇒ `ERR_GITHUB_RATE_LIMIT_CDN`; 451 ⇒ `ERR_REPO_UNAVAILABLE_451`; hết giờ/5xx ⇒ thử lại 1 lần sau `CONFIG.PREFLIGHT_RETRY_DELAY_MS`, vẫn lỗi ⇒ `ERR_NETWORK_TIMEOUT`.
    > ⚠️ Giờ 0: codeload trả đúng mã cho `HEAD`. Fallback: `HEAD` trả 405/501 ⇒ `GET` cùng URL rồi `abort()` ngay khi có header.
-2. **ING-31 Link có `ref_path` (D-11).** Tách theo `/` thành `s1..sk`; link `/blob/` bỏ đoạn cuối (tên file) khỏi tập tạo ứng viên. Ứng viên `s1`, `s1/s2`, … thử **ngắn → dài**, tối đa `CONFIG.MAX_REF_CANDIDATES`. Ứng viên đầu tiên tồn tại là `ref`, phần còn lại là `subdir`; `/blob/` ⇒ `subdir` = thư mục chứa file (file ở gốc ⇒ `""`). Hết ứng viên ⇒ `ERR_BRANCH_NOT_FOUND`. `ref_label = ref`.
-3. **ING-32 Link gốc.** (1) `HEAD https://github.com/{owner}/{repo}/archive/HEAD.zip`, `redirect: "manual"`: 3xx có `Location` khớp `^https://codeload\.github\.com/[^/]+/[^/]+/zip/(?:refs/heads/)?(.+)$` ⇒ `ref` = nhóm 1, `download_url = Location`, `ref_label = ref`; 3xx khác mẫu hoặc 200 ⇒ `download_url` = chính URL `archive/HEAD.zip` (tải theo chuyển hướng), `ref = ref_label = null`; 404 ⇒ (2). (2) Thử lần lượt `CONFIG.DEFAULT_BRANCH_FALLBACKS` bằng ING-30.
+2. **ING-31 Không thử ref từ link (D-38).** Link `/tree/…`, `/blob/…` đã bị cắt về gốc ở ING-13 ⇒ mọi link `GITHUB_URL` đi theo ING-32.
+3. **ING-32 Nhánh mặc định.** (1) `HEAD https://github.com/{owner}/{repo}/archive/HEAD.zip`, `redirect: "manual"`: 3xx có `Location` khớp `^https://codeload\.github\.com/[^/]+/[^/]+/zip/(?:refs/heads/)?(.+)$` ⇒ `ref` = nhóm 1, `download_url = Location`, `ref_label = ref`; 3xx khác mẫu hoặc 200 ⇒ `download_url` = chính URL `archive/HEAD.zip` (tải theo chuyển hướng), `ref = ref_label = null`; 404 ⇒ (2). (2) Thử lần lượt `CONFIG.DEFAULT_BRANCH_FALLBACKS` bằng ING-30.
    > ⚠️ Giờ 0: `archive/HEAD.zip` chuyển hướng tới nhánh mặc định thật. Fallback: hành vi khác ⇒ coi như 404, chạy (2).
-4. **ING-33** Link gốc mà mọi bước đều 404 ⇒ `ProbeResult = "EMPTY"` ⇒ `ERR_EMPTY_REPOSITORY`.
-5. **ING-34** `subdir` chuẩn hóa như ING-60.4; không có code dưới đó ⇒ `ERR_NO_SOURCE_FILES_FOUND` (ING-80).
+4. **ING-33** Mọi bước của ING-32 đều 404 ⇒ `ProbeResult = "EMPTY"` ⇒ `ERR_EMPTY_REPOSITORY`.
+5. **ING-34** `subdir_override` chuẩn hóa như ING-60.4; không có code dưới đó ⇒ `ERR_NO_SOURCE_FILES_FOUND` (ING-80).
 
 ---
 
@@ -135,11 +135,11 @@ export async function receiveUpload(body: ReadableStream<Uint8Array>, contentTyp
 ```
 
 1. **ING-40 Timer.** Mỗi lần thử có 1 `AbortController` hết hạn sau `CONFIG.STREAM_TIMEOUT_MS`, phủ tải + đọc mục lục + giải nén (Mục 5–11 kiểm `signal.aborted` giữa các entry).
-2. **Tải.** `GET download_url` (`GITHUB_COMMIT` ⇒ `https://codeload.github.com/{owner}/{repo}/zip/{sha}`). Không tin `Content-Length`; cộng dồn byte thật theo chunk.
+2. **Tải.** `GET download_url` (`GITHUB_COMMIT` ⇒ `https://codeload.github.com/{owner}/{repo}/zip/{sha}`, luôn đúng SHA của phiên — D-39). Không tin `Content-Length`; cộng dồn byte thật theo chunk.
 3. **ING-42 Cắt cụt.** Vượt `CONFIG.MAX_STREAM_BYTES` ⇒ `abort()`, giữ đúng `CONFIG.MAX_STREAM_BYTES` byte đầu (bỏ phần thừa chunk cuối), `stream_cut = true`, đi tiếp — không ném lỗi.
-4. **HTTP.** 404 ⇒ `ERR_BRANCH_NOT_FOUND` (`GITHUB_COMMIT`: `03` §4 đổi thành `ERR_SESSION_SOURCE_EXPIRED`); 429/403 ⇒ `ERR_GITHUB_RATE_LIMIT_CDN`; 451 ⇒ `ERR_REPO_UNAVAILABLE_451`.
+4. **HTTP.** 404 ⇒ `ERR_BRANCH_NOT_FOUND` (`GITHUB_COMMIT`: commit bị force-push xóa ⇒ `03` §4 đổi thành `ERR_SESSION_NOT_FOUND`, Q-12); 429/403 ⇒ `ERR_GITHUB_RATE_LIMIT_CDN`; 451 ⇒ `ERR_REPO_UNAVAILABLE_451`.
 5. **ING-44 Thử lại.** 5xx, `ECONNRESET`, đứt giữa chừng, hết giờ, zip hỏng (ING-63) ⇒ chờ `CONFIG.STREAM_RETRY_DELAY_MS`, tải lại **1 lần** với timer mới. Vẫn lỗi ⇒ hết giờ: `ERR_STREAM_TIMEOUT`, còn lại: `ERR_STREAM_CORRUPTED`. Không thử lại 404/429/451.
-6. **ING-45 Upload.** Multipart qua bộ đếm byte; vượt `CONFIG.MAX_STREAM_BYTES` ⇒ hủy, `ERR_STREAM_QUOTA_EXCEEDED` (không cắt cụt). Thiếu trường `archive` hoặc 4 byte đầu không phải `PK\x03\x04`/`PK\x05\x06` ⇒ `ERR_UPLOAD_INVALID`. Trường `subdir` ⇒ `subdir_override`. `repo_name` = tên file bỏ `.zip`. Không thử lại.
+6. **ING-45 Upload.** Multipart qua bộ đếm byte; vượt `CONFIG.MAX_UPLOAD_BYTES` (giới hạn body của Vercel, D-27) ⇒ hủy, `ERR_STREAM_QUOTA_EXCEEDED` (không cắt cụt). Thiếu trường `archive` hoặc 4 byte đầu không phải `PK\x03\x04`/`PK\x05\x06` ⇒ `ERR_UPLOAD_INVALID`. Trường `subdir` ⇒ `subdir_override`. `repo_name` = tên file bỏ `.zip`. Không thử lại.
 
 ---
 
@@ -157,7 +157,7 @@ export function computeSnapshot(a: RawArchive, ctx: { repo_key: string; ref: str
    > ⚠️ Giờ 0: comment EOCD của zip codeload là commit SHA 40 hex. Fallback: không có ⇒ `ARCHIVE_HASH` (ING-52) + warning "Không đọc được mã commit — phiên này không mở lại được bằng link".
 2. GitHub: `ref` khớp `/^[0-9a-f]{40}$/` ⇒ `snapshot_id = ref`, `COMMIT_SHA`; ngược lại comment EOCD khớp mẫu ⇒ `snapshot_id = comment`, `COMMIT_SHA`. `stream_cut` ⇒ không có EOCD ⇒ ING-52.
 3. **ING-52** Còn lại và mọi upload ⇒ `computeArchiveHash(bytes)`, `ARCHIVE_HASH`. Với `stream_cut`, `bytes` là đúng `CONFIG.MAX_STREAM_BYTES` byte đã giữ ⇒ vẫn tất định.
-4. `repo_key` = `owner/repo` viết thường (sau ING-21) hoặc tên file zip; `ref_label` từ Mục 3 (upload: `null`); `subdir` = scope tường minh (`subdir_override` hoặc `subdir` từ link), `""` khi Mục 8 tự phát hiện. Dựng lại truyền như `subdir_override` ⇒ kết quả trùng (INV-10).
+4. `repo_key` = `owner/repo` viết thường (sau ING-21) hoặc tên file zip; `ref_label` từ Mục 3 (upload: `null`); `subdir` = scope tường minh (`subdir_override`), `""` khi Mục 8 tự phát hiện. Dựng lại truyền như `subdir_override` ⇒ kết quả trùng (INV-10).
 
 ---
 
@@ -222,7 +222,7 @@ export function filePriorityScore(path: string, size: number, scope: string): nu
 export function selectFiles(entries: ClassifiedEntry[], scope: ScopeDecision): { manifests: ZipEntryMeta[]; ordered_candidates: ZipEntryMeta[] };
 ```
 
-1. **Scope tường minh (ING-80):** ưu tiên: `subdir_override` (`IngestRequest` / trường `subdir` của upload) ⇒ `subdir` từ link ⇒ `subdir` của phiên khi dựng lại. Chuẩn hóa dạng `"server/"`. Không có entry `CODE`/`SPECIAL` dưới đó ⇒ `ERR_NO_SOURCE_FILES_FOUND` (details `{ subdir, hint: "empty_subdir" }`). Có scope tường minh ⇒ bỏ bước 3, `is_monorepo` vẫn tính theo bước 2–3.
+1. **Scope tường minh (ING-80):** ưu tiên: `subdir_override` (`IngestRequest` / trường `subdir` của upload) ⇒ `subdir` của phiên khi dựng lại. Link không mang thư mục con (D-38). Chuẩn hóa dạng `"server/"`. Không có entry `CODE`/`SPECIAL` dưới đó ⇒ `ERR_NO_SOURCE_FILES_FOUND` (details `{ subdir, hint: "empty_subdir" }`). Có scope tường minh ⇒ bỏ bước 3, `is_monorepo` vẫn tính theo bước 2–3.
 2. **Ứng viên** (chỉ đếm entry `CODE`/`SPECIAL`, khớp nguyên segment ⇒ `api-docs/`, `apiClient/` không khớp):
    - *Server:* `<x>/` ở gốc, `x ∈ {server, backend, api}`; `apps/<x>/`, `packages/<x>/` với `x ∈ {server, backend, api}` hoặc kết thúc `-api`/`-server`/`-backend`, **có manifest**; `services/<x>/` có manifest riêng.
    - *Client:* `<x>/`, `apps/<x>/`, `packages/<x>/` với `x ∈ {client, frontend, web, ui, mobile, webapp, app-web}` hoặc kết thúc `-web`/`-client`/`-ui`/`-mobile`.
@@ -288,7 +288,7 @@ export function hasInjectionText(code: string): boolean;
    - `(password|passwd|pwd|secret|api_?key|token|private_?key|access_?key)\s*[:=]\s*(["'])([^"'\s]+)\2` (không phân biệt hoa thường, khớp cả trong `JWT_SECRET`), nhóm 3 dài ≥ `CONFIG.SECRET_MIN_VALUE_LENGTH` ⇒ thay nội dung trong nháy (giữ tên biến, giữ nháy).
    - `(mongodb(\+srv)?|postgres(ql)?|mysql|redis|amqp)://([^:/\s]+):([^@\s]+)@` ⇒ thay phần mật khẩu.
 2. **Bảo toàn dòng.** Số `\n` trước/sau che bằng nhau (lệch ⇒ bỏ file + warning, không giữ bản chưa che). `redacted_secret_count` = tổng số lần khớp (1 khối key = 1).
-3. Bản đã che là bản duy nhất trong RAMCodeStore; Tầng 1–2, `snippet`, `code_context` đều đọc từ bản này.
+3. Bản đã che là bản duy nhất trong RAMCodeStore; Tầng 1–2, `snippet` và lát cắt gửi AI đều đọc từ bản này.
 4. **ING-113 Cờ injection** (không sửa code): khớp `/(ignore|disregard|forget)\s+(all\s+)?(the\s+)?(previous|above|prior)\s+(instructions?|prompts?)|you\s+are\s+now\b|system\s+prompt|<\/?\s*(system|instructions?)\s*>/i` ⇒ path vào `suspicious_instruction_files` (sort, không trùng). Chỉ server — `toClientResult` loại bỏ (`11` Mục 15); phòng thủ thuộc `20`/`21`.
 
 ---
@@ -329,7 +329,7 @@ export function assertNotEmpty(out: IngestOutput, flags: { stream_cut: boolean; 
 2. **ING-131** `code_file_count = 0`, xét theo thứ tự: (1) `stream_cut ∨ inflated_cap_hit` ⇒ `ERR_STREAM_QUOTA_EXCEEDED`; (2) `unsupported_ratio` = byte `NO_GRAMMAR` / byte (`CODE` + `SPECIAL` + `NO_GRAMMAR`) trong scope `> CONFIG.UNSUPPORTED_LANGUAGE_RATIO` ⇒ `ERR_UNSUPPORTED_LANGUAGE`, `ApiError.error.details.language` = ngôn ngữ `UNSUPPORTED` nhiều byte nhất (C#, PHP, Rust có grammar nên là `STRUCTURAL`, không vào nhánh này); (3) còn lại ⇒ `ERR_NO_SOURCE_FILES_FOUND` với `details.hint`: `has_submodules` ⇒ `"submodule"`; có byte `NO_GRAMMAR` ⇒ `"only_unsupported"`; `manifest_count > 0` ⇒ `"only_manifests"`; còn lại ⇒ `"no_code"`. Scope tường minh rỗng (ING-80) ⇒ `details = { subdir, hint: "empty_subdir" }`.
 3. Thông điệp (`30_UI`). Cấm khuyên dán `/tree/<thư mục>`: codeload luôn nén cả repo. Khi quá lớn: tải `.zip` chỉ chứa thư mục mã nguồn.
 
-Nơi phát mã lỗi (`retryable` theo `02` Mục 9): `ERR_INVALID_GITHUB_URL` ING-12/13 · `ERR_PREFLIGHT_404_OR_PRIVATE` ING-21 · `ERR_NETWORK_TIMEOUT` ING-21/30 · `ERR_REPO_UNAVAILABLE_451` ING-21/30/43 · `ERR_GITHUB_RATE_LIMIT_CDN` ING-21/30/43 · `ERR_BRANCH_NOT_FOUND` ING-31/43 · `ERR_EMPTY_REPOSITORY` ING-33 · `ERR_STREAM_TIMEOUT`, `ERR_STREAM_CORRUPTED` ING-44 · `ERR_STREAM_QUOTA_EXCEEDED` ING-45/131 · `ERR_UPLOAD_INVALID` ING-45/63 · `ERR_UNSUPPORTED_LANGUAGE` ING-131 · `ERR_NO_SOURCE_FILES_FOUND` ING-80/131 · `ERR_SERVER_BUSY` `03` §6.7.
+Nơi phát mã lỗi (`retryable` theo `02` Mục 9): `ERR_INVALID_GITHUB_URL` ING-12/13 · `ERR_PREFLIGHT_404_OR_PRIVATE` ING-21 · `ERR_NETWORK_TIMEOUT` ING-21/30 · `ERR_REPO_UNAVAILABLE_451` ING-21/30/43 · `ERR_GITHUB_RATE_LIMIT_CDN` ING-21/30/43 · `ERR_BRANCH_NOT_FOUND` ING-43 · `ERR_EMPTY_REPOSITORY` ING-33 · `ERR_STREAM_TIMEOUT`, `ERR_STREAM_CORRUPTED` ING-44 · `ERR_STREAM_QUOTA_EXCEEDED` ING-45/131 · `ERR_UPLOAD_INVALID` ING-45/63 · `ERR_UNSUPPORTED_LANGUAGE` ING-131 · `ERR_NO_SOURCE_FILES_FOUND` ING-80/131 · `ERR_SERVER_BUSY` `03` §6.7.
 
 ---
 
@@ -339,19 +339,18 @@ Số liệu theo `CONFIG` hiện tại. Tên test bắt đầu bằng mã luật
 
 | ID | Input | Kỳ vọng |
 | :-- | :-- | :-- |
-| T-ING-01 | `"  https://github.com/nestjs/nest.git?tab=readme#x "` | `nestjs/nest`, `ref_path null`, `is_blob_link false`, `clean_url https://github.com/nestjs/nest` |
-| T-ING-02 | `git@github.com:a/b.git` · `github.com/a/b/` · `https://www.github.com/a/b` · `.../a/b/pulls` | Cả 4 ⇒ `a/b`, `ref_path null` |
-| T-ING-03 | `.../a/b/tree/release/v2/src`, codeload chỉ có `release/v2` | Thử `release` (404), `release/v2` (200) ⇒ `ref "release/v2"`, `subdir "src"`, đúng 2 HEAD |
-| T-ING-04 | `.../a/b/blob/main/src/app.ts` | Ứng viên chỉ `main`, `main/src` ⇒ `ref "main"`, `subdir "src"` |
-| T-ING-05 | `ref_path "f/a/b/c/d/x"`, nhánh thật `f/a/b/c/d` | Thử đúng 4 ứng viên ⇒ `ERR_BRANCH_NOT_FOUND` |
-| T-ING-06 | `https://gitlab.com/a/b` · `.../a/b/tree/x/../y` | `ERR_INVALID_GITHUB_URL` |
+| T-ING-01 | `"  https://github.com/nestjs/nest.git?tab=readme#x "` | `nestjs/nest`, `path_trimmed false`, `clean_url https://github.com/nestjs/nest` |
+| T-ING-02 | `git@github.com:a/b.git` · `github.com/a/b/` · `https://www.github.com/a/b` · `.../a/b/pulls` | Cả 4 ⇒ `a/b`, `path_trimmed false` |
+| T-ING-03 | `.../a/b/tree/release/v2/src` (D-38) | `a/b`, `path_trimmed true`, không HEAD thử ref; tải nhánh mặc định theo ING-32, `subdir ""` |
+| T-ING-04 | `.../a/b/blob/main/src/app.ts` (D-38) | `a/b`, `path_trimmed true`, `subdir ""` |
+| T-ING-06 | `https://gitlab.com/a/b` · `https://github.com/a` | `ERR_INVALID_GITHUB_URL` |
 | T-ING-07 | Probe 404 · 451 · 429 · 2 lần hết 300 ms · 200 sau chuyển hướng tới `/c/d` | `ERR_PREFLIGHT_404_OR_PRIVATE` · `ERR_REPO_UNAVAILABLE_451` · `ERR_GITHUB_RATE_LIMIT_CDN` · `ERR_NETWORK_TIMEOUT` · `OK`, `owner c`, `repo d` |
 | T-ING-08 | Link gốc; `HEAD.zip` 302 ⇒ `https://codeload.github.com/a/b/zip/refs/heads/develop` | `ref "develop"`, không thử `main` |
 | T-ING-09 | Link gốc; `HEAD.zip`, `main`, `master`, `dev` đều 404 | `ERR_EMPTY_REPOSITORY` |
 | T-ING-10 | Zip GitHub > 15 728 640 byte; 3 file `.ts` trọn vẹn trong phần đầu | `stream_cut`, giữ đúng 15 728 640 byte, streaming 2 lượt, 3 file, `truncated`, `ARCHIVE_HASH` = SHA-256 phần giữ |
 | T-ING-11 | Như T-ING-10 nhưng phần đầu chỉ có `node_modules/**` | `ERR_STREAM_QUOTA_EXCEEDED` |
-| T-ING-12 | Upload 16 MB | `ERR_STREAM_QUOTA_EXCEEDED`, không giải nén |
-| T-ING-13 | 30 `.ts` trong `client/`, 30 trong `server/`, mỗi thư mục có `package.json` | `is_monorepo`, offset `"server/"`; 30 file `server/` nạp trước mọi file `client/`; `skipped.quota 10` |
+| T-ING-12 | Upload 4 718 593 byte (> `MAX_UPLOAD_BYTES`) | `ERR_STREAM_QUOTA_EXCEEDED`, không giải nén |
+| T-ING-13 | 60 `.ts` trong `client/`, 60 trong `server/`, mỗi thư mục có `package.json` | `is_monorepo`, offset `"server/"`; 60 file `server/` nạp trước mọi file `client/`; `skipped.quota 20` |
 | T-ING-14 | `services/order/` 40 KB, `services/user/` 60 KB, mỗi thư mục có manifest | Offset `"services/user/"`, `is_monorepo`, 1 warning nêu `services/order/` |
 | T-ING-15 | Chỉ `backend/` 80% byte · chỉ `backend/` 60% · `api-docs/x.ts` | `"backend/"`, `is_monorepo false` · `""` · không là ứng viên |
 | T-ING-16 | FPS, scope `"server/"`: `server/src/controllers/order.controller.ts` 500 B · `client/src/App.tsx` 500 B · `server/tests/order.test.ts` 500 B · `index.ts` gốc 100 B | **5.25** · **2.3333** · **1.3333** · **2** |

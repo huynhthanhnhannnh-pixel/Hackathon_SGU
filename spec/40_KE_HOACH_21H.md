@@ -13,7 +13,7 @@
 flowchart LR
     C["H0–H1 · src/contracts/* (Người 1 gõ, 2 & 3 review)"] --> P1 & P2 & P3
     subgraph P1["Người 1 — UI + DB + API"]
-      A1["Supabase migration, auth, /api/me"] --> A2["Store + canvas đọc fixture"] --> A3["Tab 1/2/Tổng quan"] --> A4["Route ingest/analyze/enrich/evaluate/reveal (nối lib của 2, 3)"] --> A5["sessions, history, sync, persona, offline"]
+      A1["Supabase migration, auth, /api/me"] --> A2["Store + canvas đọc fixture"] --> A3["Tab 1/2/Tổng quan"] --> A4["Route ingest/analyze/enrich/evaluate/reveal (nối lib của 2, 3)"] --> A5["sessions, history, persona, offline"]
     end
     subgraph P2["Người 2 — Engine"]
       B1["Ingest: URL, probe, refs, tải, unzip, lọc, che secret, snapshot"] --> B2["Parser + symbol + call graph TS/JS"] --> B3["Lát cắt, node, cạnh, budget, tên, layout"] --> B4["Python resolver"] --> B5["Java/Go/Dart + STRUCTURAL + suy biến"]
@@ -47,7 +47,7 @@ flowchart LR
 | Tạo repo GitHub **public, trống**, thêm đủ thành viên làm collaborator, nộp link cho BTC | Người 1 | Trước giờ thi theo BTC |
 | Tạo project Supabase (vùng Singapore), bật Anonymous Sign-in + GitHub provider (cho phép manual linking) | Người 1 | 30/10 |
 | Lấy `GEMINI_API_KEY`, đo free tier của model ứng viên (Q-01) | Người 3 | 30/10 |
-| Tạo tài khoản host (Railway / Render / Fly.io), chọn vùng Singapore | Người 1 | 30/10 |
+| Tạo tài khoản Vercel (gói free), nối repo thi, chọn region `sin1` (D-27) | Người 1 | 30/10 |
 | Chọn repo demo (Q-03) và đẩy lên GitHub nếu dùng repo tự viết | Cả nhóm | 30/10 |
 | Mỗi người đọc: `01`, `02`, `03` + file module của mình | Cả nhóm | 30/10 |
 
@@ -74,12 +74,11 @@ flowchart LR
     │       ├── sessions/route.ts · sessions/[id]/history/route.ts · sessions/[id]/progress/route.ts
     │       ├── ingest/route.ts · analyze-node/route.ts · analyze-overview/route.ts
     │       ├── enrich-node/route.ts · evaluate-feynman/route.ts · reveal/route.ts
-    │       ├── report-wrong/route.ts · sync/replay/route.ts · demo/persona/route.ts
+    │       ├── report-wrong/route.ts · demo/persona/route.ts
     ├── server/
-    │   ├── auth.ts · db.ts · errors.ts · session.ts · cache.ts · quota.ts
-    │   ├── progress.ts                          # deriveNodeStates (gọi lib), Fast-Track, finalizeRunIfDone
-    │   ├── enrich.ts · evaluate.ts · reveal.ts · report.ts · sync.ts · persona.ts
-    │   ├── token.ts · receipt.ts                # challenge_token AES-GCM, SyncReceipt HMAC
+    │   ├── auth.ts · db.ts · errors.ts · session.ts · cache.ts · quota.ts · log.ts   # log.ts: pino (04)
+    │   ├── progress.ts                          # deriveNodeStates (gọi lib), finalizeRunIfDone
+    │   ├── enrich.ts · evaluate.ts · reveal.ts · report.ts · persona.ts
     │   ├── engine/index.ts                      # runEngine()
     │   ├── engine/ingest/*.ts                   # 10
     │   ├── engine/graph/*.ts · engine/graph/resolvers/*.ts   # 11
@@ -95,7 +94,7 @@ flowchart LR
 
 ## 3. Công nghệ & phiên bản
 
-> Chi tiết kiến trúc triển khai, máy chủ Railway, chuẩn logging Pino, CI/CD và bảo mật vận hành: xem [`04_KIEN_TRUC_TRIEN_KHAI.md`](04_KIEN_TRUC_TRIEN_KHAI.md).
+> Chi tiết kiến trúc triển khai, host Vercel, chuẩn logging Pino, CI/CD và bảo mật vận hành: xem [`04_KIEN_TRUC_TRIEN_KHAI.md`](04_KIEN_TRUC_TRIEN_KHAI.md).
 
 Chốt **phiên bản chính xác ở giờ H+0** bằng lệnh cài đặt, ghi vào `package.json` (không dùng `latest`). Dòng khuyến nghị:
 
@@ -112,6 +111,7 @@ Chốt **phiên bản chính xác ở giờ H+0** bằng lệnh cài đặt, ghi
 | `fflate` | 0.8.x | Giải nén zip trong RAM |
 | `@google/genai` | 1.x | Gemini, structured output |
 | `@supabase/supabase-js`, `@supabase/ssr` | 2.x | Auth + DB |
+| `pino` | 9.x | Log JSON 1 dòng ra stdout (`04` Mục 9, D-28) |
 | `vitest` | 2.x hoặc 3.x | Test hàm thuần (`50`) |
 
 **Nguồn grammar `.wasm`** (`public/grammars/`, tên file theo `LanguageAdapter.wasm_grammar`): ưu tiên `.wasm` phát hành sẵn của grammar chính thức (`tree-sitter-typescript`, `tree-sitter-python`, …) hoặc gói npm `tree-sitter-wasms`; không có ⇒ tự build bằng `npx tree-sitter build --wasm` (cần Emscripten hoặc Docker). Mọi grammar phải cùng ABI với bản `web-tree-sitter` đã pin.
@@ -136,7 +136,7 @@ Sơ đồ ba luồng: phần Đọc nhanh. Điểm nối để không ai phải 
 | **H+1** | 13:00 | `contracts/*` xong; fixture shop-api; kiểm 3 giả định ⚠️ của `10` (codeload trả đúng mã cho `HEAD`, `archive/HEAD.zip` chuyển hướng tới nhánh mặc định, comment EOCD có commit SHA); model Gemini trả lời (Q-01); nạp được grammar `.wasm` (Mục 3) |
 | **H+4** | 16:00 | UI hiện bản đồ từ fixture; `bkt-engine` + `plan` + `derive` qua test `50`; ingest tải + lọc repo demo trong RAM |
 | **H+8** | 20:00 | **Lát dọc 1:** dán link repo demo ⇒ engine thật ⇒ bản đồ thật ⇒ bấm node ⇒ Tab 1 từ `analyze-node` thật |
-| **H+12** | 00:00 CN | **Lát dọc 2:** enrich ⇒ nộp ⇒ chấm ⇒ gợi ý ⇒ BKT ⇒ đổi màu ⇒ mở khóa, ghi Postgres; Fast-Track; viền cam |
+| **H+12** | 00:00 CN | **Lát dọc 2:** enrich ⇒ nộp ⇒ chấm ⇒ gợi ý ⇒ BKT ⇒ đổi màu ⇒ mở khóa, ghi Postgres; mài mòn ở bảng kỹ năng (D-35) |
 | **H+15** | 03:00 | Mọi endpoint của `03` chạy; mở lại phiên; offline mode; persona; tổng quan; Python resolver |
 | **H+17** | 05:00 | **Đóng băng tính năng.** Duyệt tay output AI repo demo (`21` Mục duyệt tay) ⇒ ghi `mock_bundle.json`; deploy bản chạy thật |
 | **H+19** | 07:00 | Sửa lỗi từ buổi tập demo; chạy 3 lần mỗi câu trả lời trong kịch bản; quay video dự phòng |
@@ -154,13 +154,10 @@ Cắt từ trên xuống. Mỗi mục cắt phải ghi lại vào `00_QUYET_DINH
 1. Resolver Java / Go / Dart và tầng `STRUCTURAL` (giữ TS/JS + Python; INV-09 vẫn đúng vì chỉ hai ngôn ngữ này được tuyên bố đã kiểm chứng).
 2. `report-wrong` (ẩn nút "Báo sai").
 3. Màn hình lịch sử học (`/history`).
-4. `sync/replay` + biên nhận (DB lỗi ⇒ hiện `ERR_PERSISTENCE_UNAVAILABLE` + "Thử lại").
-5. Run `DECAY_REVIEW` (giữ viền cam, ẩn nút "Ôn bài").
-6. Run `REMEDIATION` (ẩn nút "Ôn lại").
-7. Phần AI của tổng quan (chỉ hiện `facts`).
-8. Liên kết GitHub (giữ tài khoản khách).
+4. Phần AI của tổng quan (chỉ hiện `facts`).
+5. Liên kết GitHub (giữ tài khoản khách).
 
-Không bao giờ cắt: bản đồ tất định, Tab 1, câu hỏi + chấm + gợi ý, BKT ở server, Fast-Track, offline mode, cổng gác.
+Không bao giờ cắt: bản đồ tất định, Tab 1, câu hỏi + chấm + gợi ý, BKT ở server, offline mode, cổng gác.
 
 ---
 
@@ -172,8 +169,8 @@ Không bao giờ cắt: bản đồ tất định, Tab 1, câu hỏi + chấm + 
 - [ ] Mọi node xong phân tích; Tab 1 có điểm hay + điểm dở "Nhận định của AI"; không có tên bịa (kiểm tay 3 node).
 - [ ] Persona `NEWBIE`: chạy đúng kịch bản A của `50` (A3 → A7): sai ⇒ gợi ý `CONCEPT` ⇒ đúng ⇒ `PASS_AFTER_HINT`, điểm kỹ năng khớp bảng; node xanh, node con mở.
 - [ ] "Bỏ qua câu này" ⇒ câu ❌, hiện đáp án; node đỏ khi run xong, node con mở kèm tam giác.
-- [ ] Persona `SENIOR_ACTIVE` ⇒ node không phải Capstone Fast-Track ⚡; Capstone vẫn hỏi 1 câu.
-- [ ] Persona `SENIOR_RUSTY` ⇒ node xanh có viền cam; "Ôn bài" chạy, không đổi màu node.
+- [ ] Mọi kỹ năng của node đã thạo ⇒ vẫn hỏi 1 câu cho kỹ năng điểm thấp nhất (D-34).
+- [ ] Persona `SENIOR_RUSTY` ⇒ bảng kỹ năng hiện thanh nhạt dần + nhãn "đang mài mòn"; không có nút ôn, màu node không đổi (D-35).
 - [ ] Tải lại trang ⇒ tiến độ còn nguyên (Postgres); mở lại phiên từ "Tiếp tục học".
 - [ ] DevTools: response không chứa `misconception`, `reference_answer` của câu chưa xong, `suspicious_instruction_files`, `symbol_whitelist`.
 - [ ] Sửa `attempt_number` trong request ⇒ `ERR_ATTEMPT_OUT_OF_SYNC`, không lộ đáp án.
@@ -184,7 +181,7 @@ Không bao giờ cắt: bản đồ tất định, Tab 1, câu hỏi + chấm + 
 
 ## 8. Quy ước commit & làm việc
 
-- Mỗi người commit **phần của mình**, nhỏ và thường xuyên (mục tiêu ≤ ~200 dòng / commit), message dạng `feat(engine): tách ref ngắn trước` / `fix(ai): …`.
+- Mỗi người commit **phần của mình**, nhỏ và thường xuyên (mục tiêu ≤ ~200 dòng / commit), message dạng `feat(engine): cắt link về gốc repo` / `fix(ai): …`.
 - Không dán nguyên một file lớn từ spec vào một commit; code được gõ hoặc sinh trong giờ thi theo spec rồi chỉnh.
 - Không commit thư mục `spec/` hay `pitch/` vào repo thi (giữ ở repo tài liệu này) — trừ khi BTC trả lời Q-02(c) cho phép.
 - Nhánh: làm trực tiếp trên `main` với pull trước khi push, hoặc nhánh theo người + merge nhanh; không để ai giữ code chưa push quá 2 giờ.
@@ -208,7 +205,7 @@ Không bao giờ cắt: bản đồ tất định, Tab 1, câu hỏi + chấm + 
 | Rủi ro | Dấu hiệu sớm | Ứng phó |
 | :-- | :-- | :-- |
 | Model AI không dùng được / free tier cạn | Lỗi 404 / 429 ở H+1 | Đổi `CONFIG.LLM_MODEL` (Q-01); demo bằng offline |
-| Comment EOCD không có commit SHA | Kiểm H+1 thất bại | Dùng `ARCHIVE_HASH`; mở lại phiên GitHub phải tải lại (ghi vào `00`) |
+| Comment EOCD không có commit SHA | Kiểm H+1 thất bại | Dùng `ARCHIVE_HASH`; phiên không dựng lại được khi trượt cache RAM trên Vercel (Q-12, ghi vào `00`) |
 | Engine trễ | Không có lát dọc 1 ở H+8 | Người 1, 3 tiếp tục trên fixture; cắt theo Mục 6 bước 1 |
 | Tree-sitter WASM lệch ABI | Parser lỗi khi nạp grammar | Đổi phiên bản `web-tree-sitter` trong `package.json` cho khớp grammar có sẵn, không tự build lại (D-32) |
 | Postgres / mạng hội trường chập chờn | Lỗi khi tập demo | Mạng di động riêng (thể lệ khuyến khích); offline mode |

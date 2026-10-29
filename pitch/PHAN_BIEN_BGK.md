@@ -12,8 +12,9 @@
 > - Thuật toán phân tích tĩnh vẽ bản đồ 6–8 bài học, không gọi AI và không chạy code. Mỗi bài là một luồng nghiệp vụ đi xuyên file (route → middleware → service → repository).
 > - AI phân tích từng bài: kỹ năng, điểm hay, điểm dở. Sau đó AI hỏi theo kiểu Feynman: mỗi kỹ năng chưa vững một câu, bám đúng dòng code. Trả lời sai thì có gợi ý theo nấc.
 > - Mọi văn bản AI phải qua cổng gác bằng code trước khi hiển thị.
-> - Mô hình BKT theo dõi 16 kỹ năng kỹ nghệ phần mềm lâu dài: kỹ năng đã vững thì được miễn thi, lâu không ôn thì được nhắc.
-> - Bản đồ tốn 0 token. Phần AI ước lượng khoảng 0,05 USD cho người đầu tiên học một repo và 0,02 USD cho người học sau (ước lượng, chưa đo).
+> - Mô hình BKT theo dõi 16 kỹ năng kỹ nghệ phần mềm lâu dài: kỹ năng đã vững thì chỉ bị hỏi 1 câu khó, lâu không luyện thì thanh kỹ năng mài mòn dần.
+> - Bản đồ tốn 0 token. Phần AI ước lượng khoảng 0,05 USD cho người đầu tiên học một repo và 0,03 USD cho người học sau (ước lượng, chưa đo).
+> - Mã nguồn mở: ai cũng tự clone, tự điền API key của mình để chạy.
 
 **Câu định vị một dòng (dùng trên slide và khi trả lời):**
 > Các công cụ hiện có giúp bạn **đọc** một repo. SimpliFey kiểm tra bạn có **hiểu** repo của chính mình hay không: từng luồng nghiệp vụ, bằng câu hỏi bám đúng dòng code, và nhớ bạn còn hổng ở đâu.
@@ -42,8 +43,8 @@
 **Điểm mới đứng vững** (là cách *kết hợp và ứng dụng*, theo INV-13):
 1. Không dừng ở giải thích repo mà **kiểm chứng mức hiểu** trên chính repo của người học: đọc → trả lời → chấm → ghi nhận.
 2. Nhận định và câu hỏi của AI **bám tên và bước có thật**. Cổng gác bằng code kiểm việc đó và không tốn token.
-3. **Mô hình người học tích lũy qua nhiều repo** trên 16 kỹ năng kiến trúc: kỹ năng đã vững được miễn thi, kỹ năng đang phai được nhắc ôn.
-4. **Chi phí thấp có kỷ luật:** phân tích tĩnh chạy trước; AI chỉ có 4 lời gọi; bản phân tích và câu hỏi được cache dùng chung giữa người học.
+3. **Mô hình người học tích lũy qua nhiều repo** trên 16 kỹ năng kiến trúc: kỹ năng đã vững chỉ bị hỏi 1 câu ở mức khó nhất, kỹ năng lâu không luyện hiện "đang mài mòn".
+4. **Chi phí thấp có kỷ luật:** phân tích tĩnh chạy trước; AI chỉ có 4 lời gọi; bản phân tích node và tổng quan được cache dùng chung giữa người học.
 
 Không tự nhận đã phát minh Compound AI, BKT, PageRank, hay repo-map bằng Tree-sitter (Aider đã có).
 
@@ -55,11 +56,11 @@ Không tự nhận đã phát minh Compound AI, BKT, PageRank, hay repo-map bằ
 | :-- | :-- |
 | Cổng gác chặn tên bịa và công nghệ không có trong repo, nhưng **không kiểm được nghĩa** AI nói đúng hay sai (INV-08) | Duyệt tay toàn bộ output của repo demo; hiện bằng chứng (bước + tên); nhãn "Nhận định của AI"; nút "Báo sai" |
 | Chỉ **TS/JS và Python** được kiểm chứng cho bản thi. Java, Go, Dart có bộ phân giải riêng trong thiết kế nhưng chưa kiểm chứng. Ngôn ngữ khác có grammar Tree-sitter chạy ở tầng `STRUCTURAL`: cạnh là suy luận, chưa kiểm chứng (INV-09) | Cạnh suy luận vẽ nét đứt và có huy hiệu độ tin cậy thấp; ngôn ngữ không có grammar thì báo `ERR_UNSUPPORTED_LANGUAGE` |
-| Repo nén ≤ `MAX_STREAM_BYTES` (15 MB), giữ ≤ `MAX_CLEAN_FILES` (50) file code | Repo lớn bị cắt bớt và có cảnh báo; có thể dán link tới thư mục con |
+| Repo nén ≤ `MAX_STREAM_BYTES` (15 MB), upload `.zip` ≤ `MAX_UPLOAD_BYTES` (4,5 MB), giữ ≤ `MAX_CLEAN_FILES` (100) file code. Chỉ nhận link gốc repo, chạy nhánh mặc định (D-38) | Repo lớn bị cắt bớt và có cảnh báo. Link tới nhánh / thư mục con tự cắt về gốc kèm ghi chú; monorepo thì chọn lại thư mục trên giao diện, hoặc upload `.zip` chỉ chứa thư mục mã nguồn |
 | Phân tích tĩnh có thể **sót cạnh** khi code dùng gọi động, DI qua cấu hình, reflection hoặc import động | Không bịa cạnh để bù; cạnh không chắc thì gắn nhãn |
 | Bộ chấm AI **chưa được hiệu chuẩn** với giảng viên; ngưỡng `PASS_CORE_ACCURACY` do nhóm tự đặt | Server tự quyết đạt (D-13); duyệt tay câu trả lời mẫu; hiệu chuẩn nằm ở roadmap GĐ2 |
 | Tham số BKT đặt tay, chưa fit. Mỗi kỹ năng chỉ có vài quan sát trên một repo, nên điểm chỉ là **ước lượng sơ bộ** | Fit EM bằng pyBKT khi có dữ liệu pilot |
-| Repo public: người học vẫn có thể **chép câu hỏi sang ChatGPT**. Cache dùng chung nên bạn cùng lớp nhận cùng bộ câu hỏi | Câu hỏi đặt vào tình huống và bám code; luật đạt cần ý bắt buộc kèm trích dẫn thật. Làm vậy là giảm, không loại bỏ được |
+| Repo public: người học vẫn có thể **chép câu hỏi sang ChatGPT**. Câu hỏi sinh mới cho mỗi người (D-37), nhưng cùng repo thì cùng điểm dở nên câu hỏi của bạn cùng lớp gần giống nhau | Câu hỏi đặt vào tình huống và bám code; luật đạt cần ý bắt buộc kèm trích dẫn thật. Làm vậy là giảm, không loại bỏ được |
 | **Mọi số độ trễ, token, chi phí đều chưa đo**; model AI chưa chốt (Q-01) | Giao diện hiện số đo thật: thời gian dựng bản đồ và token server đếm |
 
 Đồ án làm nhóm (A4), quyền riêng tư (E2), persona và Offline (D3, E3): xem Mục 5.
@@ -73,7 +74,7 @@ Không tự nhận đã phát minh Compound AI, BKT, PageRank, hay repo-map bằ
 ### A. Ý tưởng & định vị
 
 **A1. "Khác gì DeepWiki, hay dán code vào ChatGPT rồi hỏi?"**
-Đ: DeepWiki và ChatGPT giúp *đọc* và *giải thích*. SimpliFey làm chiều ngược lại: chọn ra các luồng đáng học, hỏi người học mỗi kỹ năng chưa vững một câu, server chấm theo ý bắt buộc và ghi vào 16 kỹ năng lâu dài. ChatGPT không biết bạn còn hổng gì; SimpliFey nhớ, nên miễn thi phần đã vững và nhắc ôn phần đang phai.
+Đ: DeepWiki và ChatGPT giúp *đọc* và *giải thích*. SimpliFey làm chiều ngược lại: chọn ra các luồng đáng học, hỏi người học mỗi kỹ năng chưa vững một câu, server chấm theo ý bắt buộc và ghi vào 16 kỹ năng lâu dài. ChatGPT không biết bạn còn hổng gì; SimpliFey nhớ, nên phần đã vững chỉ hỏi 1 câu ở mức khó nhất, còn kỹ năng lâu không luyện thì hiện "đang mài mòn" để bạn tự biết.
 
 **A2. "Tree-sitter với PageRank thì Aider làm lâu rồi, BKT cũng có từ 1995. Các em có gì mới hay chỉ chắp vá?"**
 Đ: Dạ, nhóm không phát minh lại các thuật toán đó.
@@ -89,19 +90,19 @@ Không tự nhận đã phát minh Compound AI, BKT, PageRank, hay repo-map bằ
 Đ: Đúng là hạn chế. Bản hiện tại tải code qua codeload nên không có lịch sử git, chưa lọc được theo tác giả. Hướng xử lý trong roadmap là lọc bằng `git blame` khi có quyền đọc repo.
 
 **A5. "Dashboard cho giảng viên đâu?"**
-Đ: Chưa có trong bản thi; nó nằm ở giai đoạn 1 của roadmap, cùng với lớp học và bộ tạo đề vấn đáp. Hôm nay sản phẩm phục vụ người học tự học.
+Đ: Chưa có và nhóm chưa theo đuổi. Dashboard giảng viên, lớp học, bộ tạo đề vấn đáp chỉ là khả năng mở rộng (D-33). Hôm nay sản phẩm phục vụ người học tự học; ai cần thì có thể tự fork mã nguồn để làm thêm.
 
-**A6. "Ai trả tiền?"** (dự kiến hỏi ở chung kết)
-Đ: Hiện mới là giả thuyết, chưa kiểm chứng:
-- sinh viên trả cho gói luyện bảo vệ đồ án hoặc phỏng vấn;
-- triển khai qua Khoa/Đoàn ở dạng pilot;
-- doanh nghiệp dùng để onboarding và chạy nội bộ.
-Nhóm muốn có số liệu pilot trước rồi mới đặt giá.
+**A6. "Không bán thì lấy gì duy trì? Ai trả tiền?"** (dự kiến hỏi ở chung kết)
+Đ: Nhóm chọn hướng **mã nguồn mở**, không thương mại hóa, không bán cho trường (D-33):
+- Người dùng tự clone repo, tự điền API key Gemini của mình trong `.env`, tự chạy. Chi phí AI do chính người dùng trả theo key của họ; nhóm không gánh tiền AI cho ai.
+- Bản chạy thử của nhóm dùng gói free của Vercel và Supabase.
+- Giá trị nhóm theo đuổi là **nghiên cứu học thuật** (AI ảo giác, độ tin cậy khi AI chấm bài, BKT trên kỹ năng kiến trúc) và kinh nghiệm cho CV.
+- Bán cho trường hay doanh nghiệp chỉ là khả năng, nhóm chưa theo đuổi.
 
 ### B. Engine & bản đồ
 
 **B1. "Đây là repo của tôi, chạy thử ngay được không?"**
-Đ: Được, với repo public trên github.com hoặc `.zip`, nén ≤ 15 MB, giữ tối đa 50 file code. TS/JS và Python đã kiểm chứng; ngôn ngữ khác có grammar thì cạnh là suy luận, vẽ nét đứt. Output AI trên repo của thầy chưa qua duyệt tay như repo demo. Rồi chạy thật theo [`KICH_BAN_DEMO.md`](KICH_BAN_DEMO.md) Mục 4.
+Đ: Được, với link gốc của repo public trên github.com (nhánh mặc định) hoặc `.zip` ≤ 4,5 MB; repo nén ≤ 15 MB, giữ tối đa 100 file code. TS/JS và Python đã kiểm chứng; ngôn ngữ khác có grammar thì cạnh là suy luận, vẽ nét đứt. Output AI trên repo của thầy chưa qua duyệt tay như repo demo. Rồi chạy thật theo [`KICH_BAN_DEMO.md`](KICH_BAN_DEMO.md) Mục 4.
 
 **B2. "Làm sao biết hàm nào gọi hàm nào mà không cần compiler?"**
 Đ: Tree-sitter đọc cú pháp, lập danh bạ tên hàm; hệ thống phân giải import rồi nối từng lời gọi tới định nghĩa thật. Ngôn ngữ có bộ phân giải riêng thì cạnh khá chính xác với code viết theo mẫu phổ biến; ngôn ngữ khác nối bằng luật chung, cạnh gắn nhãn suy luận. Gọi động, DI qua cấu hình, reflection có thể làm sót cạnh; hệ thống không bịa cạnh để bù.
@@ -134,7 +135,7 @@ AI khi đó hỏi kiểu thuật toán: chạy tay với input nhỏ, Big-O, tì
 Đ: Bản đồ phải tất định (cùng commit ⇒ cùng node, cùng tọa độ, để mở lại phiên) và miễn phí. LLM không đáp ứng được cả hai, nên spec cấm dùng LLM dựng đồ thị.
 
 **B10. "Repo private thì sao?"**
-Đ: Nén thành `.zip` rồi kéo thả vào. File chỉ nằm trong RAM và được định danh bằng SHA-256. Đăng nhập GitHub chỉ xin quyền đọc hồ sơ (`read:user`), không đọc được repo private. Đọc repo private qua GitHub App với quyền chỉ đọc nằm ở roadmap.
+Đ: Nén thành `.zip` (≤ 4,5 MB) rồi kéo thả vào. File chỉ nằm trong RAM và được định danh bằng SHA-256. Đăng nhập GitHub chỉ xin quyền đọc hồ sơ (`read:user`), không đọc được repo private. Đọc repo private qua GitHub App với quyền chỉ đọc nằm ở roadmap.
 
 ### C. AI & cổng gác
 
@@ -164,7 +165,7 @@ Muốn đạt thì phải có đủ 2–3 ý bắt buộc, và AI phải trích 
 Đ: Câu khớp mẫu *câu lệnh* bị chặn trước khi gọi AI: 0 điểm, mất 1 lượt, 0 token. Mẫu chỉ bắt dạng câu lệnh, để không phạt oan câu bình thường có chữ "bỏ qua". Code trong repo được bọc là dữ liệu trong prompt; file có comment kiểu ra lệnh cho AI bị server đánh dấu. Không có cách chống prompt injection tuyệt đối.
 
 **C6. "AI gọi mấy lần, tốn bao nhiêu, đã đo chưa?"**
-Đ: Bản đồ 0 token. AI có 4 lời gọi: **phân tích node** và **tổng quan** (1 lần mỗi phiên bản repo, dùng chung), **đặt câu hỏi** (cache dùng chung theo kỹ năng × mức × góc), **chấm** (mỗi lần nộp). Ước lượng repo 7 node, ~15 câu: người đầu ~58.500 token ≈ 0,05 USD; người sau ~22.000 token ≈ 0,02 USD, theo giá Gemini 2.5 Flash, **chưa đo**, model chưa chốt. Giao diện hiện số token server đếm; mỗi phiên có trần `SESSION_TOKEN_QUOTA`.
+Đ: Bản đồ 0 token. AI có 4 lời gọi: **phân tích node** và **tổng quan** (1 lần mỗi phiên bản repo, dùng chung), **đặt câu hỏi** (sinh mới cho mỗi người, không cache — D-37), **chấm** (mỗi lần nộp). Ước lượng repo 7 node, ~15 câu: người đầu ~58.500 token ≈ 0,05 USD; người sau ~38.000 token ≈ 0,03 USD, theo giá Gemini 2.5 Flash, **chưa đo**, model chưa chốt. Giao diện hiện số token server đếm; mỗi phiên có trần `SESSION_TOKEN_QUOTA`.
 
 **C7. "AI lỗi giữa chừng thì sao?"**
 Đ: Chấm lỗi thì không tính lượt, có nút "Thử lại". Câu hỏi hỏng thì gọi lại 1 lần rồi bỏ câu đó. Phân tích node lỗi thì node giữ vàng, có "Thử lại phân tích", node con vẫn mở kèm tam giác. Hết quota thì khóa lời gọi AI mới và báo rõ.
@@ -181,8 +182,8 @@ Mỗi kỹ năng chỉ có vài quan sát trên một repo, nên điểm là ư�
 **D2. "'Cognitive Twin' thực chất là gì?"**
 Đ: Là 16 xác suất, mỗi kỹ năng một số, cập nhật bằng BKT sau mỗi câu và phai dần theo thời gian. Đó là tên sản phẩm; về khoa học đây là mô hình người học đơn giản, đủ minh bạch để giải thích từng lần điểm đổi.
 
-**D3. "Miễn thi có bị lợi dụng không? Persona có phải gian lận?"**
-Đ: Fast-Track cần mọi kỹ năng của node ≥ `FAST_TRACK_MIN` (0,92) trên điểm đã phai; Capstone không bao giờ được miễn. Điểm do server ghi, client không có quyền ghi bảng nào. Persona chỉ bật trên máy demo (`DEMO_MODE`), chỉ ghi đè điểm của tài khoản demo, và được nói rõ là giả lập.
+**D3. "Người đã giỏi có phải làm lại hết không? Persona có phải gian lận?"**
+Đ: Không có ô nào được miễn (D-34). Ô mà mọi kỹ năng của người học đều ≥ `FAST_TRACK_MIN` (0,92) trên điểm đã phai thì chỉ hỏi **1 câu** ở mức khó nhất, cho kỹ năng điểm thấp nhất. Kỹ năng lâu không luyện không bị bắt ôn, chỉ hiện "đang mài mòn" (D-35). Điểm do server ghi, client không có quyền ghi bảng nào. Persona chỉ bật trên máy demo (`DEMO_MODE`), chỉ ghi đè điểm của tài khoản demo, và được nói rõ là giả lập.
 
 ### E. Dữ liệu, vận hành, demo
 
@@ -213,13 +214,15 @@ Mỗi kỹ năng chỉ có vài quan sát trên một repo, nên điểm là ư�
 | Dựng bản đồ < 1,5 giây | "mục tiêu", kèm số trên đồng hồ | `02` Mục 1.1 |
 | 6–8 bài học mỗi repo | Repo nhỏ có thể ít hơn | `DISPLAY_MIN_NODES`, `DISPLAY_MAX_NODES` |
 | Gửi AI ≤ 100 dòng / ≤ 1.500 token code mỗi node, đã che secret | Khẳng định | `NODE_MAX_LINES`, `NODE_MAX_CODE_TOKENS` |
-| AI ở 4 lời gọi; phân tích và câu hỏi được cache dùng chung | Khẳng định | INV-02, D-15 |
-| ~58.500 token ≈ 0,05 USD người đầu; ~22.000 ≈ 0,02 USD người sau | "ước lượng, chưa đo, theo giá Gemini 2.5 Flash" | `02` Mục 1.1 |
-| Repo nén ≤ 15 MB, ≤ 50 file code | Khẳng định | `MAX_STREAM_BYTES`, `MAX_CLEAN_FILES` |
+| AI ở 4 lời gọi; phân tích node và tổng quan được cache dùng chung, câu hỏi sinh mới | Khẳng định | INV-02, D-37 |
+| ~58.500 token ≈ 0,05 USD người đầu; ~38.000 ≈ 0,03 USD người sau | "ước lượng, chưa đo, theo giá Gemini 2.5 Flash" | `02` Mục 1.1 |
+| Repo nén ≤ 15 MB, upload `.zip` ≤ 4,5 MB, ≤ 100 file code; chỉ link gốc repo | Khẳng định | `MAX_STREAM_BYTES`, `MAX_UPLOAD_BYTES`, `MAX_CLEAN_FILES`, D-38 |
 | TS/JS và Python đã kiểm chứng | Chỉ nói sau khi chạy đủ test | INV-09 |
 | BKT: đạt ngay 0,25 → 0,5767; đạt sau gợi ý → 0,4202; trượt → 0,0791 | "tính theo công thức", không phải số đo trên người học | `50` Mục 3 |
 | Chu kỳ bán rã 14 ngày; 0,95 sau 30 ngày còn ~0,41 | Nói kèm "mô phỏng" | `DECAY_HALF_LIFE_DAYS`, `50` Mục 3.6 |
-| Miễn thi khi mọi kỹ năng ≥ 0,92; Capstone không bao giờ miễn | Khẳng định | `FAST_TRACK_MIN`, D-12 |
+| Ô mà mọi kỹ năng đã ≥ 0,92 vẫn hỏi 1 câu ở mức khó nhất; không ô nào được miễn | Khẳng định | `FAST_TRACK_MIN`, D-34 |
+| Kỹ năng lâu không luyện hiện "đang mài mòn", chỉ hiển thị, không bắt ôn | Khẳng định | D-35 |
+| Mã nguồn mở, người dùng tự mang API key | Khẳng định | D-33 |
 | Đạt = điểm ≥ 70 **và** đủ ý bắt buộc có trích dẫn thật | Kèm "ngưỡng do nhóm đặt" | `PASS_CORE_ACCURACY`, D-13 |
 | "AI nêu N mục, đúng X/N", "chấm khớp người X/20" | Chỉ nói khi đã đo, nói đúng số | Duyệt tay |
 
