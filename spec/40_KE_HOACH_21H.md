@@ -1,7 +1,40 @@
 # 40 — KẾ HOẠCH CODE 21 GIỜ (12g00 31/10 → 09g00 01/11/2026)
 
-> Phạm vi: D-04 (toàn bộ spec). Đọc cùng `references/thele.md` (luật thi) và `00_QUYET_DINH.md` (câu hỏi mở Q-xx).
-> **Luật thi chi phối cách làm:** repo thi **trống** lúc bắt đầu, BTC chỉ nhận commit trong giờ thi, **cấm bulk-commit code viết sẵn**, **mọi thành viên phải có commit**. Spec này là tài liệu đọc, không phải code: không chép nguyên khối vào repo thi trong một commit.
+> Kế hoạch 21 giờ thi cho cả nhóm (phạm vi: D-04, toàn bộ spec). Đọc cùng `references/thele.md` (luật thi) và `00_QUYET_DINH.md` (câu hỏi mở Q-xx).
+
+## Đọc nhanh
+
+- **Luật thi (Mục 8):** repo thi **trống** lúc bắt đầu, BTC chỉ nhận commit trong giờ thi, **cấm bulk-commit code viết sẵn**, **mọi thành viên phải có commit**; spec là tài liệu đọc, không phải code: không chép nguyên khối vào repo thi trong một commit.
+- **Trước giờ thi (Mục 1):** hạn 30/10 cho Q-xx, Supabase, host, `GEMINI_API_KEY`, repo demo; repo thi public, trống: nộp link cho BTC trước giờ thi theo BTC.
+- **Mốc chính (Mục 5):** H+1 13:00 `contracts/*`; H+8 20:00 lát dọc 1; H+12 00:00 CN lát dọc 2; H+17 05:00 đóng băng tính năng, kiểm Definition of Done (Mục 7); H+21 09:00 ngừng code.
+- **Trễ mốc ≥ 1 giờ (Mục 6):** cắt từ trên xuống theo thứ tự ở Mục 6; danh sách không bao giờ cắt nằm cuối Mục 6.
+
+```mermaid
+flowchart LR
+    C["H0–H1 · src/contracts/* (Người 1 gõ, 2 & 3 review)"] --> P1 & P2 & P3
+    subgraph P1["Người 1 — UI + DB + API"]
+      A1["Supabase migration, auth, /api/me"] --> A2["Store + canvas đọc fixture"] --> A3["Tab 1/2/Tổng quan"] --> A4["Route ingest/analyze/enrich/evaluate/reveal (nối lib của 2, 3)"] --> A5["sessions, history, sync, persona, offline"]
+    end
+    subgraph P2["Người 2 — Engine"]
+      B1["Ingest: URL, probe, refs, tải, unzip, lọc, che secret, snapshot"] --> B2["Parser + symbol + call graph TS/JS"] --> B3["Lát cắt, node, cạnh, budget, tên, layout"] --> B4["Python resolver"] --> B5["Java/Go/Dart + STRUCTURAL + suy biến"]
+    end
+    subgraph P3["Người 3 — AI + BKT"]
+      D1["bkt-engine, plan, derive + test (50)"] --> D2["Gemini client, schema, token"] --> D3["analyze + guard"] --> D4["questions + guard"] --> D5["grade + decidePass + follow-up"] --> D6["Duyệt tay + ghi mock_bundle"]
+    end
+```
+
+| Mục | Nói về | Code (file / hàm chính) |
+| :-- | :-- | :-- |
+| 1 | Việc phải xong trước giờ thi | — |
+| 2 | Cây thư mục repo thi | — |
+| 3 | Công nghệ, phiên bản, grammar `.wasm` | `package.json` |
+| 4 | Ba luồng song song, điểm nối | `src/contracts/*`, `src/lib/*` |
+| 5 | Mốc giờ | — |
+| 6 | Thứ tự cắt khi trễ | — |
+| 7 | Definition of Done | `npx vitest run` |
+| 8 | Quy ước commit | — |
+| 9 | Sản phẩm nộp kèm | — |
+| 10 | Rủi ro chính | — |
 
 ---
 
@@ -62,7 +95,7 @@
 
 ## 3. Công nghệ & phiên bản
 
-Chốt **phiên bản chính xác ở giờ H+0** bằng lệnh cài đặt, ghi vào `package.json` (không dùng `latest`). Khuyến nghị dòng phiên bản:
+Chốt **phiên bản chính xác ở giờ H+0** bằng lệnh cài đặt, ghi vào `package.json` (không dùng `latest`). Dòng khuyến nghị:
 
 | Gói | Dòng | Dùng cho |
 | :-- | :-- | :-- |
@@ -79,29 +112,15 @@ Chốt **phiên bản chính xác ở giờ H+0** bằng lệnh cài đặt, ghi
 | `@supabase/supabase-js`, `@supabase/ssr` | 2.x | Auth + DB |
 | `vitest` | 2.x hoặc 3.x | Test hàm thuần (`50`) |
 
-**Nguồn grammar `.wasm`** (`public/grammars/`, tên file theo `LanguageAdapter.wasm_grammar`): ưu tiên file `.wasm` phát hành sẵn của grammar chính thức (`tree-sitter-typescript`, `tree-sitter-python`, …) hoặc gói npm `tree-sitter-wasms`; không có ⇒ tự build bằng `npx tree-sitter build --wasm` (cần Emscripten hoặc Docker). Mọi grammar phải cùng ABI với bản `web-tree-sitter` đã pin.
+**Nguồn grammar `.wasm`** (`public/grammars/`, tên file theo `LanguageAdapter.wasm_grammar`): ưu tiên `.wasm` phát hành sẵn của grammar chính thức (`tree-sitter-typescript`, `tree-sitter-python`, …) hoặc gói npm `tree-sitter-wasms`; không có ⇒ tự build bằng `npx tree-sitter build --wasm` (cần Emscripten hoặc Docker). Mọi grammar phải cùng ABI với bản `web-tree-sitter` đã pin.
 > ⚠️ **Phải kiểm chứng ở H+1:** nạp được grammar TS/JS + Python bằng `initParsers()` (`11` ENG-11). **Fallback:** lệch ABI ⇒ đổi bản `web-tree-sitter` cho khớp grammar, không đổi grammar.
 
 ---
 
 ## 4. Ba luồng song song & điểm nối
 
-```mermaid
-flowchart LR
-    C["H0–H1 · src/contracts/* (Người 1 gõ, 2 & 3 review)"] --> P1 & P2 & P3
-    subgraph P1["Người 1 — UI + DB + API"]
-      A1["Supabase migration, auth, /api/me"] --> A2["Store + canvas đọc fixture"] --> A3["Tab 1/2/Tổng quan"] --> A4["Route ingest/analyze/enrich/evaluate/reveal (nối lib của 2, 3)"] --> A5["sessions, history, sync, persona, offline"]
-    end
-    subgraph P2["Người 2 — Engine"]
-      B1["Ingest: URL, probe, refs, tải, unzip, lọc, che secret, snapshot"] --> B2["Parser + symbol + call graph TS/JS"] --> B3["Lát cắt, node, cạnh, budget, tên, layout"] --> B4["Python resolver"] --> B5["Java/Go/Dart + STRUCTURAL + suy biến"]
-    end
-    subgraph P3["Người 3 — AI + BKT"]
-      D1["bkt-engine, plan, derive + test (50)"] --> D2["Gemini client, schema, token"] --> D3["analyze + guard"] --> D4["questions + guard"] --> D5["grade + decidePass + follow-up"] --> D6["Duyệt tay + ghi mock_bundle"]
-    end
-```
-
-**Điểm nối để không ai phải chờ:**
-- **Fixture `StaticEngineResult`:** Người 1 và 3 dùng bản viết tay từ repo mẫu (`50` Mục 1). Bản này đặt ở `src/server/engine/__fixtures__/shop-api.json`, gõ ở H+1. Engine thật thay vào lúc H+8.
+Sơ đồ ba luồng: phần Đọc nhanh. Điểm nối để không ai phải chờ:
+- **Fixture `StaticEngineResult`:** Người 1 và 3 dùng bản viết tay từ repo mẫu (`50` Mục 1), đặt ở `src/server/engine/__fixtures__/shop-api.json`, gõ ở H+1; engine thật thay vào lúc H+8.
 - **Fixture phản hồi AI:** Người 1 dựng UI Tab 1/2 bằng JSON mẫu của `50` Mục 2 cho tới khi Người 3 có lời gọi thật.
 - **Hàm thuần `src/lib/*`** (Người 3) không phụ thuộc gì, viết + test trước, Người 1 gọi trong transaction.
 

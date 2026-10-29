@@ -1,9 +1,20 @@
 # 50 — FIXTURE & KỊCH BẢN KIỂM THỬ END-TO-END
 
-> **Vai trò:** dữ liệu mẫu để 3 người làm song song trước khi các phần nối với nhau (`40` Mục 4), và kịch bản kiểm thử xuyên module.
-> Test đơn vị của từng module nằm ở cuối file module đó: `10`, `11`, `20`, `21`, `22`, `30` ("Test bắt buộc").
+> Dữ liệu mẫu để 3 người làm song song trước khi các phần nối với nhau (`40` Mục 4), và kịch bản kiểm thử xuyên module. Người 1 đọc; Người 2, 3 dùng khi thử module. Test đơn vị của từng module nằm ở cuối file module đó: `10`, `11`, `20`, `21`, `22`, `30` ("Test bắt buộc").
 > **Trong repo thi:** fixture ở `src/server/engine/__fixtures__/shop-api.json` và `src/server/ai/__fixtures__/*.json`; test ở `src/**/__tests__/*.test.ts` (vitest), tên test bắt đầu bằng mã luật, VD `BKT-03 cập nhật PASS_AFTER_HINT`.
-> Mọi số BKT / decay tính **không làm tròn giữa chừng**, chỉ làm tròn 4 chữ số khi hiển thị. Đã kiểm bằng script.
+
+## Đọc nhanh
+
+- **Có gì:** repo mẫu `shop-api`, fixture phản hồi AI, kịch bản A–E, 6 kiểm thử xuyên module (bắt buộc trước H+17).
+- **Dùng để:** dựng UI và test cổng gác trước khi engine / AI thật chạy; chạy kịch bản A–E rồi đối chiếu cột "Kỳ vọng".
+- **Quy tắc:** số BKT / decay không làm tròn giữa chừng, chỉ làm tròn 4 chữ số khi hiển thị (đã kiểm bằng script).
+
+| Mục | Nói về | Code (file / hàm chính) |
+| :-- | :-- | :-- |
+| 1 | Repo mẫu `shop-api`: bản đồ N1–N7 (1.1), code các bước (1.2) | `__fixtures__/shop-api.json` |
+| 2 | Fixture AI: `NodeAnalysisRaw` (2.1), `RepoOverviewRaw` (2.2), câu hỏi N3 (2.3), `GradingRaw` (2.4) | `checkAnalysis`, `checkOverview` (`21`) |
+| 3 | Kịch bản A–E (3.1–3.5), persona (3.6) | `__tests__/*.test.ts` |
+| 4 | Kiểm thử xuyên module X-01 … X-06 | `__tests__/*.test.ts` |
 
 ---
 
@@ -32,7 +43,14 @@ N3 Danh sách SP ─────────────────────
 | N6 Gửi email | `ASYNC_CONCURRENCY`, `ERROR_HANDLING` | — |
 | N7 Báo cáo doanh thu | `DB_OPTIMIZATION`, `ALGORITHMIC_COMPLEXITY` | — |
 
-Khi dùng `shop-api` làm repo demo thật: mỗi cạnh trên cần 2 lát cắt **dùng chung ≥ 1 hàm có thân viết trong repo** (D-07; method thư viện như `productRepo.findOne` của TypeORM không tính). Cụ thể: N2 và N5 dùng chung `authMiddleware`; N4 và N5 dùng chung `cartService.getCart`; N1 và N2 dùng chung một hàm của `src/repos/user.repo.ts`; N3 và N5 dùng chung một hàm của `src/repos/product.repo.ts`; N5 gọi một hàm của N6 và một hàm của N7. Code Mục 1.2 là bản rút gọn chỉ gồm các bước dùng trong kịch bản; repo thật thêm các hàm dùng chung trên thì số bước / số dòng lấy theo engine, cập nhật lại fixture Mục 1.2 và 2 ở H+8 (`40`).
+Khi dùng `shop-api` làm repo demo thật, mỗi cạnh trên cần 2 lát cắt **dùng chung ≥ 1 hàm có thân viết trong repo** (D-07; method thư viện như `productRepo.findOne` của TypeORM không tính). Cụ thể:
+- N2 và N5: `authMiddleware`.
+- N4 và N5: `cartService.getCart`.
+- N1 và N2: một hàm của `src/repos/user.repo.ts`.
+- N3 và N5: một hàm của `src/repos/product.repo.ts`.
+- N5 gọi một hàm của N6 và một hàm của N7.
+
+Code Mục 1.2 là bản rút gọn chỉ gồm các bước dùng trong kịch bản. Repo thật thêm các hàm dùng chung trên thì số bước / số dòng lấy theo engine; cập nhật lại fixture Mục 1.2 và 2 ở H+8 (`40`).
 
 ### 1.2. Code các bước dùng trong kịch bản
 
@@ -104,7 +122,7 @@ async checkout(userId, items) {
 
 ---
 
-## 2. Fixture phản hồi AI (để dựng UI và test cổng gác trước khi gọi AI thật)
+## 2. Fixture phản hồi AI
 
 ### 2.1. `NodeAnalysisRaw` của N3 — cố ý có 1 kỹ năng sai chỗ
 
@@ -216,7 +234,7 @@ Chung cho mọi kịch bản:
 | A4 | Nộp Q1 lượt 1 (2.4) | Chưa đạt; gợi ý `CONCEPT`; `attempts_used = 1`; BKT chưa đổi |
 | A5 | Nộp Q1 lượt 2 | Đạt, PAH; `DB_OPTIMIZATION` 0.25 → **0.4202**; Q1 có `reveal` |
 | A6 | Nộp Q2 lượt 1 (đúng) | PF; `LAYERED_SEPARATION` 0.25 → **0.5767**; run xong ⇒ N3 `COMPLETED`; `unlocked_node_ids` = [] (N5 còn chờ N4) |
-| A7 | Đọc lại trạng thái | N3 **không** có viền cam: 0.4202 có điểm gốc < 0.45 (#19) |
+| A7 | Đọc lại trạng thái | N3 **không** có viền cam: 0.4202 có điểm gốc < 0.45 |
 
 ### 3.2. Kịch bản B — Lan, N2: câu 1 trượt 3 lần, câu 2 đạt ⇒ ĐỎ; rồi ôn lại
 
@@ -234,7 +252,7 @@ Trước đó: N1 đạt PF ở `HTTP_ROUTING` ⇒ 0.5767.
 | B8 | Lượt 1 sai ⇒ gợi ý `CODE_POINTER`; lượt 2 đúng | PAH; `AUTH_SECURITY` 0.0791 → **0.2008**; N2 ⇒ `COMPLETED` |
 | B8' | (Biến thể) lượt 2 cũng sai | Câu `FAILED`, **không** trừ BKT (vẫn 0.0791); N2 giữ `FAILED` |
 
-Thêm kiểm regex (#1) trong kịch bản B: câu *"Request đi qua authMiddleware trước, ở đó jwt.verify dùng JWT_SECRET để kiểm token. Nếu bỏ qua bước này thì ai cũng vào được trang hồ sơ."* **không** bị chặn, vẫn được gửi cho AI chấm.
+Thêm kiểm regex trong kịch bản B: câu *"Request đi qua authMiddleware trước, ở đó jwt.verify dùng JWT_SECRET để kiểm token. Nếu bỏ qua bước này thì ai cũng vào được trang hồ sơ."* **không** bị chặn, vẫn được gửi cho AI chấm.
 
 ### 3.3. Kịch bản C — Minh (đã có hồ sơ): Fast-Track, bỏ kỹ năng đã thạo, Capstone
 
@@ -320,15 +338,3 @@ Trạng thái ban đầu của Huy: N3 `COMPLETED`.
 | X-04 | Mở lại phiên | Xóa cache RAM ⇒ `ingest { session_id }` ⇒ cùng `graph_skeleton`, tiến độ còn nguyên |
 | X-05 | RLS | Dùng anon key của người A đọc `skill_states` của B ⇒ 0 dòng; đọc `ai_cache` ⇒ 0 dòng; mọi lệnh ghi từ client ⇒ bị từ chối |
 | X-06 | Offline | `Ctrl+Shift+D` ⇒ chạy hết kịch bản demo không có mạng; không có request tới `/api/*` học tập |
-
----
-
-## 5. Chỉ mục edge case cũ (`archive/.../03_SYSTEM_EDGE_CASES_AUDIT.md`)
-
-| Phần cũ | Nơi xử lý bây giờ |
-| :-- | :-- |
-| Phần 1 (case 1.1 – 1.38: tải, lọc, ngôn ngữ, đồ thị, lát cắt, đặt tên) | Chỉ mục cuối `10_ENGINE_INGEST.md` và `11_ENGINE_DO_THI.md` |
-| Phần 2, 3, 5, 6, 8 (AI, nộp bài, cổng gác, gợi ý, bỏ qua) | Chỉ mục cuối `21_AI_KIEM_VA_DUYET.md` |
-| Phần 4 (BKT, decay, Fast-Track, Capstone) | `22_BKT_VA_KE_HOACH_CAU_HOI.md` |
-| Phần 7.1 (gộp node trùng mẫu "COMPLETED (Inherited)") | Không áp dụng: Fast-Track theo kỹ năng thay thế |
-| Phần 7.2 (ma trận mức độ lỗi, `hidden_challenge`) | Không áp dụng: bỏ `hidden_challenge` (D-01) |

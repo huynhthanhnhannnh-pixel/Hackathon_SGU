@@ -1,8 +1,27 @@
 # 02 — HỢP ĐỒNG DỮ LIỆU & BẢNG HẰNG SỐ (NGUỒN CHÂN LÝ DUY NHẤT)
 
-> **Quy tắc:** mọi kiểu dữ liệu và mọi hằng số của hệ thống nằm ở file này. File khác chỉ **nhắc tên** (`HybridArchitecturalNode`, `CONFIG.FAST_TRACK_MIN`), không chép lại định nghĩa hay con số.
-> **Trong repo thi:** Mục 1 ⇒ `src/contracts/config.ts`; Mục 2–9 ⇒ `src/contracts/*.ts` (tách theo mục). Gõ / sinh trong giờ thi, commit từng phần (xem `40_KE_HOACH_21H.md`).
-> **Quy ước:** JSON qua mạng dùng `snake_case`; thời điểm là **số mili-giây Unix** (`number`); xác suất ∈ [0, 1]; số dòng code tính từ 1. Không dùng `any`.
+> Quy định mọi kiểu dữ liệu và mọi hằng số; file khác chỉ nhắc tên (`HybridArchitecturalNode`, `CONFIG.FAST_TRACK_MIN`), không chép lại định nghĩa hay con số (INV-12). Người đọc: cả nhóm.
+> **Trong repo thi:** Mục 1 ⇒ `src/contracts/config.ts`; Mục 2–10 ⇒ `src/contracts/*.ts` (tách theo mục). Gõ / sinh trong giờ thi, commit từng phần (xem `40_KE_HOACH_21H.md`).
+> **Quy ước:** JSON qua mạng dùng `snake_case`; thời điểm là số mili-giây Unix (`number`); xác suất ∈ [0, 1]; số dòng code tính từ 1. Không dùng `any`.
+
+## Đọc nhanh
+
+- Bảng tra: `CONFIG` (Mục 1) cho con số; kiểu (Mục 2–7, 10) cho hàm / component; request / response (Mục 8) và mã lỗi (Mục 9) cho route.
+- Đổi con số ⇒ sửa `CONFIG`, không sửa ở nơi dùng. Số ở Mục 1.1 là mục tiêu / ước lượng, chưa đo.
+- Nhãn 5.1–5.5 là chú thích trong khối code của Mục 5, không phải tiêu đề.
+
+| Mục | Nhóm kiểu / nội dung | File spec dùng nhiều nhất |
+| :-: | :-- | :-- |
+| 1 | `CONFIG`; 1.1 mục tiêu / ước lượng | `11`, `22`, `10` |
+| 2 | Kiểu nền: `SWE_SKILLS`, `LearnerTier`, `NodeStatus` | `22`, `10`, `20` |
+| 3 | Đầu ra Engine: `HybridArchitecturalNode`, `StaticEngineResult` | `10`, `11`, `21` |
+| 4 | Kiểu nội bộ Engine: `LanguageAdapter`, `SymbolDefinition` | `10`, `11` |
+| 5 | AI: `NodeAnalysis` (5.1), `RepoOverviewRaw` (5.2), `QuestionPlanItem` (5.3), `GradingRaw` (5.4), `ChallengeTokenPayload` (5.5) | `20`, `22`, `21` |
+| 6 | Người học, BKT, tiến độ: `QuestionState`, `NodeStateView`, `PERSONAS` | `22`, `30`, `03` |
+| 7 | Lưu trữ: `GraphSkeletonNode`, `SyncReceipt` | `03`, `30` |
+| 8 | API: request / response từng endpoint | `03`, `30` |
+| 9 | Lỗi: `ErrorCode`, `ApiError`, bảng mã HTTP | `03`, `30`, `20` |
+| 10 | Trình duyệt và Offline: `ClientWorkbenchState`, `OfflineMockBundle` | `30`, `21` |
 
 ---
 
@@ -138,9 +157,9 @@ export const CONFIG = {
   TIER_PRACTITIONER_MIN: 0.45,
   TIER_ARCHITECT_MIN: 0.75,
   FAST_TRACK_MIN: 0.92,
-  DECAY_WARNING_BELOW: 0.45,          // Viền cam: điểm gốc ≥ ngưỡng VÀ điểm đã decay < ngưỡng (D-03 #19)
-  NOVICE_SECOND_QUESTION: false,      // 00 Mục 4 dòng #27 — bật sau khi đo token
-  GAP_TARGETING: false,               // 00 Mục 4 dòng #28
+  DECAY_WARNING_BELOW: 0.45,          // Viền cam: điểm gốc ≥ ngưỡng VÀ điểm đã decay < ngưỡng (D-03)
+  NOVICE_SECOND_QUESTION: false,      // bật sau khi đo token
+  GAP_TARGETING: false,
 
   // ---------- Lưu trữ (03_API_VA_LUU_TRU) ----------
   DB_RETRY_DELAYS_MS: [100, 300],     // Thử lại tối đa 2 lần
@@ -158,7 +177,7 @@ export const CONFIG = {
 } as const;
 ```
 
-### 1.1. Mục tiêu & ước lượng (không phải hằng số trong code — **chưa đo trên code thật**)
+### 1.1. Mục tiêu & ước lượng (không phải hằng số; **chưa đo trên code thật**)
 
 | Hạng mục | Mục tiêu / ước lượng | Ghi chú |
 | :-- | :-- | :-- |
@@ -552,7 +571,7 @@ export interface QuestionState {
   attempts_used: number;                // 0..MAX_ATTEMPTS_PER_QUESTION (REMEDIATION: ..REMEDIATION_MAX_ATTEMPTS)
   finished: boolean;
   outcome: NodeOutcome | null;
-  ended_by: "ANSWER" | "SKIP" | "DROPPED" | null;   // DROPPED = AI không đặt được câu (D-03 #6), không cập nhật BKT
+  ended_by: "ANSWER" | "SKIP" | "DROPPED" | null;   // DROPPED = AI không đặt được câu (D-03), không cập nhật BKT
   disputed: boolean;                    // Người học bấm "Báo sai" (D-22)
   reveal: QuestionReveal | null;        // Có khi finished
 }
@@ -571,7 +590,7 @@ export interface NodeStateView {         // 1 node trong 1 phiên
   status: NodeStatus;
   is_auto_mastered: boolean;            // Fast-Track
   has_warning: boolean;                 // Có node cha FAILED hoặc phân tích lỗi (soft-bypass)
-  analysis_failed: boolean;             // D-03 #20
+  analysis_failed: boolean;             // D-03
   remediation_runs: number;
   can_remediate: boolean;
   last_run: NodeRunView | null;
@@ -652,7 +671,7 @@ export interface AttemptHistoryItem {
 
 ## 8. API — request / response mọi endpoint
 
-Mọi endpoint cần phiên Supabase (khách ẩn danh cũng được) — gửi qua header `Authorization: Bearer <access_token>`. Lỗi trả `ApiError` (Mục 9). Hành vi và luồng ghi: `03_API_VA_LUU_TRU.md`.
+Mọi endpoint cần phiên Supabase (khách ẩn danh cũng được), gửi qua header `Authorization: Bearer <access_token>`. Lỗi trả `ApiError` (Mục 9). Hành vi và luồng ghi: `03_API_VA_LUU_TRU.md`.
 
 ```typescript
 // GET /api/me
@@ -867,4 +886,4 @@ export interface OfflineMockBundle {               // public/demo/mock_bundle.js
 }
 ```
 
-Ở chế độ Offline, câu trả lời được so với `scripted_answers` (độ giống ≥ `CONFIG.ANSWER_DUPLICATE_SIMILARITY`); không khớp ⇒ thông báo "Chế độ offline chỉ chấm được câu trả lời trong kịch bản". `profile` và `progress` được tính lại trên trình duyệt bằng `bkt-engine` (`22`), không ghi Postgres.
+Chế độ Offline so câu trả lời với `scripted_answers` (độ giống ≥ `CONFIG.ANSWER_DUPLICATE_SIMILARITY`); không khớp ⇒ thông báo "Chế độ offline chỉ chấm được câu trả lời trong kịch bản". `profile` và `progress` tính lại trên trình duyệt bằng `bkt-engine` (`22`), không ghi Postgres.
