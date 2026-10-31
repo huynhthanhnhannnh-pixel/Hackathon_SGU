@@ -1,9 +1,21 @@
 # 50 — FIXTURE & KỊCH BẢN KIỂM THỬ END-TO-END
 
-> **Vai trò:** dữ liệu mẫu để 3 người làm song song trước khi các phần nối với nhau (`40` Mục 4), và kịch bản kiểm thử xuyên module.
-> Test đơn vị của từng module nằm ở cuối file module đó: `10`, `11`, `20`, `21`, `22`, `30` ("Test bắt buộc").
+> Dữ liệu mẫu để 5 người làm song song trước khi các phần nối với nhau (`doc-de-hieu/07_ke_hoach_21h.md` Mục 1), và kịch bản kiểm thử xuyên module. Vai E đọc; các vai khác dùng khi thử module. Test đơn vị của từng module nằm ở cuối file module đó: `10`, `11`, `20`, `21`, `22`, `30` ("Test bắt buộc").
 > **Trong repo thi:** fixture ở `src/server/engine/__fixtures__/shop-api.json` và `src/server/ai/__fixtures__/*.json`; test ở `src/**/__tests__/*.test.ts` (vitest), tên test bắt đầu bằng mã luật, VD `BKT-03 cập nhật PASS_AFTER_HINT`.
-> Mọi số BKT / decay tính **không làm tròn giữa chừng**, chỉ làm tròn 4 chữ số khi hiển thị. Đã kiểm bằng script.
+
+## Đọc nhanh
+
+- **Có gì:** repo mẫu `shop-api`, fixture phản hồi AI, kịch bản A–E, 6 kiểm thử xuyên module (bắt buộc trước H+17).
+- **Dùng để:** dựng UI và test cổng gác trước khi engine / AI thật chạy; chạy kịch bản A–E rồi đối chiếu cột "Kỳ vọng".
+- **Quy tắc:** số BKT / decay không làm tròn giữa chừng, chỉ làm tròn 4 chữ số khi hiển thị (đã kiểm bằng script).
+
+| Mục | Nói về | Code (file / hàm chính) |
+| :-- | :-- | :-- |
+| 1 | Repo mẫu `shop-api`: bản đồ N1–N7 (1.1), code các bước (1.2) | `__fixtures__/shop-api.json` |
+| 2 | Fixture AI: `NodeAnalysisRaw` (2.1), `RepoOverviewRaw` (2.2), câu hỏi N3 (2.3), `GradingRaw` (2.4) | `checkAnalysis`, `checkOverview` (`21`) |
+| 3 | Kịch bản A–E (3.1–3.5), persona (3.6) | `__tests__/*.test.ts` |
+| 4 | Kiểm thử xuyên module X-01 … X-06 | `__tests__/*.test.ts` |
+| 5 | Definition of Done toàn sản phẩm | `npx vitest run` |
 
 ---
 
@@ -32,7 +44,15 @@ N3 Danh sách SP ─────────────────────
 | N6 Gửi email | `ASYNC_CONCURRENCY`, `ERROR_HANDLING` | — |
 | N7 Báo cáo doanh thu | `DB_OPTIMIZATION`, `ALGORITHMIC_COMPLEXITY` | — |
 
-Khi dùng `shop-api` làm repo demo thật: mỗi cạnh trên cần 2 lát cắt **dùng chung ≥ 1 hàm có thân viết trong repo** (D-07; method thư viện như `productRepo.findOne` của TypeORM không tính). Cụ thể: N2 và N5 dùng chung `authMiddleware`; N4 và N5 dùng chung `cartService.getCart`; N1 và N2 dùng chung một hàm của `src/repos/user.repo.ts`; N3 và N5 dùng chung một hàm của `src/repos/product.repo.ts`; N5 gọi một hàm của N6 và một hàm của N7. Code Mục 1.2 là bản rút gọn chỉ gồm các bước dùng trong kịch bản; repo thật thêm các hàm dùng chung trên thì số bước / số dòng lấy theo engine, cập nhật lại fixture Mục 1.2 và 2 ở H+8 (`40`).
+Khi dùng `shop-api` làm repo demo thật, mỗi cạnh trên cần 2 lát cắt **dùng chung ≥ 1 hàm có thân viết trong repo** (D-07; method thư viện như `productRepo.findOne` của TypeORM không tính). Cụ thể:
+- N2 và N5: `authMiddleware`.
+- N2 và N4: `authMiddleware`.
+- N4 và N5: `cartService.getCart`.
+- N1 và N2: một hàm của `src/repos/user.repo.ts`.
+- N3 và N5: một hàm của `src/repos/product.repo.ts`.
+- N5 gọi một hàm của N6 và một hàm của N7.
+
+Code Mục 1.2 là bản rút gọn chỉ gồm các bước dùng trong kịch bản. Repo thật thêm các hàm dùng chung trên thì số bước / số dòng lấy theo engine; cập nhật lại fixture Mục 1.2 và 2 ở H+8.
 
 ### 1.2. Code các bước dùng trong kịch bản
 
@@ -104,7 +124,7 @@ async checkout(userId, items) {
 
 ---
 
-## 2. Fixture phản hồi AI (để dựng UI và test cổng gác trước khi gọi AI thật)
+## 2. Fixture phản hồi AI
 
 ### 2.1. `NodeAnalysisRaw` của N3 — cố ý có 1 kỹ năng sai chỗ
 
@@ -203,6 +223,7 @@ Biến thể kiểm D-13: giữ nguyên lượt 2 nhưng đổi `quote` của ý
 
 Chung cho mọi kịch bản:
 - Đồng hồ hệ thống cố định.
+- `ingest` repo mẫu bằng **link GitHub** (phiên `COMMIT_SHA`, dựng lại theo SHA — D-39). Upload `.zip` chỉ có ca best-effort D19 (Q-12).
 - Kỹ năng chưa có dòng `skill_states` ⇒ P = 0.25.
 - "PF" = `PASS_FIRST`, "PAH" = `PASS_AFTER_HINT`, "F" = `FAILED`.
 
@@ -210,15 +231,15 @@ Chung cho mọi kịch bản:
 
 | # | Thao tác | Kỳ vọng |
 | :-: | :-- | :-- |
-| A1 | `ingest` repo mẫu | 7 node; N1, N3 `AVAILABLE`; còn lại `LOCKED`; không node nào Fast-Track |
-| A2 | `analyze-node` N3 | Bản phân tích như 2.1 sau kiểm; N3 vẫn `AVAILABLE` (0.25 < `FAST_TRACK_MIN`) |
-| A3 | `enrich-node` N3 `LEARN` | Kế hoạch: Q1 `DB_OPTIMIZATION` · NOVICE · `WEAKNESS`; Q2 `LAYERED_SEPARATION` · NOVICE · `FLOW`; tạo 1 run, 2 token |
+| A1 | `ingest` repo mẫu | 7 node; N1, N3 `AVAILABLE`; còn lại `LOCKED` |
+| A2 | `analyze-node` N3 | Bản phân tích như 2.1 sau kiểm; N3 vẫn `AVAILABLE` |
+| A3 | `enrich-node` N3 `LEARN` | Kế hoạch: Q1 `DB_OPTIMIZATION` · NOVICE · `WEAKNESS`; Q2 `LAYERED_SEPARATION` · NOVICE · `FLOW`; tạo 1 run; câu hỏi + đáp án mẫu + ý bắt buộc lưu ở `node_runs`, response không có đáp án (D-36) |
 | A4 | Nộp Q1 lượt 1 (2.4) | Chưa đạt; gợi ý `CONCEPT`; `attempts_used = 1`; BKT chưa đổi |
 | A5 | Nộp Q1 lượt 2 | Đạt, PAH; `DB_OPTIMIZATION` 0.25 → **0.4202**; Q1 có `reveal` |
 | A6 | Nộp Q2 lượt 1 (đúng) | PF; `LAYERED_SEPARATION` 0.25 → **0.5767**; run xong ⇒ N3 `COMPLETED`; `unlocked_node_ids` = [] (N5 còn chờ N4) |
-| A7 | Đọc lại trạng thái | N3 **không** có viền cam: 0.4202 có điểm gốc < 0.45 (#19) |
+| A7 | Đọc lại trạng thái | Kỹ năng của node đang mở: `DB_OPTIMIZATION` 0.4202, `LAYERED_SEPARATION` 0.5767; **chưa** có nhãn "đang mài mòn" (Δt = 0 ⇒ không rớt bậc, BKT-24) |
 
-### 3.2. Kịch bản B — Lan, N2: câu 1 trượt 3 lần, câu 2 đạt ⇒ ĐỎ; rồi ôn lại
+### 3.2. Kịch bản B — Lan, N2: câu 1 trượt 3 lần, câu 2 đạt ⇒ ĐỎ
 
 Trước đó: N1 đạt PF ở `HTTP_ROUTING` ⇒ 0.5767.
 
@@ -229,16 +250,13 @@ Trước đó: N1 đạt PF ở `HTTP_ROUTING` ⇒ 0.5767.
 | B3 | Q1 lượt 2: *"Hàm getProfile kiểm tra mật khẩu người dùng."* | Chưa đạt; gợi ý `CODE_POINTER`, `step_index = 2` |
 | B4 | Q1 lượt 3: *"Middleware kiểm tra user có tồn tại không."* | F; `AUTH_SECURITY` 0.25 → **0.0791**; `reveal` |
 | B5 | Q2 lượt 1 (đúng) | PF; `HTTP_ROUTING` 0.5767 → **0.8413**; run xong ⇒ N2 `FAILED`; N4 `AVAILABLE` với `has_warning = true` |
-| B6 | Đọc `node_state` của N2 sau B5 | `can_remediate = true` ngay: N1 đã `COMPLETED` ⇒ đủ `REMEDIATION_MIN_OTHER_FINISHED`. Ca `false`: node gốc là node đầu tiên học xong và `FAILED` ⇒ UI hiện "Học xong thêm một node khác…" |
-| B7 | `enrich-node` N2 `REMEDIATION` | Kế hoạch chỉ có `AUTH_SECURITY` · NOVICE · góc khác `WEAKNESS` (⇒ `FLOW`); tối đa `REMEDIATION_MAX_ATTEMPTS` lượt; `remediation_runs = 1` |
-| B8 | Lượt 1 sai ⇒ gợi ý `CODE_POINTER`; lượt 2 đúng | PAH; `AUTH_SECURITY` 0.0791 → **0.2008**; N2 ⇒ `COMPLETED` |
-| B8' | (Biến thể) lượt 2 cũng sai | Câu `FAILED`, **không** trừ BKT (vẫn 0.0791); N2 giữ `FAILED` |
+| B6 | Đọc `node_state` của N2 sau B5 | N2 giữ `FAILED` (đỏ); không có nút ôn (D-35); muốn học lại N2 ⇒ "Học lại từ đầu" tạo phiên mới, điểm kỹ năng giữ nguyên (D-42) |
 
-Thêm kiểm regex (#1) trong kịch bản B: câu *"Request đi qua authMiddleware trước, ở đó jwt.verify dùng JWT_SECRET để kiểm token. Nếu bỏ qua bước này thì ai cũng vào được trang hồ sơ."* **không** bị chặn, vẫn được gửi cho AI chấm.
+Thêm kiểm regex trong kịch bản B: câu *"Request đi qua authMiddleware trước, ở đó jwt.verify dùng JWT_SECRET để kiểm token. Nếu bỏ qua bước này thì ai cũng vào được trang hồ sơ."* **không** bị chặn, vẫn được gửi cho AI chấm.
 
-### 3.3. Kịch bản C — Minh (đã có hồ sơ): Fast-Track, bỏ kỹ năng đã thạo, Capstone
+### 3.3. Kịch bản C — Minh (đã có hồ sơ): node đã thạo vẫn hỏi 1 câu, bỏ kỹ năng đã thạo, Capstone
 
-Hồ sơ Minh (vừa luyện, Δt ≈ 0):
+Hồ sơ Minh (vừa luyện, Δt ≈ 0, `practice_count` bằng nhau):
 
 | Kỹ năng | P |
 | :-- | :-- |
@@ -251,13 +269,15 @@ Hồ sơ Minh (vừa luyện, Δt ≈ 0):
 
 | # | Thao tác | Kỳ vọng |
 | :-: | :-- | :-- |
-| C1 | `ingest` + phân tích xong N1, N2, N4 | N1 Fast-Track (2 kỹ năng ≥ 0.92) ⇒ N2 mở ⇒ N2 Fast-Track (dây chuyền, trong cùng `applyFastTrackCascade`) ⇒ N4 mở; N4 **không** Fast-Track (`STATE_MANAGEMENT` 0.25) |
-| C2 | N3 `LEARN` | Q1 `DB_OPTIMIZATION` · ARCHITECT · `WEAKNESS`; Q2 `LAYERED_SEPARATION` · NOVICE · `FLOW`. Q1 PF: 0.8413 → **0.9532**; Q2 PF: 0.25 → **0.5767** ⇒ N3 `COMPLETED` |
-| C3 | N4 `LEARN` | Chỉ hỏi `STATE_MANAGEMENT` · NOVICE · `FLOW` (`DTO_VALIDATION` đã thạo). PF ⇒ 0.5767; N4 `COMPLETED` ⇒ N5 mở |
-| C4 | N5 ★ `LEARN` | Bỏ `DB_OPTIMIZATION` (0.9532) và `HTTP_ROUTING`. Chỉ hỏi `TRANSACTION_INTEGRITY` · PRACTITIONER · `WEAKNESS`. PAH: 0.5767 → **0.7292** ⇒ N5 `COMPLETED` ⇒ N6, N7 mở |
-| C5 | (Biến thể) mọi kỹ năng của N5 ≥ `FAST_TRACK_MIN` | N5 vẫn hỏi **1 câu**: kỹ năng yếu nhất, tier ARCHITECT (Capstone không Fast-Track) |
+| C1 | `ingest` + phân tích xong N1 | N1, N3 `AVAILABLE`; không node nào tự `COMPLETED` (D-34) |
+| C2 | N1 `LEARN` | Mọi kỹ năng ≥ `FAST_TRACK_MIN` ⇒ đúng 1 câu: `DTO_VALIDATION` · ARCHITECT · `CHANGE` (hòa điểm ⇒ thứ tự phân tích; N1 không có điểm dở) (BKT-31). PF: 0.9532 → **0.9873** ⇒ N1 `COMPLETED` ⇒ N2 mở |
+| C3 | N2 `LEARN` | 1 câu: `AUTH_SECURITY` · ARCHITECT · `WEAKNESS` (BKT-31). PF ⇒ N2 `COMPLETED` ⇒ N4 mở |
+| C4 | N3 `LEARN` | Q1 `DB_OPTIMIZATION` · ARCHITECT · `WEAKNESS`; Q2 `LAYERED_SEPARATION` · NOVICE · `FLOW`. Q1 PF: 0.8413 → **0.9532**; Q2 PF: 0.25 → **0.5767** ⇒ N3 `COMPLETED` |
+| C5 | N4 `LEARN` | Chỉ hỏi `STATE_MANAGEMENT` · NOVICE · `FLOW` (`DTO_VALIDATION` đã thạo). PF ⇒ 0.5767; N4 `COMPLETED` ⇒ N5 mở |
+| C6 | N5 ★ `LEARN` | Bỏ `DB_OPTIMIZATION` (0.9532) và `HTTP_ROUTING`. Chỉ hỏi `TRANSACTION_INTEGRITY` · PRACTITIONER · `WEAKNESS`. PAH: 0.5767 → **0.7292** ⇒ N5 `COMPLETED` ⇒ N6, N7 mở |
+| C7 | (Biến thể) mọi kỹ năng của N5 ≥ `FAST_TRACK_MIN` | N5 vẫn hỏi **1 câu**: kỹ năng yếu nhất, tier ARCHITECT (BKT-31, `22` P-D) |
 
-Minh gọi AI đặt câu hỏi ở 3 node (N3, N4, N5). N1 và N2 không tốn token đặt câu hỏi hay chấm.
+Minh gọi AI đặt câu hỏi ở cả 5 node đã học (N1–N5); node mà mọi kỹ năng đã thạo chỉ tốn 1 câu (D-34).
 
 ### 3.4. Kịch bản D — Các đường trục trặc
 
@@ -273,16 +293,18 @@ Minh gọi AI đặt câu hỏi ở 3 node (N3, N4, N5). N1 và N2 không tốn 
 | D8 | Gợi ý AI có từ cấm | `verifyFollowUp` sai ⇒ dùng mẫu tĩnh **cùng loại** (lượt 1 ⇒ mẫu `CONCEPT`, không lộ vị trí) |
 | D9 | Bấm "Bỏ qua câu này" ở Q1/2 | Q1 F (`ended_by = SKIP`), BKT F, có `reveal`; chuyển sang Q2 |
 | D10 | Gõ *"chịu"* | `intent = GIVE_UP` ⇒ tính 1 lượt trượt, vẫn có gợi ý nấc kế |
-| D11 | Bình (mới) học N3 sau Lan | Trúng cache phân tích + câu hỏi; chỉ tốn token chấm |
+| D11 | Bình (mới) học N3 sau Lan | Trúng cache phân tích; câu hỏi sinh mới (không cache, D-37); tốn token đặt câu hỏi + chấm |
 | D12 | Sửa `attempt_number = 3` ở lượt 1 | `ERR_ATTEMPT_OUT_OF_SYNC`; không gọi AI; không có `reveal` |
 | D13 | Hai tab nộp cùng Q1 lượt 1 | Một tab thành công; tab kia `ERR_ATTEMPT_OUT_OF_SYNC` |
-| D14 | Postgres lỗi ở bước ghi | Response có `sync_receipt`; replay sau đó ⇒ `APPLIED`; replay lần 2 ⇒ `DUPLICATE` |
+| D14 | Postgres lỗi ở bước ghi | `ERR_PERSISTENCE_UNAVAILABLE`; bỏ kết quả chấm, `attempts_used` không đổi; UI hiện "Thử lại"; DB hồi ⇒ nộp lại được bình thường (D-40) |
 | D15 | Postgres lỗi ngay bước đọc | `ERR_PERSISTENCE_UNAVAILABLE`; không gọi AI |
-| D16 | Token câu hỏi quá `exp` | `ERR_CHALLENGE_TOKEN_EXPIRED`; gọi lại `enrich-node` ⇒ cùng `run_id`, token mới, `attempts_used` giữ nguyên |
-| D17 | Token của người A gửi từ tài khoản B | `ERR_CHALLENGE_TOKEN_INVALID` |
+| D16 | Gọi lại `enrich-node` khi run N3 đang dở | Cùng `run_id`, cùng câu hỏi, `attempts_used` giữ nguyên; không gọi AI |
+| D17 | Tài khoản B gửi `run_id` của người A | `ERR_SESSION_NOT_FOUND` (API-05); không gọi AI, không lộ đáp án |
 | D18 | "Báo sai" Q1 của B4 ngay sau khi trượt | Q1 🚩; `AUTH_SECURITY` trở lại 0.25; N2 tính lại màu: Q2 đạt ⇒ `COMPLETED` |
+| D19 | Best-effort zip (Q-12): upload `.zip` repo mẫu, xóa cache RAM, mở lại phiên | `resume_blocker = "ZIP_SOURCE"`; `ingest { session_id }` ⇒ `ERR_SESSION_NOT_FOUND`; UI "Phiên upload không mở lại được — hãy upload lại file .zip."; kéo thả lại đúng file ⇒ mở lại phiên đó |
+| D20 | Tải trước có giới hạn (D-46): mở repo 7 node, đang mở N1 | Client chỉ gọi `POST /api/analyze-node` cho N1 và 1–2 node kế tiếp; không tải toàn bộ; số lời gọi đồng thời ≤ `CONFIG.ANALYZE_CONCURRENCY` |
 
-### 3.5. Kịch bản E — Huy quay lại sau 30 ngày (ôn khi phai)
+### 3.5. Kịch bản E — Huy quay lại sau 30 ngày (mài mòn, chỉ hiển thị)
 
 Trạng thái ban đầu của Huy: N3 `COMPLETED`.
 
@@ -293,11 +315,11 @@ Trạng thái ban đầu của Huy: N3 `COMPLETED`.
 
 | # | Thao tác | Kỳ vọng |
 | :-: | :-- | :-- |
-| E1 | Đọc trạng thái | N3 XANH + viền cam (`DB_OPTIMIZATION` gốc ≥ 0.45, decay < 0.45) |
-| E2 | `enrich-node` N3 `DECAY_REVIEW` | Kế hoạch chỉ có `DB_OPTIMIZATION` · NOVICE (theo 0.4092) · `WEAKNESS`; khóa cache có `mode` nên không lấy lại câu cũ |
-| E3a | Đúng ngay | PF: 0.4092 → **0.7324**; hết viền cam; N3 vẫn `COMPLETED` |
-| E3b | Đúng sau gợi ý | PAH: → **0.5854** |
-| E3c | Sai 3 lần | F: → **0.1268**; N3 **vẫn XANH**; viền cam biến mất (điểm gốc < 0.45); kết quả ❌ hiện trong danh sách câu của Tab 2 |
+| E1 | Đọc trạng thái | N3 vẫn XANH, không viền, không nút ôn. Kỹ năng của node đang mở: `DB_OPTIMIZATION` thanh theo 0.4092, `LAYERED_SEPARATION` theo 0.6681, cả hai nhãn "đang mài mòn" vì rớt bậc (`ARCHITECT` ⇒ `NOVICE`, `ARCHITECT` ⇒ `PRACTITIONER`; BKT-24, D-35) |
+| E2 | "Học lại từ đầu" ⇒ phiên mới; `enrich-node` N3 `LEARN` | Điểm kỹ năng giữ nguyên (D-42). Kế hoạch: Q1 `DB_OPTIMIZATION` · NOVICE (theo 0.4092) · `WEAKNESS`; Q2 `LAYERED_SEPARATION` · PRACTITIONER · `ARCHITECTURE`; câu hỏi sinh mới (D-37) |
+| E3a | Q1 đúng ngay | PF: 0.4092 → **0.7324**; nhãn "đang mài mòn" của `DB_OPTIMIZATION` tắt (Δt = 0) |
+| E3b | Q1 đúng sau gợi ý | PAH: → **0.5854** |
+| E3c | Q1 sai 3 lần | F: → **0.1268**; kết quả ❌ hiện trong danh sách câu của Tab 2; N3 ở phiên cũ không đổi |
 
 ### 3.6. Persona
 
@@ -305,8 +327,7 @@ Trạng thái ban đầu của Huy: N3 `COMPLETED`.
 | :-- | :-- | :-- |
 | `NEWBIE` | 0.25 | Như kịch bản A |
 | `MID_LEVEL` | 0.65 | Mọi câu tier PRACTITIONER |
-| `SENIOR_RUSTY` | 0.95 sau 30 ngày ⇒ **0.4085** | Không Fast-Track; node XANH sẽ có viền cam |
-| `SENIOR_ACTIVE` | 0.95 | Mọi node trừ Capstone Fast-Track; Capstone hỏi 1 câu ARCHITECT |
+| `SENIOR_RUSTY` | 0.95 sau 30 ngày ⇒ **0.4085** | Mọi câu tier NOVICE; mọi kỹ năng "đang mài mòn" ở node đang mở (D-35) |
 
 ---
 
@@ -315,20 +336,27 @@ Trạng thái ban đầu của Huy: N3 `COMPLETED`.
 | Mã | Kiểm | Cách |
 | :-- | :-- | :-- |
 | X-01 | Tất định (INV-10) | Chạy engine 2 lần trên cùng zip ⇒ `JSON.stringify(result.nodes, result.edges)` giống hệt |
-| X-02 | Không rò trường (API-03) | Quét mọi response trong kịch bản A–E: không có `misconception`, `quote`, `symbol_whitelist`, `suspicious_instruction_files`, `code_context`, `reference_answer` của câu chưa xong |
-| X-03 | Không lưu code (INV-04) | Dump Postgres sau kịch bản A–E: không có chuỗi nào trùng một dòng code dài ≥ 40 ký tự của repo mẫu ngoài `ai_cache` (chỉ được chứa tên/biểu thức ngắn) |
-| X-04 | Mở lại phiên | Xóa cache RAM ⇒ `ingest { session_id }` ⇒ cùng `graph_skeleton`, tiến độ còn nguyên |
+| X-02 | Không rò trường (API-03) | Quét mọi response trong kịch bản A–E: không có `misconception`, `quote`, `symbol_whitelist`, `suspicious_instruction_files`, `reference_answer` / `must_have_points` của câu chưa xong |
+| X-03 | Không lưu code (INV-04) | Dump Postgres sau kịch bản A–E: không có chuỗi nào trùng một dòng code dài ≥ 40 ký tự của repo mẫu ngoài `ai_cache` và `node_runs` (chỉ được chứa tên/biểu thức ngắn) |
+| X-04 | Mở lại phiên | Phiên link GitHub: xóa cache RAM ⇒ `ingest { session_id }` ⇒ cùng `graph_skeleton`, tiến độ còn nguyên |
 | X-05 | RLS | Dùng anon key của người A đọc `skill_states` của B ⇒ 0 dòng; đọc `ai_cache` ⇒ 0 dòng; mọi lệnh ghi từ client ⇒ bị từ chối |
 | X-06 | Offline | `Ctrl+Shift+D` ⇒ chạy hết kịch bản demo không có mạng; không có request tới `/api/*` học tập |
 
 ---
 
-## 5. Chỉ mục edge case cũ (`archive/.../03_SYSTEM_EDGE_CASES_AUDIT.md`)
+## 5. Definition of Done toàn sản phẩm (kiểm ở H+17)
 
-| Phần cũ | Nơi xử lý bây giờ |
-| :-- | :-- |
-| Phần 1 (case 1.1 – 1.38: tải, lọc, ngôn ngữ, đồ thị, lát cắt, đặt tên) | Chỉ mục cuối `10_ENGINE_INGEST.md` và `11_ENGINE_DO_THI.md` |
-| Phần 2, 3, 5, 6, 8 (AI, nộp bài, cổng gác, gợi ý, bỏ qua) | Chỉ mục cuối `21_AI_KIEM_VA_DUYET.md` |
-| Phần 4 (BKT, decay, Fast-Track, Capstone) | `22_BKT_VA_KE_HOACH_CAU_HOI.md` |
-| Phần 7.1 (gộp node trùng mẫu "COMPLETED (Inherited)") | Không áp dụng: Fast-Track theo kỹ năng thay thế |
-| Phần 7.2 (ma trận mức độ lỗi, `hidden_challenge`) | Không áp dụng: bỏ `hidden_challenge` (D-01) |
+- [ ] Dán link repo demo ⇒ bản đồ 6–8 node; đồng hồ đo hiện `ingest_ms + engine_ms` thật.
+- [ ] Cùng link chạy 2 lần ⇒ cùng `node_id`, cùng tọa độ (INV-10).
+- [ ] Repo private / sai link / repo rỗng / quá lớn ⇒ đúng mã lỗi và thông điệp của `30`.
+- [ ] Mở từng node của repo demo ⇒ node nào cũng có bản phân tích (D-46); Tab 1 có điểm hay + điểm dở "Nhận định của AI"; không có tên bịa (kiểm tay 3 node).
+- [ ] Persona `NEWBIE`: chạy đúng kịch bản A của `50` (A3 → A7): sai ⇒ gợi ý `CONCEPT` ⇒ đúng ⇒ `PASS_AFTER_HINT`, điểm kỹ năng khớp bảng; node xanh, node con mở.
+- [ ] "Bỏ qua câu này" ⇒ câu ❌, hiện đáp án; node đỏ khi run xong, node con mở kèm tam giác.
+- [ ] Mọi kỹ năng của node đã thạo ⇒ vẫn hỏi 1 câu cho kỹ năng điểm thấp nhất (D-34).
+- [ ] Persona `SENIOR_RUSTY` ⇒ kỹ năng của node đang mở hiện thanh nhạt dần + nhãn "đang mài mòn"; không có nút ôn, màu node không đổi (D-35).
+- [ ] Tải lại trang ⇒ tiến độ còn nguyên (Postgres); mở lại phiên từ "Tiếp tục học".
+- [ ] DevTools: response không chứa `misconception`, `reference_answer` của câu chưa xong, `suspicious_instruction_files`, `symbol_whitelist`.
+- [ ] Sửa `attempt_number` trong request ⇒ `ERR_ATTEMPT_OUT_OF_SYNC`, không lộ đáp án.
+- [ ] `Ctrl+Shift+D` ⇒ chế độ offline chạy hết kịch bản demo, nhãn offline luôn hiện.
+- [ ] Mọi test `50` xanh (`npx vitest run`).
+- [ ] Repo thi có test tên bắt đầu bằng `GUARD-04` (`21` Test bắt buộc, `50` Mục 2.1), chạy xanh (`npx vitest run -t "GUARD-04"` — dùng cho demo cổng gác).

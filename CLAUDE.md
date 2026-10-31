@@ -2,11 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Repo rules for every AI (Claude, Antigravity, …): @AGENTS.md. The `.ai/` folder exists only on the working branch, not on `main`. When it is present, `.ai/QUY_TRINH.md` holds the check commands and task protocol, and Claude's role is planner/reviewer: write tasks in `.ai/tasks/`, verify with `.ai/tools/` scripts instead of re-reading whole files, commit only what passed.
+
 ## Repository state
 
-This is a **documentation repository** (Vietnamese) for the SimpliFey V2 Pro hackathon project (SGU 2026–2027, "Codebase Cognitive Twin"). There is no source code, build system or test suite here. The product is coded during the 21-hour challenge round (12:00 31/10 → 09:00 01/11/2026) in a **separate, initially empty** competition repo, by following `spec/`. Competition rules (`references/thele.md`): only commits made during the round count, no bulk commit of pre-written code, every member must commit. So: do not scaffold the implementation in this repo, and do not paste large code blocks from `spec/` into the competition repo in one commit.
+This is a **documentation repository** (Vietnamese) for the SimpliFey V2 Pro hackathon project (SGU 2026–2027, "Codebase Cognitive Twin"). There is no source code, build system or test suite here. The product is coded during the 21-hour challenge round (round 2: 7–8/11/2026, assuming 12:00 07/11 → 09:00 08/11/2026; round 3: 09/11/2026) in a **separate, initially empty** competition repo, by following `spec/`. Competition rules (`references/thele.md`): only commits made during the round count, no bulk commit of pre-written code, every member must commit. So: do not scaffold the implementation in this repo, and do not paste large code blocks from `spec/` into the competition repo in one commit.
 
-Spec freeze: 30/10/2026. After that, spec changes go through `spec/00_QUYET_DINH.md`.
+Spec changes go through `spec/00_QUYET_DINH.md`.
 
 ## Project in one paragraph
 
@@ -18,14 +20,15 @@ Turns a public GitHub repo (or uploaded `.zip`) into a deterministic map of 6–
   - `00_QUYET_DINH.md` — decisions (D-xx), defaults awaiting confirmation, open questions (Q-xx). The only place that may say "proposed / pending".
   - `01_KIEN_TRUC_VA_LUONG.md` — invariants INV-01..13, components, flows, node & question lifecycles, where data lives.
   - `02_CONTRACTS.md` — **all** TypeScript types, every API request/response, all error codes, and the single `CONFIG` constants table.
-  - `03_API_VA_LUU_TRU.md` — endpoints, Postgres schema, RLS, transactions, state derivation, Fast-Track.
-  - `10_ENGINE_INGEST.md`, `11_ENGINE_DO_THI.md` — Tiers 0–2 (Person 2).
-  - `20_AI_GOI_VA_PROMPT.md`, `21_AI_KIEM_VA_DUYET.md`, `22_BKT_VA_KE_HOACH_CAU_HOI.md` — AI calls, guardrails, BKT & question planning (Person 3).
-  - `30_UI.md` — UI (Person 1). `40_KE_HOACH_21H.md` — 21-hour build plan. `50_TEST_VA_FIXTURE.md` — fixtures and end-to-end scenarios.
-- `pitch/` — demo script, judge Q&A, plain-language walkthrough, roadmap. **Not used for coding**; when it disagrees with `spec/`, `spec/` wins.
+  - `03_API_VA_LUU_TRU.md` — endpoints, Postgres schema, RLS, transactions, state derivation.
+  - `04_KIEN_TRUC_TRIEN_KHAI.md` — deployment architecture, Vercel, Supabase, logging, CI/CD, competition repo tree, tech stack.
+  - `10_ENGINE_INGEST.md`, `11_ENGINE_DO_THI.md` — Tiers 0–2 (role B).
+  - `20_AI_GOI_VA_PROMPT.md`, `21_AI_KIEM_VA_DUYET.md`, `22_BKT_VA_KE_HOACH_CAU_HOI.md` — AI calls, guardrails, BKT & question planning (role C).
+  - `30_UI.md` — UI (role D). `50_TEST_VA_FIXTURE.md` — fixtures, end-to-end scenarios, Definition of Done.
+- `pitch/` — demo script, judge Q&A, roadmap. **Not used for coding**; when it disagrees with `spec/`, `spec/` wins.
+- `doc-de-hieu/` — plain-language walkthroughs, deployment setup guide, and the 21-hour build plan (`07_ke_hoach_21h.md`, the source for the schedule).
 - `references/` — competition rules (`thele.md`) and an algorithm textbook (illustrative only).
-- `prototype/cockpit_demo.html` — stale visual prototype; design reference only, its data and logic are outdated.
-- `archive/` — superseded documents (including everything before the 2026-10-28 consolidation in `archive/2026-10-28_truoc-hop-nhat/`). **Not authoritative**; don't cite or "fix" them.
+- `archive/` — superseded documents (including everything before the 2026-10-28 consolidation in `archive/2026-10-28_truoc-hop-nhat/`, and the stale visual prototype in `archive/prototype/`). **Not authoritative**; don't cite or "fix" them.
 
 ## Rules when editing specs
 
