@@ -174,28 +174,28 @@ Kỳ vọng sau `checkOverview`:
 ```json
 { "questions": [
   { "skill": "DB_OPTIMIZATION",
-    "feynman_question": "Cửa hàng có 200 sản phẩm. Mở trang danh sách 1 lần thì database nhận bao nhiêu truy vấn? Chỉ ra dòng code tạo ra chúng.",
-    "reference_answer": "201 truy vấn: 1 lần `productRepo.findAll` (dòng 15) + 200 lần `categoryRepo.findById` trong vòng lặp (dòng 16–18).",
-    "must_have_points": ["Ra 201 truy vấn (hoặc 1 + 200)", "Chỉ ra vòng lặp gọi `findById` (dòng 16–18) là nguồn của 200 truy vấn"],
+    "feynman_question": "Trang danh sách có 200 sản phẩm. Vì sao càng nhiều sản phẩm thì trang càng chậm?",
+    "reference_answer": "Sau khi `productRepo.findAll` lấy danh sách 1 lần (dòng 15), vòng lặp gọi `categoryRepo.findById` cho từng sản phẩm (dòng 16–18). Mỗi sản phẩm tốn thêm 1 truy vấn, nên 200 sản phẩm thành 201 truy vấn.",
+    "must_have_points": ["Mỗi sản phẩm tốn thêm 1 truy vấn để lấy loại hàng", "Số truy vấn tăng theo số sản phẩm, không cố định"],
     "fix": "Cho findAll lấy kèm loại hàng (relations: ['category']) ⇒ còn 1 truy vấn; hoặc gom các categoryId rồi tìm 1 lần bằng IN (...) ⇒ còn 2 truy vấn." },
   { "skill": "LAYERED_SEPARATION",
-    "feynman_question": "Mỗi sản phẩm trả về đều có thêm loại hàng. Loại hàng đó được lấy ở đâu, đi qua những hàm nào ở những file nào, và được gắn vào sản phẩm ở dòng nào trước khi trả về?",
+    "feynman_question": "Sản phẩm trả về có thêm thông tin loại hàng. Loại hàng đó từ đâu mà có?",
     "reference_answer": "Route ở `product.controller.ts` gọi `productService.listProducts`; trong `listProducts`, vòng `for` gọi `categoryRepo.findById(p.categoryId)`; `findById` ở `category.repo.ts` dùng `this.repo.findOne`; kết quả gán vào `p.category` (dòng 17) rồi trả về route.",
-    "must_have_points": ["Đi qua 3 file theo thứ tự: route → `listProducts` → `findById`", "Loại hàng lấy bằng `findById` theo `p.categoryId`, gán vào `p.category` trong vòng lặp"],
+    "must_have_points": ["Nêu đúng đường đi: route gọi service, service nhờ repo tìm loại hàng", "Loại hàng tìm theo `categoryId` của từng sản phẩm rồi gắn vào sản phẩm trước khi trả về"],
     "fix": "Không có lỗi cần sửa ở góc này." }
 ] }
 ```
 
 ### 2.4. `GradingRaw` — câu 1 của N3
 
-Lượt 1 — câu trả lời: *"200 truy vấn, vì có 200 sản phẩm."*
+Lượt 1 — câu trả lời: *"Vì có 200 sản phẩm nên dữ liệu nhiều."*
 ```json
 { "core_accuracy": 50, "simplicity": 70, "intent": "ANSWER",
   "points": [ { "index": 1, "covered": false, "quote": "" }, { "index": 2, "covered": false, "quote": "" } ],
-  "misconception": "Chỉ đếm truy vấn trong vòng lặp, quên lần findAll; chưa chỉ ra dòng code.",
-  "follow_up_question": "Trước khi vòng lặp chạy được, code phải có sẵn danh sách 200 sản phẩm. Danh sách đó lấy từ đâu, có tốn thêm lần hỏi database nào không?",
+  "misconception": "Nghĩ trang chậm do dữ liệu lớn, chưa thấy mỗi sản phẩm tốn thêm một truy vấn.",
+  "follow_up_question": "Sau khi có danh sách, trang còn cần thêm thông tin gì cho từng sản phẩm? Thông tin đó được lấy bằng cách nào?",
   "follow_up_type": "CONCEPT", "follow_up_step_index": null,
-  "feedback": "Bạn đếm đúng phần trong vòng lặp, nhưng còn sót một bước trước đó.", "detected_jargons": [] }
+  "feedback": "Bạn thấy đúng là nhiều sản phẩm thì chậm hơn, nhưng chưa nói vì sao.", "detected_jargons": [] }
 ```
 Kỳ vọng phía server:
 - `is_passed = false`.
@@ -203,12 +203,12 @@ Kỳ vọng phía server:
 - `points_covered = [false, false]`.
 - `follow_up.type = "CONCEPT"`.
 
-Lượt 2 — câu trả lời: *"201: dòng 15 findAll lấy danh sách 1 lần, rồi vòng for ở dòng 16–18 gọi findById 200 lần."*
+Lượt 2 — câu trả lời: *"Vì lấy danh sách xong, code còn hỏi database thêm một lần cho mỗi sản phẩm để lấy loại hàng. 200 sản phẩm là 201 lần hỏi, càng nhiều sản phẩm càng nhiều lần hỏi."*
 ```json
 { "core_accuracy": 90, "simplicity": 60, "intent": "ANSWER",
-  "points": [ { "index": 1, "covered": true, "quote": "201" }, { "index": 2, "covered": true, "quote": "vòng for ở dòng 16–18 gọi findById 200 lần" } ],
+  "points": [ { "index": 1, "covered": true, "quote": "hỏi database thêm một lần cho mỗi sản phẩm" }, { "index": 2, "covered": true, "quote": "càng nhiều sản phẩm càng nhiều lần hỏi" } ],
   "misconception": "", "follow_up_question": null, "follow_up_type": null, "follow_up_step_index": null,
-  "feedback": "Chính xác! Bạn đếm đủ cả lần lấy danh sách và chỉ đúng vòng lặp.", "detected_jargons": ["database"] }
+  "feedback": "Chính xác! Bạn giải thích đúng vì sao số truy vấn tăng theo số sản phẩm.", "detected_jargons": ["database"] }
 ```
 Kỳ vọng:
 - Cả 2 trích dẫn đều có thật trong câu trả lời ⇒ `is_passed = true` (D-13).

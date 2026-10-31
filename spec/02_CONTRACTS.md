@@ -115,9 +115,10 @@ export const CONFIG = {
   LLM_TEMPERATURE: 0,
   LLM_THINKING_BUDGET: 0,
   LLM_TIMEOUT_MS: 30000,              // Đo lại ở H+1
-  LLM_MAX_RETRIES: 1,                 // Lỗi mạng / 429 / 503 / JSON hỏng / bị cổng gác chặn ⇒ gọi lại 1 lần
+  LLM_MAX_RETRIES: 1,                 // Lỗi mạng / 429 / 503 / JSON hỏng / bị cổng gác chặn ⇒ gọi lại 1 lần; bị chặn thì kèm lý do (AI-37)
   LLM_RETRY_DELAY_MS: 500,            // Chờ trước khi gọi lại sau 429 / 503
   LLM_RETRY_JITTER_MS: 100,           // Cộng ngẫu nhiên [0, JITTER)
+  GUARD_FEEDBACK_MAX_CHARS: 400,     // Trần khối <guard_feedback> khi gọi lại (AI-37)
   GRADING_QUOTE_MIN_CHARS: 3,         // Đoạn trích (đã chuẩn hóa) ngắn hơn ⇒ ý đó không tính (D-13)
   LLM_MAX_OUTPUT_TOKENS: { ANALYZE: 900, OVERVIEW: 600, QUESTIONS: 900, GRADE: 500 },
   ANALYZE_CONCURRENCY: 3,             // Số lời gọi analyze-node chạy cùng lúc / phiên
@@ -499,6 +500,28 @@ export interface GradingRaw {           // = responseSchema của lời gọi ch
   detected_jargons: string[];
 }
 // Đầu vào chấm đọc từ node_runs.questions (03), không có code_context (D-36)
+
+export type GuardCall = "analyze" | "overview" | "questions" | "grade";
+export type GuardCode =                                  // 21: A1–A7, O1–O4, Q1–Q8, G1–G2
+  | "A1" | "A2" | "A3" | "A4" | "A5" | "A6" | "A7"
+  | "O1" | "O2" | "O3" | "O4"
+  | "Q1" | "Q2" | "Q3" | "Q4" | "Q5" | "Q6" | "Q7" | "Q8"
+  | "G1" | "G2";
+export interface GuardIssue {                            // Lý do cổng gác, do code dựng (GUARD-22)
+  code: GuardCode;
+  question?: number;                                     // Vị trí câu trong request vừa gửi, tính từ 1
+  step?: number;                                         // Số bước hợp lệ
+  name?: string;                                         // Tên bị chặn; chỉ dùng khi khớp trọn IDENT_RE
+}
+export interface GuardLogEntry {                         // Một dòng log mỗi lần chặn (04 Mục 9, GUARD-22)
+  event: "guard_blocked";
+  call: GuardCall;
+  attempt: number;                                       // Số thứ tự request, tính từ 1
+  node_id: string | null;                                // null với overview
+  codes: GuardCode[];                                    // Không trùng
+  prompt_version: string;
+  llm_model: string;
+}
 ```
 
 ---

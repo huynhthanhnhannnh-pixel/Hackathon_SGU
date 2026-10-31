@@ -88,8 +88,7 @@
 - Gợi ý nấc 1 (`CONCEPT`), hỏi lại về chỗ hiểu sai và chưa chỉ vị trí.
 - Node vẫn vàng; điểm kỹ năng chưa đổi.
 
-> "Mỗi ô hỏi **một câu cho mỗi kỹ năng mình chưa vững**. Ô này có 2 kỹ năng nên có 2 câu. Câu 1 hỏi: 200 sản phẩm thì database nhận bao nhiêu truy vấn. Em cố ý trả lời thiếu: 200.
-> AI không đưa đáp án. Nó gợi ý đúng vào chỗ em hiểu sai: *danh sách 200 sản phẩm lấy từ đâu ra?*"
+  > AI không đưa đáp án. Nó hỏi ngược đúng vào chỗ em chưa nghĩ tới: *sau khi có danh sách, trang còn lấy thêm gì cho từng sản phẩm?*"
 
 **Thao tác 2:** gõ câu **B** → "Nộp".
 **Màn hình:**
@@ -159,8 +158,8 @@ Câu hỏi online do AI sinh mới mỗi lần mở Tab 2 (không cache câu h�
 
 | # | Node · câu · lượt | Câu gõ | Kỳ vọng | Lần thử 1 · 2 · 3 |
 | :-: | :-- | :-- | :-- | :-: |
-| **A** | N3 · Câu 1 (`DB_OPTIMIZATION`, `WEAKNESS`) · lượt 1 | `200 truy vấn, vì có 200 sản phẩm.` | Chưa đạt; gợi ý `CONCEPT` không chứa "201"; điểm không đổi | ☐ ☐ ☐ |
-| **B** | N3 · Câu 1 · lượt 2 | `201: dòng 15 findAll lấy danh sách 1 lần, rồi vòng for ở dòng 16–18 gọi findById 200 lần.` | Đạt, `PASS_AFTER_HINT`; 0,25 → 0,4202; hiện đáp án + cách sửa | ☐ ☐ ☐ |
+| **A** | N3 · Câu 1 (`DB_OPTIMIZATION`, `WEAKNESS`) · lượt 1 | `Vì có 200 sản phẩm nên dữ liệu nhiều.` | Chưa đạt; gợi ý `CONCEPT` không chứa "201"; điểm không đổi | ☐ ☐ ☐ |
+| **B** | N3 · Câu 1 · lượt 2 | `Vì lấy danh sách xong, code còn hỏi database thêm một lần cho mỗi sản phẩm để lấy loại hàng. 200 sản phẩm là 201 lần hỏi, càng nhiều sản phẩm càng nhiều lần hỏi.` | Đạt, `PASS_AFTER_HINT`; 0,25 → 0,4202; hiện đáp án + cách sửa | ☐ ☐ ☐ |
 | **C** | N3 · Câu 2 (`LAYERED_SEPARATION`, `FLOW`) · lượt 1 | `Route gọi listProducts ở service; vòng for gọi categoryRepo.findById(p.categoryId) ở category.repo.ts, lấy loại hàng bằng findOne, gán vào p.category ở dòng 17 rồi trả về.` | Đạt, `PASS_FIRST`; 0,25 → 0,5767; N3 xanh; không mở thêm node | ☐ ☐ ☐ |
 | D | Cổng gác (phút 3:20) | Không gõ — chạy `npx vitest run -t "GUARD-04"` | `verifyToken` bị chặn, `findOne` giữ; test xanh | ☐ ☐ ☐ |
 | E | Câu bất kỳ, gõ `chịu` | `chịu` | `GIVE_UP`: tính 1 lượt trượt, vẫn có gợi ý nấc kế | ☐ ☐ ☐ |

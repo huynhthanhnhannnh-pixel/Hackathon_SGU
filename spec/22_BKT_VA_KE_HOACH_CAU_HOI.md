@@ -156,7 +156,7 @@ Ký hiệu: $\tilde p(k)$ = `getDecayedMastery(skills[k], now)`; `weak(k)` = có
 
 | | `NOVICE` | `PRACTITIONER` | `ARCHITECT` |
 | :-- | :-- | :-- | :-- |
-| Có điểm dở ở node | `WEAKNESS` — chỉ chỗ, đếm | `WEAKNESS` — hậu quả, cách sửa | `WEAKNESS` — tình huống biên |
+| Có điểm dở ở node | `WEAKNESS` — vì sao xảy ra | `WEAKNESS` — hậu quả, cách sửa | `WEAKNESS` — tình huống biên |
 | Không điểm dở | `FLOW` | `ARCHITECTURE` | `CHANGE` |
 
 Độ sâu theo tier cho **mọi** góc: `NOVICE` = chỉ ra / lần theo cái có sẵn; `PRACTITIONER` = vì sao, hậu quả, cách sửa/dùng lại; `ARCHITECT` = tình huống biên, tải lớn, đồng thời, đánh đổi.
@@ -165,7 +165,7 @@ Ký hiệu: $\tilde p(k)$ = `getDecayedMastery(skills[k], now)`; `weak(k)` = có
 
 | `focus` | Lấy từ bản phân tích | Node lát cắt (`ARCHITECTURAL_DATA_FLOW`) | Node thuật toán (`ALGORITHMIC_CORE`) |
 | :-- | :-- | :-- | :-- |
-| `FLOW` | `steps` | Dữ liệu qua những hàm, file nào, thứ tự nào | Chạy tay với input nhỏ |
+| `FLOW` | `steps` | Dữ liệu từ đâu mà có, đi qua đâu | Chạy tay với input nhỏ |
 | `ARCHITECTURE` | `architecture` + `strengths` | Dùng lại gì, viết thêm gì, vì sao tách như vậy | Vì sao chọn cấu trúc dữ liệu / cách làm này |
 | `WEAKNESS` | `weak_points` (+ `fix` từ `PRACTITIONER`) | Điểm dở của đúng kỹ năng đó | Big-O, tình huống biên |
 | `CHANGE` | `steps` + `architecture` | Thay đổi cụ thể sửa file nào, file nào không sửa | Input đổi (cỡ, dạng) thì sao |
@@ -276,7 +276,7 @@ Persona ghi 16 dòng `skill_states` với `practice_count = correct_count = 1`, 
 
 | Persona | Điểm đã decay | Tier mọi kỹ năng | Minh họa |
 | :-- | :-- | :-- | :-- |
-| `NEWBIE` | = `CONFIG.BKT_P_L0` | `NOVICE` | Hỏi mọi kỹ năng: `WEAKNESS` chỉ chỗ / `FLOW` |
+| `NEWBIE` | = `CONFIG.BKT_P_L0` | `NOVICE` | Hỏi mọi kỹ năng: `WEAKNESS` vì sao xảy ra / `FLOW` |
 | `MID_LEVEL` | = điểm gốc | `PRACTITIONER` | `WEAKNESS` hậu quả + cách sửa / `ARCHITECTURE` |
 | `SENIOR_RUSTY` | Dưới `CONFIG.TIER_PRACTITIONER_MIN`, thấp hơn điểm gốc | `NOVICE` | Điểm gốc cao vẫn bị hỏi `NOVICE`; mọi kỹ năng "đang mài mòn" (BKT-24) |
 

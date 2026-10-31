@@ -148,7 +148,7 @@ Vi phạm thì gọi AI lại 1 lần; vẫn sai thì bỏ phần đó (bỏ câ
 
 **C2. "Tab 1 đã nói điểm dở rồi, sang Tab 2 chỉ việc chép lại à? Mà chép câu hỏi sang ChatGPT thì sao?"**
 Đ: Tab 1 chỉ nói *cái gì* và *ở đâu*. Câu hỏi hỏi những thứ Tab 1 không nói:
-- con số theo tình huống, ví dụ 200 sản phẩm thì bao nhiêu truy vấn;
+- tình huống cụ thể và vì sao nó xảy ra, ví dụ trang 200 sản phẩm chậm do đâu;
 - cách sửa và tình huống biên;
 - đổi một chỗ thì phải sửa những file nào.
 

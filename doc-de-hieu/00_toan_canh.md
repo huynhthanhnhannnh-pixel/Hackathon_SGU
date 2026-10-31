@@ -136,22 +136,11 @@ Lan chuyển sang tab Feynman để luyện tập. Máy chủ nhận thấy cả
 
 #### Bước 5: Trả lời Câu hỏi 1 về Tối ưu hóa cơ sở dữ liệu
 Nội dung câu hỏi hiển thị cho Lan:
-> *"Cửa hàng có 200 sản phẩm. Mở trang danh sách 1 lần thì database nhận bao nhiêu truy vấn? Chỉ ra dòng code tạo ra chúng."*
-
-- **Lần trả lời 1:** Lan gõ câu trả lời: *"200 truy vấn, vì có 200 sản phẩm."*
-  Máy chủ gửi câu trả lời và các ý bắt buộc cho AI chấm điểm. AI đánh giá độ chính xác đạt 50 điểm (dưới ngưỡng đạt 70 điểm) vì Lan chỉ đếm số lần trong vòng lặp mà quên mất lần truy vấn đầu tiên lấy danh sách, đồng thời chưa chỉ ra dòng code cụ thể. Máy chủ xác định câu trả lời chưa đạt và gửi về gợi ý nấc 1 (khái niệm):
-  > *"Trước khi vòng lặp chạy được, code phải có sẵn danh sách 200 sản phẩm. Danh sách đó lấy từ đâu, có tốn thêm lần hỏi database nào không?"*
-  Lúc này, điểm kỹ năng của Lan vẫn giữ nguyên 0.25 và Lan còn 2 lượt thử.
-
-- **Lần trả lời 2:** Sau khi đọc gợi ý, Lan nhìn lại code và gõ:
-  > *"201: dòng 15 findAll lấy danh sách 1 lần, rồi vòng for ở dòng 16–18 gọi findById 200 lần."*
-  Máy chủ kiểm tra thấy câu trả lời đạt 90 điểm và có đầy đủ các trích dẫn thực tế trong câu viết của Lan. Máy chủ công nhận Lan đã hoàn thành đạt yêu cầu sau gợi ý. Thuật toán BKT tính toán và nâng điểm kỹ năng Tối ưu hóa cơ sở dữ liệu của Lan từ 0.25 lên **0.4202**. Trình duyệt mở khóa đáp án tham khảo và cách sửa (dùng quan hệ nạp sẵn hoặc gom danh sách ID để giảm số lần truy vấn).
-
-#### Bước 6: Trả lời Câu hỏi 2 về Phân tầng kiến trúc
+  #### Bước 6: Trả lời Câu hỏi 2 về Phân tầng kiến trúc
 Lan bấm nút chuyển sang câu hỏi thứ hai:
-> *"Mỗi sản phẩm trả về đều có thêm loại hàng. Loại hàng đó được lấy ở đâu, đi qua những hàm nào ở những file nào, và được gắn vào sản phẩm ở dòng nào trước khi trả về?"*
+> *"Sản phẩm trả về có thêm thông tin loại hàng. Loại hàng đó từ đâu mà có?"*
 
-Lan trả lời chính xác ngay trong lần thử đầu tiên: chỉ rõ dữ liệu đi từ route ở controller qua hàm `listProducts` của service, đến repository gọi `findById`, rồi được gán vào thuộc tính sản phẩm ở dòng 17 trước khi trả về.
+Lan trả lời chính xác ngay trong lần thử đầu tiên: nêu đúng đường đi từ route ở `product.controller.ts` qua `productService.listProducts`, đến `categoryRepo.findById` dùng `findOne`, rồi loại hàng được gắn vào sản phẩm trước khi trả về route.
 - Máy chủ xác nhận đạt ngay lần đầu. Thuật toán BKT nâng điểm kỹ năng Phân tầng kiến trúc của Lan từ 0.25 lên **0.5767** (đủ điều kiện chuyển lên bậc Thực hành).
 
 #### Bước 7: Hoàn thành bài học và mở khóa

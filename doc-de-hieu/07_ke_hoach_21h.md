@@ -26,9 +26,9 @@ flowchart LR
 Nhóm chia 5 vai:
 - **Vai A — Trưởng tích hợp:** Thiết lập dự án, DB migration, auth, API routes, ghép nối, review & merge PR, deploy Vercel.
 - **Vai B — Engine:** Tầng 0 (tải repo, lọc rác), Tầng 1 (parser, AST, đồ thị gọi hàm), Tầng 2 (lát cắt, layout Dagre).
-- **Vai C — AI + BKT:** Lời gọi Gemini (`gemini-3.5-flash-lite`), prompt & responseSchema, cổng gác `guard/*`, chấm bài, `bkt-engine`.
+- **Vai C — AI + BKT:** Lời gọi Gemini (`gemini-3.5-flash-lite`), prompt & responseSchema, cổng gác `guard/*`, gọi lại kèm lý do, ghi mã lỗi, chấm bài, `bkt-engine`.
 - **Vai D — Giao diện:** Cột 1 Bản đồ (ReactFlow), Cột 2 Code (Monaco), Cột 3 Cockpit (X-Ray, Feynman, Tổng quan), chế độ offline.
-- **Vai E — Kiểm thử, demo, slide:** Fixture, chạy bộ test `50`, chạy thử repo demo, duyệt tay output AI, video demo dự phòng, slide thuyết trình.
+- **Vai E — Kiểm thử, demo, slide:** Fixture, chạy bộ test `50`, chạy thử repo demo, duyệt tay output AI, ghi lỗi thành ca test trong review/loi_da_gap.md, video demo dự phòng, slide thuyết trình.
 
 **Điểm nối để không ai phải chờ:**
 - **Fixture `StaticEngineResult`:** Vai A, D, E dùng bản viết tay từ repo mẫu (`50` Mục 1), đặt ở `src/server/engine/__fixtures__/shop-api.json`, gõ ở H+1; engine thật của Vai B thay vào lúc H+8.

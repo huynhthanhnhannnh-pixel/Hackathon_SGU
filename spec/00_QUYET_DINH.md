@@ -6,17 +6,17 @@
 
 ## Đọc nhanh
 
-- **Mục 1 — Quyết định đang có hiệu lực:** gồm mọi D chưa hủy, xếp theo mã tăng dần (D-01 … D-10, D-12, D-13, D-15, D-16, D-18 … D-20, D-22 … D-24, D-27 … D-50). Viết thẳng theo nội dung hiện hành, không giữ chữ cũ đã bị bãi bỏ.
+- **Mục 1 — Quyết định đang có hiệu lực:** gồm mọi D chưa hủy, xếp theo mã tăng dần (D-01 … D-10, D-12, D-13, D-15, D-16, D-18 … D-20, D-22 … D-24, D-27 … D-52). Viết thẳng theo nội dung hiện hành, không giữ chữ cũ đã bị bãi bỏ.
 - **Mục 2 — Chờ chốt:** hiện không còn quyết định nào.
-- **Mục 3 — Câu hỏi còn mở:** Q-03, Q-10. Không chặn việc code; có người chịu trách nhiệm và mặc định nếu chưa trả lời.
+- **Mục 3 — Câu hỏi còn mở:** Q-03, Q-10, Q-13. Không chặn việc code; có người chịu trách nhiệm và mặc định nếu chưa trả lời.
 - **Mục 4 — Lịch sử:** các D đã hủy hoặc thay thế (D-11, D-14, D-17, D-21, D-25, D-26) và các câu hỏi đã đóng (Q-01, Q-02, Q-04 … Q-09, Q-11, Q-12).
 - **Đổi một quyết định:** sửa dòng D-xx ở file này trước, rồi mới sửa file đích (cột "Áp dụng ở").
 
 | Mục | Nội dung | File được trỏ tới |
 | :-: | :-- | :-- |
-| 1 | Quyết định đang có hiệu lực (44 quyết định) | `01`, `02`, `03`, `04`, `10`, `11`, `20`, `21`, `22`, `30`, `50`, `doc-de-hieu/`, `pitch/` |
+| 1 | Quyết định đang có hiệu lực (46 quyết định) | `01`, `02`, `03`, `04`, `10`, `11`, `20`, `21`, `22`, `30`, `50`, `doc-de-hieu/`, `pitch/` |
 | 2 | Chờ chốt (không còn) | — |
-| 3 | Câu hỏi còn mở (Q-03, Q-10) | `02`, `50` |
+| 3 | Câu hỏi còn mở (Q-03, Q-10, Q-13) | `02`, `50` |
 | 4 | Lịch sử (6 D đã hủy/thay thế, 10 Q đã đóng) | — |
 
 ---
@@ -69,6 +69,8 @@
 | **D-48** | **Giao diện nhập repo:** Không làm ô "Thư mục" cạnh ô link. | `02`, `30` |
 | **D-49** | **Giấy phép mã nguồn:** Mã nguồn repo thi dùng giấy phép MIT. | `04`, repo thi |
 | **D-50** | **Model AI:** `gemini-3.5-flash-lite`, gọi bằng `generateContent` + `responseSchema` (đã thử thật 31/10). `gemini-2.5-flash` không còn mở cho người dùng mới; `gemini-3.8-flash` hạn mức quá thấp. Dự phòng: Groq `openai/gpt-oss-120b`. Gói free nên chỉ dùng repo công khai. Web deploy dùng key riêng; mỗi người test bằng key của mình. | `02`, `20`, `21`, `doc-de-hieu/07`, `pitch/` |
+| **D-51** | **Giảm lỗi lặp lại của AI, không đổi model** (chốt 31/10/2026):<br>• **Gọi lại kèm lý do:** analyze, overview, questions bị cổng gác chặn thì request kế tiếp có khối lý do do code dựng; lỗi mạng và JSON hỏng thì không. Chấm giữ mẫu tĩnh, không gọi lại. Số request không đổi.<br>• **Ghi mã lỗi:** mỗi lần chặn ghi 1 dòng log, không lưu code, văn bản AI, bài làm; không thêm bảng Postgres.<br>• **Lỗi thành ca test:** mỗi lỗi ❌ có ít nhất 1 ca trong `review/loi_da_gap.md`; đổi `PROMPT_VERSION` phải chạy lại, tụt thì không nhận.<br>• **Bài học vào prompt:** chỉ sau khi qua ca test, do nhóm tự viết, nạp đúng lời gọi liên quan, ghi model và `PROMPT_VERSION`; trần số bài ở Q-13. | `02`, `04`, `20`, `21` |
+| **D-52** | **Định hướng câu hỏi:** câu hỏi nêu 1 tình huống rồi hỏi vì sao, từ đâu hoặc chuyện gì xảy ra, để người học tự giải thích bằng lời của mình. Ý bắt buộc là ý giải thích; không đòi số dòng hay tên hàm, trừ góc `CHANGE` cần nêu file. Luật Đạt, BKT, cổng gác giữ nguyên. | `20`, `22`, `50`, `doc-de-hieu/`, `pitch/` |
 
 ---
 
@@ -84,6 +86,7 @@ Hiện không còn quyết định nào chờ chốt. D-08, D-09, D-16, D-24 đ�
 | :-- | :-- | :-- | :-- | :-- |
 | **Q-03** | **Repo demo thật** (thay repo minh họa `shop-api`).<br>Tiêu chí:<br>• public<br>• TS/JS Express hoặc NestJS<br>• 20–50 file code<br>• có ≥ 1 điểm dở rõ (truy vấn trong vòng lặp / thiếu transaction / secret viết thẳng)<br>• ≤ 15 MB nén | Cả nhóm | Trước ngày thi | Dùng repo mẫu tự viết theo `50_TEST_VA_FIXTURE.md` Mục 1, đẩy lên GitHub cá nhân trước giờ thi (đây là repo **dữ liệu demo**, không phải code sản phẩm) |
 | **Q-10** | **Giới hạn tốc độ tải zip không xác thực từ `codeload.github.com`:** GitHub không công bố quota số cụ thể cho codeload ngoài secondary rate limits / abuse detection (trả 429 / 403 khi quá nhiều request từ 1 IP/dải IP). Cần kiểm chứng hành vi probe và tải zip ở giờ H+1. | Vai B | Trước ngày thi | Giữ semaphore `MAX_CONCURRENT_INGESTIONS` và cache RAM để giảm thiểu số lần tải; gặp 429 trả `ERR_GITHUB_RATE_LIMIT_CDN` |
+| **Q-13** | **Trần số bài học nạp vào prompt (D-51):** chưa có số đo nên chưa đặt số. | _chờ điền_ | _chờ điền_ | Chưa nạp bài học nào vào prompt |
 
 ---
 
