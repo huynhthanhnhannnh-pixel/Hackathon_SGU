@@ -6,7 +6,7 @@
 
 ## Đọc nhanh
 
-- **Mục 1 — Quyết định đang có hiệu lực:** gồm mọi D chưa hủy, xếp theo mã tăng dần (D-01 … D-10, D-12, D-13, D-15, D-16, D-18 … D-20, D-22 … D-24, D-27 … D-50). Viết thẳng theo nội dung hiện hành, không giữ chữ cũ đã bị bãi bỏ.
+- **Mục 1 — Quyết định đang có hiệu lực:** gồm mọi D chưa hủy, xếp theo mã tăng dần (D-01 … D-10, D-12, D-13, D-15, D-16, D-18 … D-20, D-22 … D-24, D-27 … D-51). Viết thẳng theo nội dung hiện hành, không giữ chữ cũ đã bị bãi bỏ.
 - **Mục 2 — Chờ chốt:** hiện không còn quyết định nào.
 - **Mục 3 — Câu hỏi còn mở:** Q-03, Q-10. Không chặn việc code; có người chịu trách nhiệm và mặc định nếu chưa trả lời.
 - **Mục 4 — Lịch sử:** các D đã hủy hoặc thay thế (D-11, D-14, D-17, D-21, D-25, D-26) và các câu hỏi đã đóng (Q-01, Q-02, Q-04 … Q-09, Q-11, Q-12).
@@ -14,7 +14,7 @@
 
 | Mục | Nội dung | File được trỏ tới |
 | :-: | :-- | :-- |
-| 1 | Quyết định đang có hiệu lực (44 quyết định) | `01`, `02`, `03`, `04`, `10`, `11`, `20`, `21`, `22`, `30`, `50`, `doc-de-hieu/`, `pitch/` |
+| 1 | Quyết định đang có hiệu lực (45 quyết định) | `01`, `02`, `03`, `04`, `10`, `11`, `20`, `21`, `22`, `30`, `50`, `doc-de-hieu/`, `pitch/` |
 | 2 | Chờ chốt (không còn) | — |
 | 3 | Câu hỏi còn mở (Q-03, Q-10) | `02`, `50` |
 | 4 | Lịch sử (6 D đã hủy/thay thế, 10 Q đã đóng) | — |
@@ -69,6 +69,7 @@
 | **D-48** | **Giao diện nhập repo:** Không làm ô "Thư mục" cạnh ô link. | `02`, `30` |
 | **D-49** | **Giấy phép mã nguồn:** Mã nguồn repo thi dùng giấy phép MIT. | `04`, repo thi |
 | **D-50** | **Model AI:** `gemini-3.5-flash-lite`, gọi bằng `generateContent` + `responseSchema` (đã thử thật 31/10). `gemini-2.5-flash` không còn mở cho người dùng mới; `gemini-3.8-flash` hạn mức quá thấp. Dự phòng: Groq `openai/gpt-oss-120b`. Gói free nên chỉ dùng repo công khai. Web deploy dùng key riêng; mỗi người test bằng key của mình. | `02`, `20`, `21`, `doc-de-hieu/07`, `pitch/` |
+| **D-51** | **Tăng số node lên tối đa 20:**<br>• Bản đồ tối đa 20 node (`CONFIG.DISPLAY_MAX_NODES = 20`, tối thiểu vẫn là 6); đường chính tối đa 6 node (`CONFIG.CRITICAL_PATH_MAX_NODES = 6`); thứ tự chọn ENG-114 giữ nguyên.<br>• Bỏ node thừa ngoài 20 ⇒ ghi `IngestionReport.omitted_node_count` + warning "{n} luồng khác không hiển thị trên bản đồ".<br>• Tab Tổng quan giữ luật D-46 (đợi mọi node phân tích xong).<br>• Nâng `CONFIG.ENGINE_VERSION` từ `"1.0.0"` lên `"1.1.0"`. | `02`, `11`, `30`, `50`, `doc-de-hieu/`, `pitch/` |
 
 ---
 

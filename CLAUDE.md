@@ -12,7 +12,7 @@ Spec changes go through `spec/00_QUYET_DINH.md`.
 
 ## Project in one paragraph
 
-Turns a public GitHub repo (or uploaded `.zip`) into a deterministic map of 6–8 cross-file architectural slices (pure code, 0 tokens, target < 1.5 s), then uses Gemini at **4 calls** — `analyze-node` (skills + strengths + weak points, shared cache), `analyze-overview`, `enrich-node` (questions per weak skill), `evaluate-feynman` (grading + 3-level hints) — and a server-side BKT learner model over 16 skills stored in Supabase Postgres. Stack: Next.js 15, ReactFlow, Monaco, Tree-sitter WASM, Zustand, Supabase.
+Turns a public GitHub repo (or uploaded `.zip`) into a deterministic map of up to 20 cross-file architectural slices (pure code, 0 tokens, target < 1.5 s), then uses Gemini at **4 calls** — `analyze-node` (skills + strengths + weak points, shared cache), `analyze-overview`, `enrich-node` (questions per weak skill), `evaluate-feynman` (grading + 3-level hints) — and a server-side BKT learner model over 16 skills stored in Supabase Postgres. Stack: Next.js 15, ReactFlow, Monaco, Tree-sitter WASM, Zustand, Supabase.
 
 ## Directory map
 

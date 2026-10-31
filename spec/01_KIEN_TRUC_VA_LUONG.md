@@ -6,7 +6,7 @@
 
 ## 1. Sản phẩm trong 1 đoạn
 
-SimpliFey V2 Pro biến một repo GitHub public (hoặc file `.zip`) thành **bản đồ học tập** gồm 6–8 node. Mỗi node là một **lát cắt nghiệp vụ xuyên file** (route → middleware → service → repository), không phải một file. Bản đồ dựng bằng **code thuần, 0 token** (Tree-sitter, Tarjan, PageRank, lát cắt, Dagre). Sau đó AI (Gemini) làm 4 việc:
+SimpliFey V2 Pro biến một repo GitHub public (hoặc file `.zip`) thành **bản đồ học tập** gồm tối đa `CONFIG.DISPLAY_MAX_NODES` node. Mỗi node là một **lát cắt nghiệp vụ xuyên file** (route → middleware → service → repository), không phải một file. Bản đồ dựng bằng **code thuần, 0 token** (Tree-sitter, Tarjan, PageRank, lát cắt, Dagre). Sau đó AI (Gemini) làm 4 việc:
 1. phân tích từng node (kỹ năng + điểm hay + điểm dở, dùng chung cho mọi người học);
 2. viết tổng quan repo;
 3. đặt câu hỏi Feynman cho đúng các kỹ năng người học còn yếu;

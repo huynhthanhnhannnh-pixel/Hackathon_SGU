@@ -9,7 +9,7 @@
 
 > **SimpliFey V2 Pro giúp sinh viên hiểu chính repo của mình.**
 > - Người học dán link GitHub public hoặc kéo thả file `.zip`.
-> - Thuật toán phân tích tĩnh vẽ bản đồ 6–8 bài học, không gọi AI và không chạy code. Mỗi bài là một luồng nghiệp vụ đi xuyên file (route → middleware → service → repository).
+> - Thuật toán phân tích tĩnh vẽ bản đồ tối đa 20 bài học, không gọi AI và không chạy code. Mỗi bài là một luồng nghiệp vụ đi xuyên file (route → middleware → service → repository).
 > - AI phân tích từng bài: kỹ năng, điểm hay, điểm dở. Sau đó AI hỏi theo kiểu Feynman: mỗi kỹ năng chưa vững một câu, bám đúng dòng code. Trả lời sai thì có gợi ý theo nấc.
 > - Mọi văn bản AI phải qua cổng gác bằng code trước khi hiển thị.
 > - Mô hình BKT theo dõi 16 kỹ năng kỹ nghệ phần mềm lâu dài: kỹ năng đã vững thì chỉ bị hỏi 1 câu khó, lâu không luyện thì thanh kỹ năng mài mòn dần.
@@ -254,7 +254,7 @@ Nhóm kiểm soát bằng:
 | :-- | :-- | :-- |
 | Bản đồ dựng bằng code, 0 token | Khẳng định | INV-02 |
 | Dựng bản đồ < 1,5 giây | "mục tiêu", kèm số trên đồng hồ | `02` Mục 1.1 |
-| 6–8 bài học mỗi repo | Repo nhỏ có thể ít hơn | `DISPLAY_MIN_NODES`, `DISPLAY_MAX_NODES` |
+| Tối đa 20 bài học mỗi repo | Repo nhỏ có thể ít hơn | `DISPLAY_MIN_NODES`, `DISPLAY_MAX_NODES`, D-51 |
 | Gửi AI ≤ 100 dòng / ≤ 1.500 token code mỗi node, đã che secret | Khẳng định | `NODE_MAX_LINES`, `NODE_MAX_CODE_TOKENS` |
 | AI ở 4 lời gọi; phân tích node và tổng quan được cache dùng chung, câu hỏi sinh mới | Khẳng định | INV-02, D-37 |
 | ~58.500 token ≈ 0,05 USD người đầu; ~38.000 ≈ 0,03 USD người sau | "ước lượng, chưa đo, theo giá Gemini 3.5 Flash-Lite" | `02` Mục 1.1 |

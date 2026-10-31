@@ -507,7 +507,7 @@ Tra chi tiết: spec/10_ENGINE_INGEST.md Mục 13.
 
 # Phần 2: Tầng đồ thị và lát cắt — Từ danh sách file sạch đến bản đồ kiến trúc hoàn chỉnh
 
-Ở Phần 1, chúng ta đã chứng kiến cách hệ thống tải về, lọc rác, che giấu bí mật và giữ lại tối đa 100 file mã nguồn sạch nhất trong bộ nhớ RAM cùng bản vân tay công nghệ của dự án. Nhưng đó mới chỉ là các file văn bản riêng lẻ nằm trong bộ nhớ. Làm thế nào để từ hàng ngàn dòng code đó, hệ thống có thể tự động vẽ nên một bản đồ kiến trúc mạch lạc gồm 6 đến 8 node, chỉ ra được luồng đi từ lúc người dùng gửi yêu cầu đến khi dữ liệu được ghi vào database, mà **hoàn toàn không tiêu tốn một token AI nào**?
+Ở Phần 1, chúng ta đã chứng kiến cách hệ thống tải về, lọc rác, che giấu bí mật và giữ lại tối đa 100 file mã nguồn sạch nhất trong bộ nhớ RAM cùng bản vân tay công nghệ của dự án. Nhưng đó mới chỉ là các file văn bản riêng lẻ nằm trong bộ nhớ. Làm thế nào để từ hàng ngàn dòng code đó, hệ thống có thể tự động vẽ nên một bản đồ kiến trúc mạch lạc gồm tối đa 20 node, chỉ ra được luồng đi từ lúc người dùng gửi yêu cầu đến khi dữ liệu được ghi vào database, mà **hoàn toàn không tiêu tốn một token AI nào**?
 
 Đó chính là nhiệm vụ của Tầng 2. Toàn bộ tiến trình biến các file văn bản thành một đồ thị tương tác được thực hiện qua 13 giai đoạn tuần tự, chặt chẽ như một dây chuyền sản xuất cơ khí chính xác.
 
@@ -545,7 +545,7 @@ flowchart TB
   GRP_A --> GRP_B
   GRP_B --> GRP_C
   GRP_C --> GRP_D
-  GRP_D --> OUT_RES["Bản đồ kiến trúc 6-8 node"]
+  GRP_D --> OUT_RES["Bản đồ kiến trúc tối đa 20 node"]
 ```
 
 ### Nguyên tắc tất định tuyệt đối
@@ -1010,18 +1010,18 @@ Hệ thống quy định: Mũi tên luôn đi từ Node có độ phức tạp n
 
 Tiếp theo, hệ thống áp dụng thuật toán **Rút gọn bắc cầu (Transitive Reduction)**: Nếu đã có đường đi từ A sang B rồi từ B sang C, mũi tên nối tắt trực tiếp từ A sang C sẽ tự động bị xóa bỏ để đồ thị thoáng đãng, không bị chằng chịt dây nhợ.
 
-### Ngân sách hiển thị tối ưu (Display Budget: 6 đến 8 node)
-Một giao diện học tập lý tưởng chỉ nên chứa từ 6 đến 8 node. Nếu một dự án có tới 20 điểm vào sinh ra 20 lát cắt, người học sẽ bị ngợp. Hệ thống áp dụng thuật toán phân bổ ngân sách hiển thị:
-1. **Bảo tồn Đường găng dài nhất (Critical Path):** Sử dụng quy hoạch động để tìm ra chuỗi liên kết dài nhất trên đồ thị (ví dụ luồng: Đăng ký -> Hồ sơ -> Giỏ hàng -> Thanh toán). Hệ thống giữ lại tối đa 4 node đầu tiên trên chuỗi xương sống này.
-2. **Tuyển chọn các vị trí còn lại:** Ưu tiên bổ sung các node có độ phức tạp trên 15, tiếp theo là các node có `rank_score` cao nhất, cho đến khi vừa đủ đúng 8 node.
+### Ngân sách hiển thị tối ưu (Display Budget: tối đa 20 node)
+Bản đồ học tập được thiết kế để chứa tối đa 20 node (tối thiểu là 6). Hệ thống áp dụng thuật toán phân bổ ngân sách hiển thị:
+1. **Bảo tồn Đường găng dài nhất (Critical Path):** Sử dụng quy hoạch động để tìm ra chuỗi liên kết dài nhất trên đồ thị (ví dụ luồng: Đăng ký -> Hồ sơ -> Giỏ hàng -> Thanh toán). Hệ thống giữ lại tối đa 6 node đầu tiên trên chuỗi xương sống này.
+2. **Tuyển chọn các vị trí còn lại:** Ưu tiên bổ sung các node VIP có độ phức tạp nhận thức trên 15, tiếp theo là các node có `rank_score` cao nhất, độ phức tạp giảm dần, `id` tăng dần, cho đến khi vừa đủ tối đa 20 node.
 
-Dự án có từ 8 node trở xuống thì giữ hết. Node bị bỏ sẽ không được gộp file vào node khác.
+Dự án có từ 20 node trở xuống thì giữ hết toàn bộ. Nếu vượt quá 20 node, phần thừa sẽ bị bỏ (không gộp file) và hệ thống ghi nhận số node bị ẩn kèm cảnh báo hiển thị cho người học: "{n} luồng khác không hiển thị trên bản đồ".
 
-*Ví dụ tính tay với số giả định:* Có 10 node L1 đến L10. Chuỗi dài nhất là L1 → L2 → L3 → L4 → L5.
-1. Giữ 4 node đầu của chuỗi: L1, L2, L3, L4. Còn 4 chỗ trống.
-2. Trong 6 node còn lại, L7 có độ phức tạp 22 và L9 có 18, đều trên 15, nên vào trước. Còn 2 chỗ.
-3. L5, L6, L8, L10 đều không quá 15, xếp theo `rank_score` là 0.6, 0.5, 0.4, 0.3. Lấy L5 và L6.
-4. Kết quả giữ L1–L7 và L9, bỏ L8, L10. Mũi tên được tính lại trên 8 node này.
+*Ví dụ tính tay với số giả định:* Có 10 node L1 đến L10 (≤ 20 nên giữ hết cả 10 node). Chuỗi dài nhất là L1 → L2 → L3 → L4 → L5.
+1. Thứ tự xếp hạng chọn 5 node của chuỗi dài nhất trước: L1, L2, L3, L4, L5.
+2. Trong 5 node còn lại, L7 có độ phức tạp 22 và L9 có 18 (đều VIP > 15) nên được xếp kế tiếp: L7, L9. Đã có 7 node.
+3. 3 node còn lại L6, L8, L10 xếp theo `rank_score` (giả sử 0.5, 0.4, 0.3) ⇒ L6 là node thứ 8.
+4. Kết quả: Giữ trọn vẹn cả 10 node L1–L10 (≤ 20 nên không bỏ node nào). Mũi tên được tính trên toàn bộ 10 node này.
 
 ### Bổ nhiệm Nút Đỉnh cao (Nút Capstone ★)
 Trong số các node còn lại sau khi áp ngân sách hiển thị (không tính node gom nhóm), hệ thống chọn đúng 1 node có độ phức tạp nhận thức cao nhất làm **Nút Capstone (★)**. Hòa thì lấy `rank_score` lớn hơn, hòa nữa thì lấy `id` nhỏ hơn. Capstone không nhất thiết nằm cuối bản đồ: N5 vẫn có mũi tên sang N6, N7.
@@ -1187,6 +1187,6 @@ Từ một đường dẫn GitHub thô sơ do người dùng dán vào, chỉ x�
 6. Cắt lát các luồng nghiệp vụ xương sống, đo độ phức tạp nhận thức và độ cân bằng kiến trúc.
 7. Đặt tên tất định trực quan và bố trí tọa độ đồ thị.
 
-Một bản đồ kiến trúc 6 đến 8 node chuẩn mực đã sẵn sàng để dẫn dắt sinh viên bước vào hành trình khám phá và làm chủ mã nguồn!
+Một bản đồ kiến trúc tối đa 20 node chuẩn mực đã sẵn sàng để dẫn dắt sinh viên bước vào hành trình khám phá và làm chủ mã nguồn!
 
 Tra chi tiết: spec/11_ENGINE_DO_THI.md Mục 15.

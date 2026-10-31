@@ -2,7 +2,7 @@
 
 > Hackathon SGU 2026–2027 · Repo **tài liệu** (đặc tả để code + tài liệu thuyết trình). Code sản phẩm viết trong vòng thử thách 21 giờ (vòng 2: 7–8/11/2026, giả định 12g00 07/11 → 09g00 08/11; vòng 3: 09/11/2026) ở một repo thi riêng, trống lúc bắt đầu.
 
-**Sản phẩm:** dán link repo GitHub (hoặc kéo thả `.zip`) ⇒ trong < 1.5 s có bản đồ 6–8 node. Mỗi node là một lát cắt nghiệp vụ xuyên file, dựng bằng code thuần, 0 token. Sau đó AI làm 3 việc:
+**Sản phẩm:** dán link repo GitHub (hoặc kéo thả `.zip`) ⇒ trong < 1.5 s có bản đồ tối đa 20 node. Mỗi node là một lát cắt nghiệp vụ xuyên file, dựng bằng code thuần, 0 token. Sau đó AI làm 3 việc:
 - phân tích điểm hay / điểm dở của từng node;
 - đặt câu hỏi Feynman cho đúng kỹ năng người học còn yếu;
 - chấm bài và gợi ý 3 nấc.

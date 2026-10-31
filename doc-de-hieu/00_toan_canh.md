@@ -11,14 +11,14 @@ Trong các đồ án công nghệ thông tin mà sinh viên chúng ta thường 
 
 SimpliFey được xây dựng để giải quyết bài toán đó. Bạn chỉ cần đưa vào đường dẫn repo GitHub công khai (public) hoặc tải lên một file nén `.zip`, hệ thống sẽ dẫn dắt bạn qua 4 bước:
 
-1. **Vẽ bản đồ học tập từ chính code của bạn:** Máy chủ tự động phân tích ngữ pháp mã nguồn và rút ra 6 đến 8 node quan trọng nhất. Mỗi node là một luồng nghiệp vụ xuyên qua nhiều file (ví dụ: luồng Đặt hàng đi từ file nhận yêu cầu route, qua file kiểm tra middleware, xuống file xử lý service, rồi tới file lưu dữ liệu repository), hoàn toàn không phải một file đơn lẻ. Bản đồ này được dựng hoàn toàn bằng code thuần, không tốn token AI và không tốn chi phí.
+1. **Vẽ bản đồ học tập từ chính code của bạn:** Máy chủ tự động phân tích ngữ pháp mã nguồn và rút ra tối đa 20 node. Mỗi node là một luồng nghiệp vụ xuyên qua nhiều file (ví dụ: luồng Đặt hàng đi từ file nhận yêu cầu route, qua file kiểm tra middleware, xuống file xử lý service, rồi tới file lưu dữ liệu repository), hoàn toàn không phải một file đơn lẻ. Bản đồ này được dựng hoàn toàn bằng code thuần, không tốn token AI và không tốn chi phí.
 2. **AI phân tích từng node:** Khi bạn mở một node trên bản đồ, AI mới đọc vài chục dòng code của lát cắt đó và chỉ ra: node này thể hiện những kỹ năng phần mềm nào, kiến trúc được tổ chức ra sao, đâu là điểm viết tốt và đâu là điểm viết chưa tốt.
 3. **Thử thách giải thích Feynman:** Hệ thống đặt câu hỏi tình huống bám sát các dòng code thật trong repo cho những kỹ năng bạn chưa vững. Bạn trả lời bằng ngôn ngữ của chính mình. Trả lời chưa đúng thì nhận gợi ý từng nấc; trả lời đúng thì hoàn thành node và mở khóa bài học kế tiếp.
 4. **Theo dõi năng lực dài hạn:** Hệ thống ghi nhớ độ thuần thục của bạn trên 16 kỹ năng kỹ nghệ phần mềm thông qua mô hình xác suất. Những kỹ năng lâu ngày không luyện tập sẽ nhạt dần trên giao diện. Đây chỉ là thông tin hiển thị, hệ thống không có nút ôn tập.
 
 ```mermaid
 flowchart LR
-    REPO["1 · Repo GitHub hoặc .zip"] --> ENG["2 · Engine code thuần<br/>0 token, ra 6–8 node"]
+    REPO["1 · Repo GitHub hoặc .zip"] --> ENG["2 · Engine code thuần<br/>0 token, ra tối đa 20 node"]
     ENG --> AI["3 · AI phân tích node<br/>và đặt câu hỏi qua cổng gác"]
     AI --> FEYN["4 · Thử thách Feynman<br/>giải thích bám sát code"]
     FEYN --> BKT["5 · Ghi nhận 16 kỹ năng<br/>và mở khóa bài học"]
@@ -46,7 +46,7 @@ flowchart TD
 ```
 
 ### Trụ cột 1: Engine phân tích tĩnh (Tầng 0 đến Tầng 2)
-Engine chịu trách nhiệm tiếp nhận repo từ mạng hoặc file tải lên, lọc bỏ các thư mục rác (như thư viện cài sẵn hay file ảnh), che đi các khóa bí mật lỡ để trong code, và giữ lại tối đa 100 file mã nguồn quan trọng trong bộ nhớ RAM. Sau đó, bộ phân tích cú pháp Tree-sitter lập danh bạ các hàm và lần theo vết gọi hàm để trích xuất các lát cắt nghiệp vụ từ điểm đón yêu cầu (route) xuống tầng lưu dữ liệu. Các thuật toán đồ thị như Tarjan gộp các hàm gọi vòng, PageRank xếp hạng độ quan trọng, và Dagre bố trí tọa độ hiển thị để tạo ra bản đồ học tập từ 6 đến 8 node rõ ràng, mạch lạc mà không tốn một token AI nào.
+Engine chịu trách nhiệm tiếp nhận repo từ mạng hoặc file tải lên, lọc bỏ các thư mục rác (như thư viện cài sẵn hay file ảnh), che đi các khóa bí mật lỡ để trong code, và giữ lại tối đa 100 file mã nguồn quan trọng trong bộ nhớ RAM. Sau đó, bộ phân tích cú pháp Tree-sitter lập danh bạ các hàm và lần theo vết gọi hàm để trích xuất các lát cắt nghiệp vụ từ điểm đón yêu cầu (route) xuống tầng lưu dữ liệu. Các thuật toán đồ thị như Tarjan gộp các hàm gọi vòng, PageRank xếp hạng độ quan trọng, và Dagre bố trí tọa độ hiển thị để tạo ra bản đồ học tập tối đa 20 node rõ ràng, mạch lạc mà không tốn một token AI nào.
 - *Đọc sâu tài liệu:* [02_engine.md](02_engine.md)
 
 ### Trụ cột 2: AI và hệ thống cổng gác kiểm duyệt

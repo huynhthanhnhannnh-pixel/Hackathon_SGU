@@ -13,7 +13,7 @@ Trong các ứng dụng giáo dục hay trợ lý lập trình hiện nay, nhi�
 2. **AI hay bịa (ảo giác):** Khi đọc quá nhiều tập tin cùng lúc, mô hình rất dễ bịa ra những hàm không hề tồn tại, nhầm lẫn vị trí giữa các tầng xử lý, hoặc đoán sai công nghệ của dự án.
 3. **Kết quả không ổn định:** Cùng một đoạn mã nhưng mỗi lần hỏi AI lại đưa ra một cấu trúc phân tích khác nhau, khiến hệ thống không thể lưu trữ hay xây dựng bài học bài bản.
 
-SimpliFey chọn một cách tiếp cận hoàn toàn khác: **máy phân tích mã trước (hoàn toàn miễn phí, không tốn token), AI chỉ vào cuộc ở bước sau cùng và chỉ đọc từng lát cắt rất hẹp**. Bộ phân tích tĩnh đã dựng sẵn bản đồ gồm 6 đến 8 luồng nghiệp vụ quan trọng nhất. Khi người học cần học hoặc kiểm tra kiến thức ở ô nào, hệ thống mới gửi đúng vài chục dòng mã của ô đó cho mô hình ngôn ngữ lớn (Gemini) thông qua đúng 4 lời gọi được kiểm soát chặt chẽ.
+SimpliFey chọn một cách tiếp cận hoàn toàn khác: **máy phân tích mã trước (hoàn toàn miễn phí, không tốn token), AI chỉ vào cuộc ở bước sau cùng và chỉ đọc từng lát cắt rất hẹp**. Bộ phân tích tĩnh đã dựng sẵn bản đồ gồm tối đa 20 luồng nghiệp vụ quan trọng nhất. Khi người học cần học hoặc kiểm tra kiến thức ở ô nào, hệ thống mới gửi đúng vài chục dòng mã của ô đó cho mô hình ngôn ngữ lớn (Gemini) thông qua đúng 4 lời gọi được kiểm soát chặt chẽ.
 
 ```mermaid
 flowchart TD

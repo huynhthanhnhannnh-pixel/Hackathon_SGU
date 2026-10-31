@@ -21,7 +21,7 @@ Toàn bộ logic tính toán quan trọng trong hệ thống — như trạng th
 - *Đánh đổi:* Mọi hành động làm thay đổi tiến độ học tập đều cần gửi yêu cầu lên máy chủ và chờ phản hồi. Trình duyệt chỉ sử dụng các hàm thuần hỗ trợ để hiển thị giao diện và phục vụ chế độ demo dữ liệu ghi sẵn (Offline).
 
 ### Tải trước có giới hạn (Smart Lazy Loading)
-Một repo có 6 đến 8 node. Nếu ngay khi mở trang, giao diện yêu cầu phân tích toàn bộ các node cùng lúc, hạn mức AI của phiên sẽ tốn cho cả những node người học chưa mở.
+Một repo có tới 20 node. Nếu ngay khi mở trang, giao diện yêu cầu phân tích toàn bộ các node cùng lúc, hạn mức AI của phiên sẽ tốn cho cả những node người học chưa mở.
 - *Cách giải quyết:* Giao diện chỉ yêu cầu phân tích sâu (lời gọi chuẩn bị câu hỏi) cho duy nhất node mà người dùng đang mở xem. Đối với tác vụ phân tích mã nguồn tổng thể, hệ thống chỉ đưa vào hàng đợi xử lý node đang mở cùng với 1 đến 2 node kế tiếp theo thứ tự phụ thuộc, với số lượng xử lý đồng thời tối đa là 3 tác vụ.
 - *Khi nào cách này bộc lộ hạn chế?* Khi người học bấm liên tục qua nhiều node, các node chưa kịp phân tích sẽ hiện khung chờ với hiệu ứng lấp lánh (shimmer) cho tới khi dữ liệu về.
 

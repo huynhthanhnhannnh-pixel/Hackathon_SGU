@@ -1,6 +1,6 @@
 # 11 — ENGINE TẦNG 1–2: CÚ PHÁP, ĐỒ THỊ GỌI HÀM, LÁT CẮT, NODE
 
-> Bản đồ 6–8 node tất định, 0 token: symbol, callgraph, lát cắt entry (D-06), cạnh (D-07), budget, tên, tọa độ.
+> Bản đồ `DISPLAY_MIN_NODES`–`DISPLAY_MAX_NODES` node tất định, 0 token: symbol, callgraph, lát cắt entry (D-06), cạnh (D-07), budget, tên, tọa độ.
 > Input: `IngestOutput` (`10` Mục 0). Output: `StaticEngineResult`; `toClientResult()` ⇒ `ClientStaticEngineResult`.
 > Code: `src/server/engine/index.ts` (`runEngine`, `buildGraph`, `toClientResult`) · `src/server/engine/graph/{registry,parser,symbols,callgraph,tarjan,pagerank,complexity,slicing,unclebob,nodes,naming,layout,whitelist,degraded}.ts` · `graph/resolvers/{ts_js,python,java,go,dart,universal}.ts` · `queries/<lang>.scm` · `public/grammars/*.wasm`.
 > Kiểu: `02_CONTRACTS.md` · Hằng số: `CONFIG.*` · Luật `ENG-xx`.
@@ -9,10 +9,10 @@
 
 ## Đọc nhanh
 
-- Nhận `IngestOutput`, dựng 6–8 node kiến trúc tất định, 0 token AI.
+- Nhận `IngestOutput`, dựng `DISPLAY_MIN_NODES`–`DISPLAY_MAX_NODES` node kiến trúc tất định, 0 token AI.
 - Parse AST qua Tree-sitter (TS/JS, Python đã kiểm chứng) trích xuất symbol và callgraph.
 - Tìm entry point, cắt lát gọi hàm (Forward Slicing) và xếp hạng bằng PageRank/Cognitive Complexity.
-- Ghép node theo Display Budget (tối đa 8 node), đặt tên tất định, bố cục DAG (D-07, D-08).
+- Ghép node theo Display Budget (tối đa `CONFIG.DISPLAY_MAX_NODES` node), đặt tên tất định, bố cục DAG (D-07, D-08).
 - Trả về `StaticEngineResult` (lưu cache) và `ClientStaticEngineResult` gửi về UI.
 
 Sơ đồ 13 giai đoạn:
@@ -241,7 +241,7 @@ export function buildSlice(entry: EntryPoint, ctx: EngineContext): Candidate;
 2. **ENG-111 Tên gốc & id (D-08).** Thang tên Mục 13 chạy trên mọi candidate ⇒ `base_title`, `title_source`, `title_evidence`. `slug(t)`: NFD bỏ dấu, `đ`⇒`d`, lowercase, ngoài `[a-z0-9]` ⇒ `-`, gộp `-`, bỏ `-` hai đầu, cắt `CONFIG.TITLE_MAX_CHARS` ký tự, rỗng ⇒ `node`. `hash6(s)` = 6 hex đầu SHA-1(UTF-8). Lát cắt `slice-<slug(base_title)>-<hash6(entry_symbol)>`; thuật toán `algo-<slug>-<hash6(khóa hàm)>`; node ảo ENG-102; Virtual Root ENG-104.
 3. **ENG-112 Cạnh D-07.** Cặp có `functions` giao ≠ ∅: A → B nếu `cognitive_complexity` A nhỏ hơn; hòa ⇒ `rank_score` lớn hơn; hòa ⇒ `id` nhỏ hơn. Thứ tự toàn phần ⇒ `G0` không chu trình (assert `tarjanScc`).
 4. Rút gọn bắc cầu `G0` ⇒ `G0r` (bỏ `u → v` khi còn đường dài ≥ 2).
-5. **ENG-114 Display Budget.** `max = CONFIG.DISPLAY_MAX_NODES`, không đếm `is_group_root`. ≤ `max` ⇒ giữ hết. Ngược lại: (1) đường dài nhất trên `G0r` (DP theo Kahn, hòa ⇒ `id` nhỏ), chọn đỉnh trước/cuối dài nhất, hòa ⇒ `rank_score` lớn, hòa ⇒ `id` nhỏ; giữ tối đa `CONFIG.CRITICAL_PATH_MAX_NODES` node đầu; (2) thêm: `cognitive_complexity > CONFIG.VIP_COMPLEXITY_MIN` trước, `rank_score` giảm, `cognitive_complexity` giảm, `id` tăng — tới `max`. Bỏ không gộp file.
+5. **ENG-114 Display Budget.** `max = CONFIG.DISPLAY_MAX_NODES`, không đếm `is_group_root`. ≤ `max` ⇒ giữ hết. Ngược lại: (1) đường dài nhất trên `G0r` (DP theo Kahn, hòa ⇒ `id` nhỏ), chọn đỉnh trước/cuối dài nhất, hòa ⇒ `rank_score` lớn, hòa ⇒ `id` nhỏ; giữ tối đa `CONFIG.CRITICAL_PATH_MAX_NODES` node đầu; (2) thêm: `cognitive_complexity > CONFIG.VIP_COMPLEXITY_MIN` trước, `rank_score` giảm, `cognitive_complexity` giảm, `id` tăng — tới `max`. Bỏ không gộp file. Số node bị bỏ ⇒ `ingestion_report.omitted_node_count` + warning "{n} luồng khác không hiển thị trên bản đồ".
 6. **Cạnh trên tập giữ `K`** = rút gọn bắc cầu của `{(u,v) ∈ K² : v đến được từ u trong G0}`. `confidence = RESOLVED` khi: cạnh D-07 có hàm chung `f` mà đường DFS (ENG-80) tới `f` ở cả hai lát cắt toàn `RESOLVED`; hoặc đường trong `G0` toàn `RESOLVED`; hoặc là cạnh node ảo/gom nhóm. Còn lại `INFERRED`. `GraphEdge.id = "${source}->${target}"`; `prerequisites` = nguồn cạnh vào trừ node `is_group_root`, sort.
 7. **Capstone (D-12).** Trong node cuối trừ node `is_group_root`: `cognitive_complexity` lớn nhất, hòa ⇒ `rank_score` lớn nhất, hòa ⇒ `id` nhỏ nhất; đúng 1.
 8. **Trường.** `files` = file các bước theo thứ tự, không trùng; `languages` = `LanguageId` của `files`, sort; `support_tier` = `STRUCTURAL` nếu có file `STRUCTURAL`, ngược lại `RESOLVED`; lát cắt: `cognitive_complexity` = max `complexity` các hàm (D-12), `rank_score = rank_score(files[0])`, `ARCHITECTURAL_DATA_FLOW`, `is_vip_algorithm = false`. `is_group_root = false` trừ ENG-104.
@@ -314,7 +314,7 @@ export function mainPath(graph: StaticEngineResult): string[];   // → RepoOver
 | T-ENG-14 | A {a,s} cc 3 · B {b,s,t} cc 8 · C {c,t} cc 12 · D {d,s,t} cc 20 | `G0` A→B, B→C, A→D, B→D, C→D ⇒ A→B→C→D |
 | T-ENG-15 | `G0r` A→X→C, A→B, B→C, giữ {A,B,C} · chuỗi A→B→C, giữ {A,C} | A→B, B→C (không A→C) · A→C |
 | T-ENG-18 | `"Order Checkout"` + `src/routes/order.routes.ts#<POST /checkout>` · `src/algo/dijkstra.ts#findShortestRoute` | `slice-order-checkout-a6ff3b` · `algo-find-shortest-route-acfab3` |
-| T-ENG-19 | 12 candidate, đường dài nhất 6 · 2 node cc 20, rank 0.6/0.7 | 4 đầu đường + 4 theo ENG-114 = 8 · Capstone = rank 0.7 |
+| T-ENG-19 | 12 candidate, đường dài nhất 6 · 2 node cc 20, rank 0.6/0.7 | Giữ hết 12 (≤ CONFIG.DISPLAY_MAX_NODES), omitted_node_count = 0 · Capstone = rank 0.7 |
 | T-ENG-21 | TS Na 2, Nc 3, Ce 1, Ca 1 · Na 0, Nc 2, Ce 0, Ca 3 · toàn `.js` | A 0.4, I 0.5, D 0.1 `BALANCED` · D 1 `ZONE_OF_PAIN` · miễn trừ |
 | T-ENG-22 | `POST /orders/checkout` · `GET /users/:id/orders` · `POST /orders` · `GET /orders/:id` · `GET /orders` · `DELETE /orders/:id` | Order Checkout · List User Orders · Create Order · Get Order · List Orders · Delete Order |
 | T-ENG-23 | `crawler/run.py` `main()`, crawler×4, page×3 · hai "Checkout" ở `cart/`, `payment/` | "Crawler / Page" · "Checkout (cart)", "Checkout (payment)", `id` không đổi |
@@ -328,3 +328,4 @@ export function mainPath(graph: StaticEngineResult): string[];   // → RepoOver
 | T-ENG-33 | `toClientResult` | Không `symbol_whitelist`, không `suspicious_instruction_files` |
 | T-ENG-34 | `runEngine` 2 lần cùng zip (X-01) | `nodes`, `edges`, `symbol_whitelist` giống hệt khi `JSON.stringify` |
 | T-ENG-35 | `mainPath`: cạnh `n-a→n-b→n-d`, `n-a→n-c→n-d`, `vroot-algorithms→n-a` | `["n-a","n-b","n-d"]` (hòa theo `id`; không có vroot) |
+| T-ENG-36 | 25 candidate | Giữ 20 (= CONFIG.DISPLAY_MAX_NODES), omitted_node_count = 5, warning "5 luồng khác không hiển thị trên bản đồ", node is_group_root không tính |

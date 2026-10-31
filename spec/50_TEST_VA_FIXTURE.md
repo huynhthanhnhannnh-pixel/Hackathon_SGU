@@ -31,7 +31,7 @@ Web bán hàng Express + TypeORM + Postgres, tự viết để minh họa (dùng
 N1 Đăng ký ──► N2 Xem hồ sơ ──► N4 Giỏ hàng ─┐
 N3 Danh sách SP ─────────────────────────────┴─► N5 Thanh toán ★ ──► N6 Gửi email xác nhận
                                                                 └─► N7 Báo cáo doanh thu
-★ = Capstone (cognitive_complexity lớn nhất)
+★ = Capstone (cognitive_complexity lớn nhất).
 ```
 
 | Node | Kỹ năng (sau kiểm) | Điểm dở (Nhận định của AI) |
@@ -346,7 +346,7 @@ Trạng thái ban đầu của Huy: N3 `COMPLETED`.
 
 ## 5. Definition of Done toàn sản phẩm (kiểm ở H+17)
 
-- [ ] Dán link repo demo ⇒ bản đồ 6–8 node; đồng hồ đo hiện `ingest_ms + engine_ms` thật.
+- [ ] Dán link repo demo ⇒ bản đồ 6–20 node; đồng hồ đo hiện `ingest_ms + engine_ms` thật.
 - [ ] Cùng link chạy 2 lần ⇒ cùng `node_id`, cùng tọa độ (INV-10).
 - [ ] Repo private / sai link / repo rỗng / quá lớn ⇒ đúng mã lỗi và thông điệp của `30`.
 - [ ] Mở từng node của repo demo ⇒ node nào cũng có bản phân tích (D-46); Tab 1 có điểm hay + điểm dở "Nhận định của AI"; không có tên bịa (kiểm tay 3 node).
