@@ -132,7 +132,7 @@ Task giao trước khi ngủ được chạy quá 30 phút; dậy phải kiểm 
 | Rủi ro | Dấu hiệu sớm | Ứng phó |
 | :-- | :-- | :-- |
 | Model AI không dùng được / free tier cạn | Lỗi 404 / 429 ở H+1 | Demo bằng Offline. Muốn đổi sang Groq theo D-50 thì phải viết thêm lớp gọi Groq và thêm `GROQ_API_KEY`, đổi `CONFIG.LLM_MODEL` thôi không đủ |
-| Comment EOCD không có commit SHA | Kiểm H+1 thất bại | Dùng `ARCHIVE_HASH`; phiên không dựng lại được khi trượt cache RAM trên Vercel (Q-12, ghi vào `00`) |
+| Comment EOCD không có commit SHA | Kiểm H+1 thất bại | Dùng `ARCHIVE_HASH`; phiên vẫn mở lại được nhờ `session_snapshots` (D-59) |
 | Engine trễ | Không có lát dọc 1 ở H+8 | Các vai khác tiếp tục trên fixture; cắt theo Mục 3 bước 1 |
 | Tree-sitter WASM lệch ABI | Parser lỗi khi nạp grammar | Đổi phiên bản `web-tree-sitter` trong `package.json` cho khớp grammar có sẵn, không tự build lại (D-32) |
 | Postgres / mạng hội trường chập chờn | Lỗi khi tập demo | Mạng di động riêng (thể lệ khuyến khích); offline mode |

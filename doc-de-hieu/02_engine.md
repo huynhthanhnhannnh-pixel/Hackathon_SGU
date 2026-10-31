@@ -14,10 +14,10 @@ Tài liệu này sẽ cùng bạn đi qua từng bước chi tiết của cỗ m
 
 Trước khi đi vào từng dòng code xử lý, chúng ta cần hiểu rõ 3 nguyên tắc thiết kế bất di bất dịch của tầng này:
 
-### Không chạm ổ đĩa (Zero-Disk)
-Mọi byte dữ liệu tải từ GitHub về hay do người dùng tải lên qua trình duyệt đều chỉ được giữ trong bộ nhớ RAM dưới dạng các mảng byte (`Uint8Array`). Hệ thống tuyệt đối không gọi các lệnh ghi file ra đĩa cứng hay thư mục tạm của hệ điều hành. Khi quá trình phân tích kết thúc (dù thành công hay gặp sự cố), các biến giữ bộ nhớ tạm đều được giải phóng ngay lập tức.
-- *Vì sao phải làm vậy?* Khi triển khai ứng dụng trên các nền tảng đám mây hiện đại (serverless hoặc container không có quyền ghi đĩa bền vững), việc ghi đĩa vừa chậm chạp vừa tiềm ẩn nguy cơ rò rỉ dữ liệu của người dùng trước cho người dùng sau. Làm việc thuần túy trên RAM giúp tốc độ xử lý nhanh hơn hàng chục lần và an toàn tuyệt đối về mặt dữ liệu.
-- *Đánh đổi:* Bộ nhớ RAM của máy chủ có giới hạn rất nghiêm ngặt. Nếu người dùng đưa vào một repository nặng hàng gigabyte, hệ thống không thể chứa hết. Do đó, chúng ta bắt buộc phải đặt trần dung lượng nén và giải nén như bạn sẽ thấy ở các mục sau.
+### Không lưu file mã nguồn
+Mọi byte dữ liệu tải từ GitHub về hay do người dùng tải lên qua trình duyệt (file code đầy đủ, buffer zip, cây cú pháp AST) đều chỉ được giữ tạm thời trong bộ nhớ RAM dưới dạng các mảng byte (`Uint8Array`) trong lúc Engine chạy rồi giải phóng ngay lập tức. Hệ thống tuyệt đối không ghi file mã nguồn đầy đủ ra đĩa cứng hay cơ sở dữ liệu. Thứ duy nhất có code được lưu vào Postgres là kết quả engine của phiên (`StaticEngineResult` gồm các node, đoạn code đã cắt của từng bước `trace_steps[].snippet`, `dto_snippet`, tên hàm, danh sách file, tọa độ) ở bảng `session_snapshots` (1 dòng / phiên, ghi cùng lúc tạo phiên theo D-59).
+- *Vì sao phải làm vậy?* Khi triển khai ứng dụng trên nền tảng đám mây serverless, việc không lưu file mã nguồn đầy đủ vừa bảo vệ an toàn dữ liệu, vừa tôn trọng bản quyền mã nguồn của người học. Việc lưu lại lát cắt trong `session_snapshots` giúp mọi lần vào lại phiên, người học luôn thấy đúng cùng đoạn code đó mà không cần tải lại file zip hay chạy lại engine; cả phiên GitHub lẫn phiên từ file `.zip` đều mở lại được bình thường.
+- *Đánh đổi:* Bộ nhớ RAM của máy chủ có giới hạn rất nghiêm ngặt trong lúc phân tích. Nếu người dùng đưa vào một repository nặng hàng gigabyte, hệ thống không thể chứa hết. Do đó, chúng ta bắt buộc phải đặt trần dung lượng nén và giải nén như bạn sẽ thấy ở các mục sau.
 
 ### Luôn luôn tất định (Determinism)
 Cùng một phiên bản mã nguồn đầu vào (cùng mã commit hoặc cùng một file nén giống hệt nhau), hệ thống phải luôn sinh ra kết quả lọc và cấu trúc bản đồ giống nhau từng chi tiết, không phụ thuộc vào việc máy chủ chạy trên hệ điều hành Windows hay Linux, không phụ thuộc vào giờ giấc hệ thống hay thứ tự file ngẫu nhiên mà hệ điều hành trả về khi duyệt thư mục.
@@ -689,11 +689,19 @@ Nhận diện các chú thích kiến trúc:
 - Flask: Nhận diện các decorator `@app.route('/...')` và `@login_required`.
 - FastAPI: Nhận diện `@app.post('/checkout')` và tự động bóc tách các hàm phụ thuộc được tiêm qua `Depends(get_current_user)` thành các bước tiền xử lý.
 
-### 4. Các điểm đầu vào chương trình và công cụ dòng lệnh
-Đối với các ứng dụng không có giao diện web (như ứng dụng dòng lệnh CLI hay script chạy nền):
-- Nhận diện hàm `main()` của Go hoặc `public static void main` của Java.
-- Nhận diện khối lệnh khởi chạy `if __name__ == "__main__":` của Python.
-- Nhận diện các lệnh đăng ký của thư viện dòng lệnh như Commander (`.command('build').action(...)`) hay Click.
+### 4. Ứng dụng di động phổ biến (React Native, Flutter, Android, iOS — D-57)
+Nhận diện các màn hình (SCREEN) làm điểm đầu vào kiến trúc:
+- **React Native & Expo:** Màn hình trong Stack, Tab, Drawer của React Navigation (`<X.Screen component={...}>`); Expo Router tự nhận diện các file trang trong thư mục `app/` (trừ file layout `_layout`).
+- **Flutter:** `GoRoute`, danh sách `routes` hoặc màn hình `home` của `MaterialApp`/`CupertinoApp`, các trang con của `TabBarView`/`IndexedStack`.
+- **Android (Java/Kotlin):** Lớp con của `Activity` (bắt đầu từ `onCreate`), `Fragment` (`onCreateView`), hoặc khai báo `composable(...)` trong `NavHost`.
+- **iOS (Swift):** Lớp con của `UIViewController` (`viewDidLoad`), hoặc view SwiftUI là đích điều hướng `NavigationLink`, tab trong `TabView` hay `WindowGroup`.
+
+### 5. Các điểm đầu vào chương trình, entry chung và quy ước export (D-58)
+Đối với các ứng dụng dòng lệnh, chương trình không framework hoặc cấu trúc phi web:
+- **Hàm `main` của mọi ngôn ngữ có ngữ pháp (Tree-sitter):** Nhận diện hàm `main()` (hoặc C# `Main()`) có thân ở mọi ngôn ngữ được hỗ trợ: C, C++, Rust (`src/bin/*.rs`), C#, Java, Go (`package main`), Kotlin, Swift (`@main`/`main.swift`), Scala (`extends App`), Ruby (`if __FILE__ == $0`), PHP (`index.php` ở gốc scope). Nhờ đó, các chương trình C/C++/Rust/C# có `main` sẽ có lát cắt hoàn chỉnh xuất phát từ `main`, không còn bị xếp vào nhóm chỉ có thuật toán rời.
+- **Entry chung theo tên thư mục và file (`GENERIC`):** Tự động nhận diện các file nằm trong thư mục hoặc có tên chứa: `controllers/`, `routes/`, `handlers/`, `screens/`, `pages/`, `views/`, `activities/`, `fragments/`, `commands/`… áp dụng cả khi repo dùng framework tự tạo chưa có mẫu đăng ký riêng.
+- **Quy ước hàm "export" ở các ngôn ngữ không có từ khóa `export`:** Engine hiểu quy ước công khai tự nhiên của từng ngôn ngữ: Python và Dart là tên không bắt đầu bằng dấu gạch dưới `_`; Go là tên bắt đầu bằng chữ hoa; Rust dùng từ khóa `pub`; C/C++ là hàm cấp file không có `static` và method `public`; Java, C#, Kotlin, Swift, PHP là hàm/method không khai báo `private`/`protected`/`internal`.
+- **Công cụ dòng lệnh:** Nhận diện các lệnh đăng ký của thư viện CLI như Commander (`.command('build').action(...)`), Click hay Typer.
 
 ### Khái niệm "File cửa ngõ" (Ingress File)
 Bất kỳ file nào chứa ít nhất một điểm đầu vào hợp lệ (ví dụ file `order.routes.ts` hay `user.routes.ts`) sẽ được trao danh hiệu **File cửa ngõ (Ingress File)**. Danh hiệu này mang một ý nghĩa chiến lược rất lớn: các file cửa ngõ sẽ được cộng thêm điểm ưu tiên đặc biệt khi chạy thuật toán PageRank ở bước sau, đảm bảo bản đồ kiến trúc luôn bắt đầu từ những nơi thân thuộc nhất với người dùng.
@@ -718,7 +726,7 @@ flowchart TD
   CHK_FILES -- "Sai" --> MODE_NORMAL
 ```
 
-1. **Chế độ BÌNH THƯỜNG (NORMAL):** Áp dụng cho các dự án ứng dụng web, microservices có điểm đầu vào rõ ràng. Đây là chế độ mặc định của dự án `shop-api` của chúng ta. Hệ thống sẽ đi theo từng điểm vào để cắt lát luồng dữ liệu.
+1. **Chế độ BÌNH THƯỜNG (NORMAL):** Áp dụng cho các dự án ứng dụng web, microservices có điểm đầu vào rõ ràng. Đây là chế độ mặc định của dự án `shop-api` của chúng ta. Hệ thống sẽ đi theo từng điểm vào để cắt lát luồng dữ liệu. Đặc biệt, các chương trình C/C++/Rust/C# có hàm `main` giờ đây cũng có lát cắt hoàn chỉnh xuất phát từ `main`, không còn chỉ là "tập thuật toán" (D-58); các ứng dụng di động phổ biến (React Native, Flutter, Android, iOS) cũng được nhận diện màn hình làm điểm bắt đầu luồng (D-57).
 2. **Chế độ THỦ TỤC (PROCEDURAL):** Áp dụng khi dự án chỉ có 1 đến 2 file mã nguồn (ví dụ một file `main.py` dài hàng trăm dòng). Vì không có route, hệ thống sẽ dùng kỹ thuật đặc biệt để chia file dài đó thành các chặng logic (nhận dữ liệu, kiểm tra hợp lệ, xử lý tính toán, lưu trữ) thành các node ảo độc lập.
 3. **Repo toàn bài tập thuật toán rời** (ví dụ `quicksort.py`, `dijkstra.py` không gọi nhau, không có `main`): vẫn chạy chế độ BÌNH THƯỜNG. Không có lát cắt nào, nên bản đồ chỉ gồm các node thuật toán sinh từ những hàm có độ phức tạp cao (Mục 9). Bản demo không còn chế độ gom nhóm riêng cho loại repo này (D-54).
 
@@ -953,7 +961,7 @@ Hệ thống soi từng dòng lệnh cấp 1 trong hàm dài nhất và dán cho
 
 Mỗi nhãn xuất hiện sẽ được hệ thống đóng gói thành một **Node ảo (Virtual Node)**. Bốn node ảo này được tự động liên kết với nhau theo thứ tự:
 $$\text{Input} \longrightarrow \text{Validation} \longrightarrow \text{Compute \& Output} \longrightarrow \text{Data Access}$$
-Nhờ vậy, một file script đơn điệu bỗng chốc biến thành một quy trình kiến trúc 4 chặng vô cùng trực quan và dễ hiểu!
+Nhờ vậy, một file script đơn điệu bỗng chốc biến thành một quy trình kiến trúc 4 chặng vô cùng trực quan và dễ hiểu! Cần lưu ý rằng: node ảo là chặng code thật tách từ hàm dài theo vai trò câu lệnh, không phải node gom nhóm; hoàn toàn không có node nào trên bản đồ thiếu code thật.
 
 Tra chi tiết: spec/11_ENGINE_DO_THI.md Mục 10.
 
@@ -979,10 +987,10 @@ flowchart LR
   class N5 capstone;
 ```
 
-### Luật sinh cạnh liên kết giữa hai Node: Dùng chung hàm
-Một mũi tên có hướng từ Node A trỏ sang Node B chỉ được phép xuất hiện khi và chỉ khi:
-**Hai lát cắt A và B dùng chung ít nhất một hàm có thân được viết trong chính repo!**
-*(Lưu ý: Các hàm của thư viện bên ngoài như hàm `productRepo.findOne` của TypeORM không được tính; bắt buộc phải là code do nhóm lập trình viên tự viết).*
+### Luật sinh cạnh liên kết giữa hai Node: Dùng chung hàm và Nối vào luồng gọi (D-07, D-56)
+Một mũi tên có hướng giữa Node A và Node B xuất hiện trong hai trường hợp:
+1. **Hai lát cắt dùng chung hàm (D-07):** Khi hai lát cắt A và B dùng chung ít nhất một hàm có thân được viết trong chính repo (không tính các hàm thư viện bên ngoài).
+2. **Lát cắt gọi tới Node thuật toán (D-56):** Node thuật toán được nối dây vào lát cắt (luồng) nào gọi tới nó, kể cả khi gọi qua nhiều tầng hàm trung gian trên đồ thị gọi hàm. Ví dụ: lát cắt "Thanh toán" gọi tới hàm trong Node thuật toán "Tính phí ship" ⇒ hệ thống tự động nối dây giữa 2 ô này. Ngược lại, nếu một thuật toán không có luồng nào gọi tới, hoặc chỉ được gọi gián tiếp qua callback hay gọi động mà đồ thị gọi hàm không thấy, thì Node thuật toán đó vẫn đứng riêng độc lập.
 
 Hãy nhìn vào bản đồ mẫu của `shop-api`. Bản đồ này viết tay cho dữ liệu mẫu; khi chạy engine thật, đồ thị engine sinh ra là chuẩn:
 - **N2 (Xem hồ sơ) và N5 (Thanh toán):** Cả hai dùng chung hàm bảo vệ `authMiddleware`. Trên sơ đồ không có mũi tên thẳng từ N2 sang N5, vì đã có đường đi qua N4 và bước rút gọn bắc cầu bên dưới xóa mũi tên nối tắt.
@@ -1139,6 +1147,8 @@ Hệ thống tích hợp thuật toán bố cục phân tầng **Dagre (`@dagrej
 - **Tính tất định:** Trước khi đưa vào thuật toán Dagre, danh sách các node và các cạnh được sắp xếp tăng dần theo mã định danh `id`. Tọa độ tâm ($cx, cy$) do Dagre tính toán sẽ được làm tròn thành số nguyên tuyệt đối:
   $$x = \text{round}(cx - 240 / 2), \quad y = \text{round}(cy - 120 / 2)$$
 Nhờ vậy, dù bạn mở bản đồ trên bất kỳ trình duyệt nào hay chạy lại bao nhiêu lần, các ô vuông vẫn luôn đứng yên ở đúng vị trí pixel đó!
+
+- **Mọi điểm bắt đầu nằm cùng 1 hàng trên cùng (D-55):** Điểm bắt đầu là những node không có node cha nào đi trước (`prerequisites = []`). Để tất cả các điểm này nằm thẳng hàng ngang ở trên cùng bản đồ, engine tạm thời thêm một nút gốc phụ ảo `__start__` nối tới mọi điểm bắt đầu bằng những cạnh có trọng số rất lớn (cạnh rất nặng), rồi chạy Dagre bố cục. Trọng số này ép Dagre xếp mọi điểm bắt đầu vào đúng hàng trên cùng. Sau đó, engine gỡ bỏ nút phụ `__start__`. Nút phụ này không hiển thị trên giao diện, không tính là một node hay điểm bắt đầu, và bản đồ không thêm nhãn "Bắt đầu" nào.
 
 Tra chi tiết: spec/11_ENGINE_DO_THI.md Mục 14.
 

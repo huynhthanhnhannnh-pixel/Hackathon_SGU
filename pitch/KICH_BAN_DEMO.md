@@ -143,7 +143,7 @@
 ### ⏱ 4:35 – 5:00 · Kết — Vai A (slide cuối)
 
 > "Tiến độ lưu theo tài khoản GitHub, đổi máy vẫn học tiếp.
-> Hệ thống **không lưu code** của bạn, chỉ lưu mã commit. Lần sau nó tải lại đúng commit đó, và vì thuật toán tất định nên bản đồ dựng lại y hệt.
+> Hệ thống không lưu repo của bạn. Nó chỉ giữ những đoạn code ngắn đã cắt cho từng ô, nên lần sau mở lại bạn thấy đúng những đoạn code y như hôm nay.
 > Đúng với chủ đề cuộc thi: ứng dụng AI vào học tập, tiết kiệm chi phí.
 > Bản đồ 0 token; phần AI ước lượng khoảng 0,05 USD/phiên (chưa đo). Dự án mã nguồn mở, ai cũng tự cài được, bản nhóm host là bản dùng thử.
 > Các công cụ hiện có giúp bạn **đọc** một repo. SimpliFey kiểm tra bạn có **hiểu** repo của chính mình hay không. Xin cảm ơn thầy và Ban giám khảo."

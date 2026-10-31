@@ -20,14 +20,14 @@ Trong các đồ án web bán hàng mà sinh viên chúng ta thường làm, d�
 
 Trong một hệ thống học tập qua mã nguồn thực tế như SimpliFey, cách làm tự do đó có nhiều rủi ro: database phình to, kết nối database bị giữ khi chờ AI, và trình duyệt có thể thấy trước đáp án của câu hỏi hoặc thông tin nhạy cảm. Để tránh các vấn đề này, SimpliFey đặt ra 8 nguyên tắc:
 
-1. **Không lưu mã nguồn vào cơ sở dữ liệu (Zero-Disk cho code):** Postgres hoàn toàn không chứa file mã nguồn, đoạn code mẫu (snippet), hay cây cú pháp phân tích của repo. Cơ sở dữ liệu chỉ lưu trữ thông tin tài khoản người học, điểm các kỹ năng, thông tin phiên học (commit SHA và khung đồ thị chỉ chứa tên node mà không có nội dung code), tiến độ học tập, câu trả lời của người học, và các văn bản do AI tạo ra đã được kiểm định an toàn (như câu hỏi, đáp án mẫu, bản phân tích kiến trúc). Mã nguồn repo chỉ nằm trong RAM của máy chủ khi phân tích tĩnh và trong cache RAM tạm (Mục 3.3).
+1. **Không lưu file mã nguồn vào cơ sở dữ liệu:** Postgres hoàn toàn không lưu file mã nguồn đầy đủ, file zip hay cây cú pháp AST của repo (những dữ liệu này chỉ nằm trong RAM khi phân tích rồi giải phóng ngay). Thứ duy nhất có code được lưu vào Postgres là kết quả engine của phiên (`StaticEngineResult` gồm các node, đoạn code đã cắt của từng bước `trace_steps[].snippet`, `dto_snippet`, tên hàm, danh sách file, tọa độ) ở bảng `session_snapshots` (1 dòng / phiên, ghi cùng lúc tạo phiên theo D-59). Mục đích là để mọi lần vào lại phiên, người học luôn thấy đúng cùng đoạn code đó mà không cần tải lại zip hay chạy lại engine. Ngoài ra, cơ sở dữ liệu chỉ lưu trữ thông tin tài khoản, điểm kỹ năng, thông tin phiên học, tiến độ, câu trả lời, và các văn bản AI đã qua kiểm định an toàn (Mục 3.3).
 2. **Máy chủ là nơi ghi dữ liệu duy nhất:** Trình duyệt web của người học hoàn toàn không có quyền trực tiếp thêm, sửa hay xóa bất kỳ dòng dữ liệu nào trong bất kỳ bảng nào của Postgres. Mọi hành động làm thay đổi dữ liệu (từ việc tạo phiên học, lưu câu hỏi, ghi nhận lượt trả lời, đến việc tính toán điểm kỹ năng) bắt buộc phải gửi yêu cầu qua các endpoint của route handler trên máy chủ. Máy chủ sau khi kiểm tra tính hợp lệ mới dùng khóa bí mật quản trị (service-role key) để ghi vào database.
 3. **Trả về dữ liệu theo danh sách trường cho phép:** Mỗi endpoint API khi trả lời trình duyệt đều phải thông qua một hàm ánh xạ tường minh. Hệ thống nghiêm cấm việc sao chép nguyên đối tượng thô từ database hoặc từ AI để gửi về máy khách. Điều này ngăn chặn việc vô tình làm lộ các ý niệm sai lệch (misconception), đáp án mẫu chuẩn khi câu hỏi chưa kết thúc, hoặc các danh sách file hướng dẫn đáng ngờ được quét trong repo.
 4. **Mọi yêu cầu đều cần xác thực phiên:** Người dùng đăng nhập thông qua tài khoản GitHub bằng Supabase Auth. Mọi request gửi tới các endpoint API bắt buộc phải kèm theo mã token truy cập trong header `Authorization: Bearer <access_token>`. Máy chủ sẽ xác thực tính hợp lệ của token này với Supabase Auth. Nếu thiếu token hoặc token không hợp lệ, hệ thống sẽ từ chối ngay với mã lỗi `ERR_UNAUTHENTICATED`.
 5. **Kiểm tra nghiêm ngặt quyền sở hữu phiên học:** Khi người học thao tác với mã định danh phiên (`session_id`) hoặc lần học (`run_id`), máy chủ luôn kiểm tra xem phiên đó có đúng là do người dùng hiện tại tạo ra hay không. Nếu phiên không tồn tại hoặc thuộc về người khác, hệ thống sẽ trả về mã lỗi `ERR_SESSION_NOT_FOUND`. Hệ thống không bao giờ trả về thông báo kiểu "phiên này là của người khác" nhằm bảo vệ quyền riêng tư cho người dùng.
 6. **Kiểm soát và đếm định mức token trên máy chủ:** Sau mỗi lần gọi AI thực tế (không tính những lần lấy dữ liệu có sẵn từ bộ nhớ đệm cache), máy chủ sẽ cộng dồn số lượng token tiêu thụ vào trường `tokens_used` của phiên học trong bảng `learning_sessions`. Trước mỗi lần chuẩn bị gọi AI mới, máy chủ kiểm tra nếu số token đã dùng chạm hoặc vượt quá hạn mức quy định của phiên thì sẽ chặn lại và trả về mã lỗi `ERR_TOKEN_QUOTA_EXCEEDED`.
 7. **Tách biệt hoàn toàn lời gọi AI ra ngoài giao dịch database:** Nếu giữ transaction của database trong lúc chờ AI phản hồi, kết nối và khóa bị giữ suốt thời gian đó. Vì vậy, máy chủ luôn đọc dữ liệu cần thiết ra trước, kết thúc đọc, sau đó gọi AI hoàn toàn bên ngoài transaction. Chỉ sau khi AI đã trả về kết quả và kết quả được tính toán xong xuôi, máy chủ mới mở một transaction ngắn để lưu kết quả vào database.
-8. **Thiết kế phù hợp với môi trường serverless trên Vercel:** Hệ thống được triển khai trên nền tảng Vercel Functions tại khu vực Singapore (`sin1`). Do cơ chế của môi trường serverless, bộ nhớ đệm RAM chứa kết quả phân tích đồ thị hay các cơ chế kiểm soát số luồng chỉ tồn tại trong phạm vi của một tiến trình (instance) đơn lẻ. Chúng có tác dụng giúp hệ thống xử lý nhanh hơn trong điều kiện lý tưởng, nhưng hệ thống không bao giờ phụ thuộc vào chúng. Khi bộ nhớ đệm RAM bị trượt do chuyển instance, máy chủ luôn có cơ chế tự động dựng lại đồ thị từ commit SHA của phiên. Ngoài ra, file `.zip` do người dùng tải lên bị giới hạn dung lượng tối đa 4.5 MB để tuân thủ giới hạn kích thước gói tin gửi lên của Vercel, trong khi việc nạp qua đường link GitHub không bị giới hạn này.
+8. **Thiết kế phù hợp với môi trường serverless trên Vercel:** Hệ thống được triển khai trên nền tảng Vercel Functions tại khu vực Singapore (`sin1`). Do cơ chế của môi trường serverless, bộ nhớ đệm RAM chứa kết quả phân tích đồ thị hay các cơ chế kiểm soát số luồng chỉ tồn tại trong phạm vi của một tiến trình (instance) đơn lẻ. Chúng có tác dụng giúp hệ thống xử lý nhanh hơn trong điều kiện lý tưởng, nhưng hệ thống không bao giờ phụ thuộc vào chúng. Khi bộ nhớ đệm RAM bị trượt do chuyển instance, máy chủ chỉ cần đọc lại kết quả đã lưu của phiên từ bảng `session_snapshots` trong Postgres (D-59). Ngoài ra, file `.zip` do người dùng tải lên bị giới hạn dung lượng tối đa 4.5 MB để tuân thủ giới hạn kích thước gói tin gửi lên của Vercel, trong khi việc nạp qua đường link GitHub không bị giới hạn này.
 
 Tra chi tiết: spec/03_API_VA_LUU_TRU.md Mục 1.
 
@@ -37,12 +37,13 @@ Tra chi tiết: spec/03_API_VA_LUU_TRU.md Mục 1.
 
 Trong các bài tập lớn ở trường, chúng ta thường có thói quen tạo một hoặc hai bảng thật lớn rồi nhồi nhét tất cả thông tin vào các cột kiểu chuỗi hoặc JSON. Tuy nhiên, khi hệ thống cần mở rộng và hỗ trợ học tập lâu dài, cách thiết kế đó sẽ bộc lộ nhược điểm: không thể tái sử dụng điểm kỹ năng giữa các kho lưu trữ (repo) khác nhau, khó truy vết lịch sử làm bài, và không thể phân quyền bảo mật chi tiết.
 
-Cơ sở dữ liệu của SimpliFey được chuẩn hóa thành 8 bảng chuyên biệt, mỗi bảng chịu trách nhiệm cho một phần dữ liệu độc lập:
+Cơ sở dữ liệu của SimpliFey được chuẩn hóa thành 9 bảng chuyên biệt, mỗi bảng chịu trách nhiệm cho một phần dữ liệu độc lập:
 
 ```mermaid
 erDiagram
   profiles ||--o{ skill_states : "tích lũy điểm kỹ năng"
   profiles ||--o{ learning_sessions : "sở hữu các phiên học"
+  learning_sessions ||--o| session_snapshots : "lưu kết quả engine"
   learning_sessions ||--o{ node_progress : "theo dõi tiến độ node"
   learning_sessions ||--o{ node_runs : "thực hiện các lần học"
   node_runs ||--o{ question_attempts : "ghi nhận từng lượt trả lời"
@@ -53,7 +54,7 @@ erDiagram
   }
 ```
 
-### 2.1. Chi tiết 8 bảng và lý do tách bảng
+### 2.1. Chi tiết 9 bảng và lý do tách bảng
 
 1. **Bảng `profiles` (Hồ sơ người dùng):**
    - *Lưu gì:* Mã định danh người dùng `user_id` (khóa chính, liên kết trực tiếp với bảng `auth.users` của Supabase), tên hiển thị `display_name`, và thời điểm tạo tài khoản `created_at`.
@@ -64,19 +65,22 @@ erDiagram
 3. **Bảng `learning_sessions` (Phiên học mã nguồn):**
    - *Lưu gì:* Mỗi dòng đại diện cho một phiên làm việc với một repo mã nguồn cụ thể. Bao gồm nguồn nạp `source` (`GITHUB` hoặc `ZIP`), khóa nhận diện repo `repo_key`, mã định danh trạng thái mã nguồn `snapshot_id` (chính là commit SHA 40 ký tự hoặc mã băm của file nén), loại định danh `snapshot_id_kind`, thư mục con `subdir`, nhãn `ref_label`, tên repo `repo_name`, phiên bản engine phân tích `engine_version`, khung đồ thị `graph_skeleton` (chỉ chứa danh sách các node và quan hệ phụ thuộc mà không chứa code), số lượng token đã dùng `tokens_used`, cùng thời gian tạo và hoạt động gần nhất.
    - *Vì sao tách bảng:* Tách riêng phiên học giúp người dùng có thể cùng lúc học nhiều repo khác nhau, hoặc mở lại phiên học cũ mà không làm xáo trộn tiến độ của các dự án khác.
-4. **Bảng `node_progress` (Tiến độ hoàn thành node):**
+4. **Bảng `session_snapshots` (Kết quả engine của phiên):**
+   - *Lưu gì:* Mã phiên `session_id` (khóa chính, liên kết trực tiếp với bảng `learning_sessions` qua `ON DELETE CASCADE`), gói JSONB `result` chứa toàn bộ `StaticEngineResult` của phiên (các node, đoạn code đã cắt của từng bước `trace_steps[].snippet`, `dto_snippet`, tên hàm, danh sách file, tọa độ bố cục; không chứa file mã nguồn đầy đủ), và thời điểm tạo `created_at`.
+   - *Vì sao tách bảng:* Bảng này lưu đoạn code đã cắt của phiên (D-59) để mọi lần vào lại phiên, người học luôn thấy đúng cùng đoạn code đó mà không cần tải lại file zip hay chạy lại engine. Bảng không có chính sách RLS cho client (client không đọc trực tiếp, chỉ đọc qua endpoint máy chủ). Dòng này được ghi cùng transaction lúc tạo phiên và tự động xóa khi xóa phiên hoặc xóa tài khoản.
+5. **Bảng `node_progress` (Tiến độ hoàn thành node):**
    - *Lưu gì:* Trạng thái học tập của từng node trong một phiên học cụ thể. Khóa chính là cặp `(session_id, node_id)`. Bảng này chỉ lưu các node đã phát sinh sự kiện: trạng thái `status` (`AVAILABLE`, `COMPLETED`, hoặc `FAILED`), cờ báo phân tích lỗi `analysis_failed`, và thời điểm cập nhật `updated_at`.
    - *Vì sao tách bảng:* Tách tiến độ node ra khỏi phiên học giúp kích thước bản ghi của phiên học luôn gọn nhẹ. Đặc biệt, bảng này chỉ chứa các node đã có dữ liệu thực tế, các node chưa học hoặc bị khóa sẽ được máy chủ suy luận động khi đọc chứ không ghi cứng vào database.
-5. **Bảng `node_runs` (Một lần học cụ thể của một node):**
+6. **Bảng `node_runs` (Một lần học cụ thể của một node):**
    - *Lưu gì:* Mỗi khi người học bấm bắt đầu học một node, một bản ghi lần học (run) được tạo ra. Bảng lưu mã phiên `session_id`, mã node `node_id`, chế độ học `mode` (`LEARN`), danh sách câu hỏi chi tiết `questions` (kiểu `RunQuestion` dưới dạng JSONB), danh sách tham chiếu các bước code `steps` (chỉ lưu tên bước và tên hàm, không lưu code), danh sách từ khóa cấm của repo `forbidden_external_keywords`, thời điểm bắt đầu `started_at` và thời điểm kết thúc `finished_at`. Để tránh người học mở cùng lúc nhiều lần học cho một node, bảng có chỉ mục duy nhất (unique index) đảm bảo mỗi node trong một phiên chỉ có tối đa một run đang mở (`finished_at IS NULL`).
    - *Vì sao tách bảng:* Cột `questions` chứa đáp án mẫu nên client không được đọc bảng này, trong khi `node_progress` thì client đọc được. Tách ra để quyền đọc khác nhau, và để mỗi lần học giữ được kế hoạch câu hỏi cố định của riêng nó.
-6. **Bảng `question_attempts` (Lịch sử từng lượt trả lời câu hỏi):**
+7. **Bảng `question_attempts` (Lịch sử từng lượt trả lời câu hỏi):**
    - *Lưu gì:* Mỗi lần người học bấm nộp bài, một dòng mới được chèn vào bảng này: mã lần học `run_id`, vị trí câu hỏi `question_index`, số thứ tự lượt nộp `attempt_number` (từ 1 đến 3), kỹ năng được kiểm tra `skill`, điểm độ chính xác cốt lõi `core_accuracy`, điểm diễn giải đơn giản `simplicity`, ý định trả lời `intent` (`ANSWER`, `GIVE_UP`, hoặc `OFF_TOPIC`), kết quả đạt hay không `is_passed`, mảng cờ đánh giá các ý bắt buộc `points_covered`, nội dung câu trả lời của người học `student_answer` (tối đa 2000 ký tự), và thời điểm nộp. Bảng này tuân thủ nguyên tắc chỉ thêm mới, không sửa.
    - *Vì sao tách bảng:* Tách bảng này giúp lưu trữ chi tiết từng phản hồi của người học phục vụ cho việc xem lại lịch sử học tập, theo dõi sự tiến bộ qua các lượt gợi ý, và hỗ trợ đối soát khi có thắc mắc.
-7. **Bảng `ai_cache` (Bộ nhớ đệm phản hồi AI):**
+8. **Bảng `ai_cache` (Bộ nhớ đệm phản hồi AI):**
    - *Lưu gì:* Khóa bộ nhớ đệm `cache_key`, loại nội dung `kind` (`NODE_ANALYSIS` cho phân tích từng node, hoặc `REPO_OVERVIEW` cho tổng quan repo), gói dữ liệu JSONB `payload`, tên mô hình AI `model`, phiên bản prompt `prompt_version`, cùng số lượng token đầu vào `tokens_in` và đầu ra `tokens_out`.
    - *Vì sao tách bảng:* Các bài phân tích kiến trúc của một repo theo một commit SHA cụ thể là dữ liệu dùng chung cho tất cả mọi người học trên toàn hệ thống. Tách bảng này giúp tái sử dụng kết quả phân tích AI đã qua kiểm định, giúp tiết kiệm chi phí và tài nguyên token.
-8. **Bảng `dispute_reports` (Báo cáo thắc mắc kết quả chấm):**
+9. **Bảng `dispute_reports` (Báo cáo thắc mắc kết quả chấm):**
    - *Lưu gì:* Mã người báo `user_id`, mã lần học `run_id`, số thứ tự câu hỏi `question_index`, nội dung phản ánh `note` (tối đa 500 ký tự), và thời điểm gửi.
    - *Vì sao tách bảng:* Khi người học thấy AI chấm chưa đúng và bấm nút "Báo sai", hệ thống sẽ xử lý phục hồi điểm tự động ngay lập tức trên máy chủ mà không cần con người duyệt thủ công. Bảng này được tách riêng để ghi nhận lại nhật ký phục vụ việc đội ngũ phát triển rà soát chất lượng prompt về sau.
 
@@ -105,12 +109,12 @@ Trường `questions` trong bảng `node_runs` lưu trữ một mảng các đ�
 
 RLS là tính năng mạnh mẽ của Postgres cho phép thiết lập quyền đọc ghi dữ liệu đến từng dòng dựa vào danh tính của người dùng đang đăng nhập (`auth.uid()`):
 
-- **Bật RLS trên toàn bộ 8 bảng:** Mọi truy cập trực tiếp từ phía client đều bị kiểm soát nghiêm ngặt.
+- **Bật RLS trên toàn bộ 9 bảng:** Mọi truy cập trực tiếp từ phía client đều bị kiểm soát nghiêm ngặt.
 - **Quyền đọc (`SELECT`) của trình duyệt:**
   - Người học chỉ được phép đọc các dòng dữ liệu thuộc về chính mình trong các bảng: `profiles`, `skill_states`, `learning_sessions`, `dispute_reports` khi thỏa mãn điều kiện `auth.uid() = user_id`.
   - Đối với bảng `node_progress`, người học chỉ được đọc những dòng có `session_id` liên kết với phiên học thuộc quyền sở hữu của mình.
 - **Các bảng cấm hoàn toàn quyền đọc của trình duyệt:**
-  - Bảng `ai_cache`, `node_runs`, và `question_attempts` **không thiết lập bất kỳ chính sách truy cập nào cho client**.
+  - Bảng `ai_cache`, `node_runs`, `question_attempts`, và `session_snapshots` **không thiết lập bất kỳ chính sách truy cập nào cho client**.
   - Lý do: Bảng `node_runs` chứa đáp án mẫu chuẩn (`reference_answer`) và các ý bắt buộc (`must_have_points`). Nếu cấp quyền đọc cho client, người học có thể mở công cụ phát triển (DevTools) của trình duyệt để xem trộm đáp án trước khi nộp bài. Lịch sử làm bài trong `question_attempts` cũng chỉ được xem thông qua endpoint API chuyên dụng sau khi máy chủ đã lọc thông tin.
 - **Quyền ghi (`INSERT`, `UPDATE`, `DELETE`):**
   - **Không có bất kỳ chính sách ghi nào dành cho client trên toàn bộ cơ sở dữ liệu.** Trình duyệt không thể tự ý gọi lệnh SQL để chèn hay sửa dữ liệu. Mọi thao tác ghi bắt buộc phải đi qua route handler máy chủ và được thực thi bằng khóa đặc quyền quản trị (service-role key).
@@ -161,11 +165,11 @@ Tra chi tiết: spec/03_API_VA_LUU_TRU.md Mục 3, Mục 6.2, spec/02_CONTRACTS.
 
 ---
 
-## 3. Định danh phiên, Cache RAM và Dựng lại đồ thị
+## 3. Định danh phiên, Cache RAM và Đọc kết quả đã lưu
 
-Một câu hỏi rất thực tế mà nhiều bạn sinh viên hay thắc mắc là: *"Nếu không lưu mã nguồn repo vào cơ sở dữ liệu, thì khi người học tắt máy tính đi ngủ hoặc khi nền tảng Vercel tắt tiến trình serverless sau vài phút không có người truy cập, hôm sau quay lại hệ thống làm thế nào để mở lại đúng bài học đang dở mà không bị mất dữ liệu?"*
+Một câu hỏi rất thực tế mà nhiều bạn sinh viên hay thắc mắc là: *"Nếu không lưu file mã nguồn repo vào cơ sở dữ liệu, thì khi người học tắt máy tính đi ngủ hoặc khi nền tảng Vercel tắt tiến trình serverless sau vài phút không có người truy cập, hôm sau quay lại hệ thống làm thế nào để mở lại đúng bài học đang dở mà không bị mất dữ liệu?"*
 
-Câu trả lời nằm ở sự kết hợp giữa **Bộ khóa định danh phiên học**, **Cơ chế cache RAM 2 tầng**, và **Nguyên tắc dựng lại đồ thị tất định theo commit SHA**.
+Câu trả lời nằm ở sự kết hợp giữa **Bộ khóa định danh phiên học**, **Cơ chế cache RAM 2 tầng**, và **Bảng lưu kết quả engine của phiên `session_snapshots` (D-59)**.
 
 ### 3.1. Bộ khóa định danh phiên học
 
@@ -176,18 +180,18 @@ Khóa phiên = (user_id, source, snapshot_id, subdir, engine_version)
 - `user_id`: Mã tài khoản của người học.
 - `source`: Nguồn nạp repo (`GITHUB` hoặc `ZIP`).
 - `snapshot_id`: Mã nhận diện trạng thái mã nguồn.
-  - Đối với GitHub: Đây là commit SHA dài 40 ký tự hex, được đọc trực tiếp từ phần bình luận EOCD (End of Central Directory) của gói zip tải về từ máy chủ GitHub codeload. Nếu vì lý do nào đó mà phần bình luận này không chứa SHA hợp lệ, hệ thống sẽ tính mã băm SHA-256 trên toàn bộ dữ liệu file zip nén và gắn nhãn là `ARCHIVE_HASH`, đồng thời đưa ra cảnh báo phiên này không thể mở lại lâu dài.
-  - Đối với file `.zip` do người dùng tự tải lên: `snapshot_id` luôn là mã băm `ARCHIVE_HASH` (mã SHA-256 của toàn bộ dữ liệu file nén).
+  - Đối với GitHub: Đây là commit SHA dài 40 ký tự hex, được đọc trực tiếp từ phần bình luận EOCD (End of Central Directory) của gói zip tải về từ máy chủ GitHub codeload. Nếu vì lý do nào đó mà phần bình luận này không chứa SHA hợp lệ, hệ thống sẽ tính mã băm SHA-256 trên toàn bộ dữ liệu file zip nén và gắn nhãn là `ARCHIVE_HASH`, kèm cảnh báo "phiên không mở lại được" nếu thiếu dòng snapshot (`10`).
+  - Đối với file `.zip` do người dùng tự tải lên: `snapshot_id` là mã băm `ARCHIVE_HASH` (mã SHA-256 của toàn bộ dữ liệu file nén). Nhờ bảng `session_snapshots`, phiên `.zip` vẫn mở lại bình thường (D-59).
 - `subdir`: Đường dẫn thư mục con nếu người học chọn phân tích một dự án nằm bên trong monorepo (mặc định là chuỗi rỗng nếu học toàn bộ repo).
 - `engine_version`: Phiên bản của engine phân tích tĩnh (ví dụ `1.0.0`). Khi nhóm phát triển thay đổi luật phân tích đồ thị dẫn đến việc thay đổi cấu trúc node, phiên bản này sẽ được nâng lên.
 
 Khi người dùng thực hiện nạp repo, máy chủ kiểm tra xem trong cơ sở dữ liệu đã có phiên học nào khớp đúng cả 5 thông tin trên của người dùng hay chưa. Nếu đã có, hệ thống sẽ mở lại phiên có thời điểm hoạt động gần nhất (`last_active_at` mới nhất) thay vì tạo ra một bản ghi trùng lặp. Tuy nhiên, nếu người học chủ động chọn nút "Học lại từ đầu", hệ thống vẫn cho phép tạo ra một phiên học mới có cùng khóa để người học làm lại từ đầu với tiến độ trống.
 
-### 3.2. Phiên học gắn chặt với commit SHA
+### 3.2. Phiên học gắn chặt với snapshot và commit SHA (D-39, D-59)
 
 Trong phát triển phần mềm, mã nguồn trên một nhánh (như `main`) thay đổi liên tục qua từng ngày. Nếu một phiên học gắn với tên nhánh, thì giả sử hôm nay code có 7 hàm, ngày mai có người đẩy thêm thành 12 hàm, khiến các câu hỏi và tiến độ của người học bị sai lệch vị trí hoàn toàn.
 
-Để tránh lỗi này, SimpliFey quy định: **Mọi phiên học đều gắn chặt với một commit SHA cố định**. Khi người học dán đường link repo GitHub vào, hệ thống sẽ phân giải ra commit SHA hiện tại tại thời điểm đó. Nếu sau này repo trên GitHub có những commit mới, việc người học dán lại đường link sẽ tạo ra một commit SHA mới, và hệ thống sẽ coi đó là một phiên học mới độc lập. Muốn mở lại bài học cũ, hệ thống luôn sử dụng chính xác commit SHA đã lưu của phiên đó.
+Để tránh lỗi này, SimpliFey quy định: **Mọi phiên học đều gắn chặt với commit SHA và snapshot kết quả engine đã lưu lúc tạo phiên (`session_snapshots`, D-39, D-59)**. Khi người học vào lại phiên, hệ thống đọc trực tiếp kết quả đã lưu, hoàn toàn không chạy lại engine hay tải lại file zip. Người học luôn thấy đúng cùng đoạn code đó. Nếu sau này repo trên GitHub có commit mới, người học dán link mới sẽ nhận commit SHA mới và tạo ra một phiên học mới độc lập.
 
 ### 3.3. Bộ nhớ đệm Cache RAM 2 tầng trên Vercel
 
@@ -199,18 +203,18 @@ Bộ nhớ đệm RAM này có sức chứa tối đa 20 bản ghi (`CONFIG.INGE
 
 **Lưu ý quan trọng về môi trường Serverless:** Do được triển khai trên Vercel Functions, mỗi tiến trình (instance) serverless sở hữu một vùng nhớ RAM hoàn toàn độc lập và có thể bị tắt đi bất kỳ lúc nào khi không có yêu cầu. Bộ nhớ đệm RAM chỉ có tác dụng hỗ trợ tăng tốc độ trong điều kiện cùng một instance phục vụ các yêu cầu liên tiếp. Kiến trúc của SimpliFey được thiết kế để không bao giờ phụ thuộc sống còn vào bộ nhớ đệm RAM này.
 
-### 3.4. Cơ chế dựng lại đồ thị qua hàm `getOrRebuildStaticResult(session)`
+### 3.4. Cơ chế đọc kết quả engine qua hàm `getSessionStaticResult(session)`
 
-Bất cứ khi nào một endpoint cần sử dụng đến đồ thị phân tích chi tiết (chẳng hạn để lấy đoạn mã nguồn gửi cho AI đặt câu hỏi), máy chủ sẽ gọi hàm `getOrRebuildStaticResult(session)` để tìm kiếm hoặc dựng lại dữ liệu:
+Bất cứ khi nào một endpoint cần sử dụng đến kết quả engine chi tiết (như khi mở lại phiên, `POST /api/analyze-node`, hoặc `POST /api/enrich-node` lấy đoạn code gửi cho AI), máy chủ sẽ gọi hàm `getSessionStaticResult(session)` để lấy dữ liệu:
 
 | Tình huống | Cách máy chủ xử lý | Trải nghiệm phía người học |
 | :-- | :-- | :-- |
-| **Trúng cache RAM** | Dữ liệu đồ thị `StaticEngineResult` vẫn còn trong RAM của instance hiện tại. Máy chủ trả về và sử dụng ngay lập tức mà không cần xử lý thêm. | Không phải tải lại mã nguồn. |
-| **Trượt cache, phiên có `COMMIT_SHA`** | Instance mới chưa có dữ liệu trong RAM. Máy chủ gửi yêu cầu tải gói nén trực tiếp từ GitHub theo đường dẫn `codeload.github.com/{owner}/{repo}/zip/{sha}`, sau đó chạy lại toàn bộ Tầng 0 đến Tầng 2 của engine phân tích trong bộ nhớ RAM. Do engine phân tích có tính chất tất định, kết quả đồ thị dựng lại sẽ trùng khớp với khung `graph_skeleton` đã lưu trong database. | Người học đợi máy chủ tải và phân tích lại, sau đó học tiếp bình thường. |
-| **Trượt cache, phiên có `ARCHIVE_HASH` (file `.zip` tải lên, hoặc GitHub không đọc được SHA)** | Vì hệ thống tuân thủ nguyên tắc không lưu file zip tải lên vào ổ cứng máy chủ, khi cache RAM bị xóa, máy chủ không có cách nào tự động tái tạo lại mã nguồn từ con số không. Máy chủ sẽ trả về mã lỗi `ERR_SESSION_NOT_FOUND`. | Giao diện báo phiên upload không mở lại được, hãy upload lại `.zip`. Khi người học upload lại đúng file cũ (có cùng mã băm SHA-256), máy chủ sẽ nhận ra và mở lại đúng tiến độ của phiên học đó. |
-| **Commit trên GitHub bị xóa (force-push)** | Máy chủ GitHub codeload trả về mã lỗi 404 khi cố gắng tải mã nguồn theo commit SHA cũ. Máy chủ trả về mã lỗi `ERR_SESSION_NOT_FOUND`. | Phiên học không thể tạo thêm câu hỏi mới. Người học chuyển sang chế độ chỉ xem lại lịch sử các câu hỏi đã làm; toàn bộ điểm kỹ năng đã tích lũy trong hồ sơ cá nhân vẫn được bảo toàn. |
+| **Trúng cache RAM** | Dữ liệu `StaticEngineResult` vẫn còn trong RAM của instance hiện tại. Máy chủ dùng ngay kết quả đó. | Phản hồi siêu tốc, 0 độ trễ nạp dữ liệu. |
+| **Trượt cache RAM** | Instance mới chưa có dữ liệu trong RAM. Máy chủ đọc `session_snapshots.result` của phiên từ Postgres rồi nạp vào cache RAM. Kết quả giống hệt lần đầu, không tải lại zip, không chạy lại engine; cả phiên GitHub lẫn phiên từ file `.zip` đều mở lại được (D-59). | Người học mở lại bài học mượt mà, thấy đúng cùng đoạn code đã cắt trước đó. |
+| **Phiên thiếu dòng `session_snapshots` (lỗi bất thường)** | Trường hợp hiếm gặp khi dòng snapshot bị thiếu trong DB: nếu phiên có `COMMIT_SHA`, máy chủ gửi yêu cầu tải zip từ GitHub theo SHA (`codeload.github.com/{owner}/{repo}/zip/{sha}`), chạy lại Tầng 0–2 trong RAM, so khớp `node_id` và `prerequisites` với `graph_skeleton` (khớp thì ghi bù vào `session_snapshots`; lệch thì ghi log lỗi và trả `ERR_SESSION_ENGINE_OUTDATED`). Nếu là `ARCHIVE_HASH` hoặc GitHub trả 404 (commit bị xóa), máy chủ trả về `ERR_SESSION_NOT_FOUND`. | Nếu phục hồi thành công thì học tiếp bình thường; nếu không tìm thấy thì giao diện báo không tìm thấy phiên học. |
 
-Để bảo đảm tính toàn vẹn dữ liệu, mỗi khi dựng lại đồ thị từ commit SHA, máy chủ luôn so sánh đối chiếu danh sách các `node_id` và các liên kết phụ thuộc `prerequisites` với khung `graph_skeleton` đã được lưu trong database từ trước. Nếu phát hiện có sự sai lệch (ví dụ do mã nguồn engine trên máy chủ vừa được nâng cấp luật mới), hệ thống sẽ ghi log lỗi và từ chối xử lý với mã lỗi `ERR_SESSION_ENGINE_OUTDATED`.
+
+Chỉ khi gặp tình huống bất thường (phiên thiếu dòng `session_snapshots`) máy chủ mới tải lại mã nguồn theo commit SHA và so sánh đối chiếu danh sách các `node_id` cùng `prerequisites` với khung `graph_skeleton`. Nếu phát hiện có sự sai lệch (ví dụ do engine vừa được nâng cấp luật mới), hệ thống sẽ ghi log lỗi và từ chối xử lý với mã lỗi `ERR_SESSION_ENGINE_OUTDATED` (D-59).
 
 ### 3.5. Cơ chế khóa bộ nhớ đệm văn bản AI (`ai_cache`)
 
@@ -297,7 +301,7 @@ Cần hiểu rất rõ rằng: **Hiện tượng mài mòn hoàn toàn là một
 
 Nhiều người có thể đặt câu hỏi: *"Nếu người học đã có điểm kỹ năng rất cao từ trước thì khi bấm vào một node mới, hệ thống có tự động đánh dấu hoàn thành mà không cần làm bài không?"*
 
-Nguyên tắc của SimpliFey là: **Không có cơ chế nhảy cóc (Fast-Track) và không có node nào được miễn thi**. Mỗi node đại diện cho một lát cắt mã nguồn cụ thể của repo. Ngay cả khi người học đã thành thạo cả 16 kỹ năng với điểm số cao nhất, hàm lập kế hoạch `planNodeQuestions` vẫn luôn sinh ra ít nhất 1 câu hỏi đánh giá vào kỹ năng có điểm số thấp nhất trong số các kỹ năng của node đó. Node chỉ có thể chuyển sang trạng thái `COMPLETED` hoặc `FAILED` khi người học hoàn thành xong các câu hỏi của lần học.
+Nguyên tắc của SimpliFey là: **Không có cơ chế miễn thi** (D-60). Mỗi node đại diện cho một lát cắt mã nguồn cụ thể của repo. Ngay cả khi người học đã thành thạo cả 16 kỹ năng với điểm số cao nhất, hàm lập kế hoạch `planNodeQuestions` vẫn luôn sinh ra ít nhất 1 câu hỏi đánh giá vào kỹ năng có điểm số thấp nhất trong số các kỹ năng của node đó. Node chỉ có thể chuyển sang trạng thái `COMPLETED` hoặc `FAILED` khi người học hoàn thành xong các câu hỏi của lần học.
 
 ### 4.5. Đổi persona trong chế độ Demo
 
@@ -350,8 +354,8 @@ Hệ thống cung cấp đúng 13 endpoint API phục vụ toàn bộ vòng đ�
 - **Ai gọi & Khi nào:** Trình duyệt gọi ở màn hình bắt đầu để hiển thị danh sách các bài học gần đây trong mục "Tiếp tục học".
 - **Làm gì:** Máy chủ truy vấn danh sách các phiên học của người dùng hiện tại từ bảng `learning_sessions`. Với mỗi phiên, máy chủ đọc các dòng tiến độ từ `node_progress` để đếm số node hoàn thành (`completed_count`), số node trượt (`failed_count`), và tổng số node từ khung đồ thị `graph_skeleton`. Máy chủ cũng xác định cờ cho phép tiếp tục học `can_resume`:
   - Nếu phiên bản engine của phiên học khác với phiên bản engine hiện tại của máy chủ (`CONFIG.ENGINE_VERSION`): `can_resume = false`, lý do chặn là `ENGINE_UPDATED`.
-  - Nếu phiên học có nguồn từ file upload `.zip` hoặc kho GitHub không đọc được commit SHA (gắn nhãn `ARCHIVE_HASH`) mà bộ nhớ đệm RAM đã bị giải phóng: `can_resume = false`, lý do chặn là `ZIP_SOURCE`.
-  - Các trường hợp còn lại (phiên gắn với `COMMIT_SHA` hợp lệ): `can_resume = true`.
+  - Các trường hợp còn lại (kể cả phiên từ file upload `.zip` hay GitHub, nhờ kết quả đã lưu trong `session_snapshots` theo D-59): `can_resume = true`, lý do chặn là `null`.
+
 - **Ghi gì vào bảng nào:** Hoàn toàn không ghi dữ liệu, chỉ đọc từ database.
 - **Lỗi có thể gặp:** `ERR_UNAUTHENTICATED`, `ERR_PERSISTENCE_UNAVAILABLE`.
 
@@ -366,7 +370,7 @@ Hệ thống cung cấp đúng 13 endpoint API phục vụ toàn bộ vòng đ�
 - **Làm gì:** 
   - *Kiểm soát tài nguyên:* Sử dụng cơ chế khóa đếm (semaphore) để đảm bảo trên một instance máy chủ chỉ chạy tối đa 4 tác vụ nạp repo cùng lúc (`CONFIG.MAX_CONCURRENT_INGESTIONS`). Nếu phải chờ đợi trong hàng đợi quá 10 giây, máy chủ trả về mã lỗi `ERR_SERVER_BUSY`. Nếu tải file zip lên, máy chủ kiểm tra dung lượng không vượt quá 4.5 MB (`CONFIG.MAX_UPLOAD_BYTES`).
   - *Phân tích mã nguồn:* Máy chủ thực hiện Tầng 0 (tải và giải nén trong RAM, lọc rác mã nguồn), Tầng 1 (phân tích cú pháp AST, trích xuất đồ thị gọi hàm), và Tầng 2 (tách các lát cắt nghiệp vụ và bố trí tọa độ đồ thị). Toàn bộ quá trình chạy bằng mã nguồn thuần túy, tiêu tốn đúng 0 token AI.
-  - *Quản lý phiên:* Nếu người học mở lại phiên cũ (`{ session_id }`), máy chủ kiểm tra phiên bản engine và dựng lại đồ thị theo commit SHA. Nếu người học chọn "Học lại từ đầu" (`{ session_id, restart: true }`), máy chủ tạo một phiên mới với cùng snapshot nhưng tiến độ node trống, điểm kỹ năng giữ nguyên. Nếu là link repo mới, máy chủ kiểm tra khóa phiên, nếu trùng thì mở lại phiên cũ, nếu chưa có thì tạo dòng mới trong `learning_sessions`.
+  - *Quản lý phiên:* Nếu người học mở lại phiên cũ (`{ session_id }`), máy chủ kiểm tra phiên bản engine và đọc kết quả đã lưu của phiên từ `session_snapshots` (D-59), không chạy lại engine hay tải lại zip. Nếu người học chọn "Học lại từ đầu" (`{ session_id, restart: true }`), máy chủ tạo một phiên mới với cùng snapshot nhưng tiến độ node trống, điểm kỹ năng giữ nguyên. Nếu là link repo mới, máy chủ kiểm tra khóa phiên, nếu trùng thì mở lại phiên cũ, nếu chưa có thì tạo dòng mới trong `learning_sessions` và lưu kết quả engine vào `session_snapshots`.
   - *Tối ưu hóa phản hồi:* Máy chủ tìm kiếm sẵn trong bảng `ai_cache` xem có node nào đã từng được AI phân tích từ trước hay chưa để trả về kèm luôn cho trình duyệt, giúp người học không phải chờ đợi ở bước sau.
 - **Ghi gì vào bảng nào:** Thêm mới hoặc cập nhật một dòng trong bảng `learning_sessions`.
 - **Lỗi có thể gặp:** Các mã lỗi nạp mã nguồn (như `ERR_INVALID_GITHUB_URL`, `ERR_STREAM_QUOTA_EXCEEDED`, `ERR_EMPTY_REPOSITORY`, `ERR_UNSUPPORTED_LANGUAGE`), `ERR_SESSION_ENGINE_OUTDATED`, `ERR_SERVER_BUSY`.
@@ -393,7 +397,7 @@ Hệ thống cung cấp đúng 13 endpoint API phục vụ toàn bộ vòng đ�
   - *Gọi lại vẫn ra cùng kết quả (idempotent):* Máy chủ kiểm tra xem node này đã có một lần học nào đang mở hay chưa (`finished_at IS NULL` trong bảng `node_runs`). Nếu có (ví dụ do người học tải lại trang hoặc mở từ tab khác), máy chủ trả về ngay đối tượng lần học đó mà không cần gọi lại AI. Nếu hai tab cùng tạo run, chỉ mục `node_runs_one_open` chặn tab sau, và tab đó đọc lại run đang mở.
   - *Kiểm tra điều kiện tiên quyết:* Node phải đang ở trạng thái sẵn sàng `AVAILABLE` và đã có sẵn bản phân tích kiến trúc trong `ai_cache`. Nếu không, hệ thống trả về lỗi tương ứng.
   - *Lập kế hoạch câu hỏi cá nhân hóa:* Máy chủ nạp hồ sơ điểm số 16 kỹ năng của người học từ bảng `skill_states`. Hệ thống ưu tiên chọn các kỹ năng mà người học chưa thành thạo thuộc node này để đặt câu hỏi (mỗi kỹ năng 1 câu). Nếu tất cả các kỹ năng đều đã đạt điểm thành thạo, hệ thống vẫn chọn ra 1 kỹ năng có điểm thấp nhất để hỏi, không có node nào được miễn thi.
-  - *Sinh câu hỏi:* Máy chủ dựng lại đồ thị trong RAM để trích xuất đoạn code mẫu gửi cho AI. AI sẽ tạo ra câu hỏi giải thích khái niệm theo phương pháp Feynman, đáp án mẫu đạt chuẩn (`reference_answer`), danh sách các ý bắt buộc cốt lõi (`must_have_points`), và cách sửa code (`fix`).
+  - *Sinh câu hỏi:* Máy chủ đọc kết quả đã lưu của phiên qua hàm `getSessionStaticResult(session)` để lấy đoạn code đã cắt của node gửi cho AI (D-59). AI sẽ tạo ra câu hỏi giải thích khái niệm theo phương pháp Feynman, đáp án mẫu đạt chuẩn (`reference_answer`), danh sách các ý bắt buộc cốt lõi (`must_have_points`), và cách sửa code (`fix`).
   - *Xử lý lỗi câu hỏi:* Nếu AI sinh câu hỏi bị lỗi vi phạm quy tắc, máy chủ tự động gọi lại riêng câu hỏi đó 1 lần. Nếu vẫn không đạt, câu hỏi đó được đánh dấu là `ended_by = "DROPPED"` (câu AI không đặt được, không phải phiên bị hủy) và không tính vào bài học. Nếu tất cả các câu hỏi dự kiến đều bị rơi vào tình trạng này, máy chủ từ chối tạo lần học với mã lỗi `ERR_AI_REJECTED` để người học bấm thử lại.
   - *Lưu trữ an toàn:* Máy chủ tạo bản ghi trong bảng `node_runs` lưu trữ toàn bộ danh sách câu hỏi kèm đáp án mẫu. Khi gửi dữ liệu về cho trình duyệt, máy chủ loại bỏ toàn bộ đáp án mẫu và ý bắt buộc của những câu chưa xong để ngăn chặn gian lận.
 - **Ghi gì vào bảng nào:** Tạo mới 1 dòng trong bảng `node_runs`, cập nhật số lượng `tokens_used` và mốc thời gian hoạt động `last_active_at` trong bảng `learning_sessions`.
@@ -665,7 +669,7 @@ Trong môi trường vận hành thực tế, các sự cố về mạng, dịch
 | **Cơ sở dữ liệu Postgres gặp lỗi đọc hoặc ghi** | Hệ thống áp dụng cơ chế tự động thử lại sau các khoảng thời gian chờ ngắn. Nếu sau các lần thử lại vẫn không thành công, máy chủ trả về mã lỗi `ERR_PERSISTENCE_UNAVAILABLE`. Toàn bộ kết quả chấm vừa thực hiện sẽ bị hủy bỏ, lượt làm bài của người học không bị tính. | Giao diện hiển thị thông báo lỗi kết nối database và xuất hiện nút bấm "Thử lại" để người học nộp lại khi hệ thống ổn định. |
 | **Dịch vụ AI gặp sự cố (quá tải, timeout, lỗi JSON)** | Nếu lời gọi AI Gemini bị quá tải hạn mức (mã 429), lỗi máy chủ bên thứ ba (mã 503), hoặc trả về cấu trúc JSON hỏng sau số lần thử lại tối đa, máy chủ trả về mã lỗi `ERR_AI_UNAVAILABLE`. Lượt làm bài này hoàn toàn không bị trừ. | Giao diện hiển thị thông báo dịch vụ AI đang bận kèm nút bấm "Thử lại", bảo toàn số lượt làm bài của người học. |
 | **Phiên học dùng hết định mức token** | Khi số lượng token ghi nhận trong trường `tokens_used` của bảng `learning_sessions` chạm hoặc vượt quá hạn mức quy định của phiên, máy chủ sẽ từ chối mọi yêu cầu gọi AI mới với mã lỗi `ERR_TOKEN_QUOTA_EXCEEDED`. | Người học không thể yêu cầu AI phân tích thêm node mới hoặc nộp câu hỏi đang làm dở. Chế độ Offline không giúp được ở đây, vì nó chỉ dành cho repo demo. |
-| **Commit trên GitHub bị xóa (force-push)** | Khi máy chủ cố gắng tải mã nguồn theo commit SHA cũ nhưng nhận mã lỗi 404 từ GitHub codeload, hệ thống trả về mã lỗi `ERR_SESSION_NOT_FOUND`. | Phiên học không thể tạo thêm câu hỏi mới. Người học chỉ có thể xem lại lịch sử các câu hỏi đã làm; toàn bộ điểm kỹ năng đã tích lũy trong hồ sơ cá nhân vẫn được bảo toàn trọn vẹn. |
+| **Phiên thiếu dòng snapshot và commit trên GitHub bị xóa** | Khi phiên thiếu dòng `session_snapshots` (lỗi bất thường) mà tải mã nguồn theo commit SHA cũ bị lỗi 404 từ GitHub codeload, hệ thống trả về mã lỗi `ERR_SESSION_NOT_FOUND` (D-59). | Phiên học không thể phục hồi được. Người học có thể xem lại lịch sử các câu hỏi đã làm; toàn bộ điểm kỹ năng trong hồ sơ cá nhân vẫn được bảo toàn. |
 | **Bảo vệ dữ liệu cá nhân trong câu trả lời** | Câu trả lời của người học bị giới hạn độ dài tối đa 2000 ký tự trong bảng `question_attempts`. Bảng này không có chính sách RLS nào cho client, nên câu trả lời chỉ đọc được qua API của chủ tài khoản. Khi người dùng thực hiện xóa tài khoản, toàn bộ các câu trả lời này sẽ bị xóa sạch vĩnh viễn theo cơ chế cascade. | Câu trả lời chỉ chủ tài khoản đọc được và bị xóa theo tài khoản. |
 
 ### 7.3. Danh mục biến môi trường trên máy chủ

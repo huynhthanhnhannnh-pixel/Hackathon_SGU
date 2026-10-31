@@ -7,7 +7,7 @@
 - đặt câu hỏi Feynman cho đúng kỹ năng người học còn yếu;
 - chấm bài và gợi ý 3 nấc.
 
-Mô hình BKT ghi nhận năng lực kỹ năng: luôn hỏi ít nhất 1 câu cho kỹ năng yếu nhất của node (bỏ Fast-Track, D-34), và hiển thị mài mòn kỹ năng theo thời gian thay vì bắt ôn tập (D-35).
+Mô hình BKT ghi nhận năng lực kỹ năng: luôn hỏi ít nhất 1 câu cho kỹ năng yếu nhất của node (không có miễn thi, D-34), và hiển thị mài mòn kỹ năng theo thời gian thay vì bắt ôn tập (D-35).
 
 **Định hướng:** Dự án mã nguồn mở cho cộng đồng (tự clone, tự điền API key trong `.env`) kết hợp nghiên cứu học thuật và CV; bản nhóm host là bản dùng thử có giới hạn cho repo công khai (D-33).
 
@@ -21,7 +21,7 @@ Mô hình BKT ghi nhận năng lực kỹ năng: luôn hỏi ít nhất 1 câu c
 | :-- | :-- |
 | **Cả nhóm (bắt buộc)** | [`00_QUYET_DINH`](spec/00_QUYET_DINH.md) → [`01_KIEN_TRUC_VA_LUONG`](spec/01_KIEN_TRUC_VA_LUONG.md) → [`02_CONTRACTS`](spec/02_CONTRACTS.md) → [`03_API_VA_LUU_TRU`](spec/03_API_VA_LUU_TRU.md) → [`04_KIEN_TRUC_TRIEN_KHAI`](spec/04_KIEN_TRUC_TRIEN_KHAI.md) |
 | **Vai A — Trưởng tích hợp** | + [`50_TEST_VA_FIXTURE`](spec/50_TEST_VA_FIXTURE.md) |
-| **Vai B — Engine** | + [`10_ENGINE_INGEST`](spec/10_ENGINE_INGEST.md), [`11_ENGINE_DO_THI`](spec/11_ENGINE_DO_THI.md) |
+| **Vai B — Engine** | + [`10_ENGINE_INGEST`](spec/10_ENGINE_INGEST.md), [`11_ENGINE_DO_THI`](spec/11_ENGINE_DO_THI.md), [`12_ENGINE_MAU_ENTRY`](spec/12_ENGINE_MAU_ENTRY.md) |
 | **Vai C — AI + BKT** | + [`20_AI_GOI_VA_PROMPT`](spec/20_AI_GOI_VA_PROMPT.md), [`21_AI_KIEM_VA_DUYET`](spec/21_AI_KIEM_VA_DUYET.md), [`22_BKT_VA_KE_HOACH_CAU_HOI`](spec/22_BKT_VA_KE_HOACH_CAU_HOI.md) |
 | **Vai D — Giao diện** | + [`30_UI`](spec/30_UI.md) |
 | **Vai E — Kiểm thử & Demo** | + [`50_TEST_VA_FIXTURE`](spec/50_TEST_VA_FIXTURE.md) |

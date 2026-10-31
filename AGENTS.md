@@ -3,7 +3,7 @@
 Repo **tài liệu** tiếng Việt cho dự án SimpliFey (hackathon SGU 2026). Không có code ở đây. Chi tiết dự án: `CLAUDE.md`. Luật chung của đội nằm ở `ai-kit`, file này chỉ giữ luật riêng của repo.
 
 ## Bản đồ
-- `spec/` — nguồn quy chuẩn duy nhất. `00` quyết định · `01` kiến trúc & luồng · `02` mọi kiểu + bảng `CONFIG` · `03` API & DB · `04` triển khai · `10`,`11` engine · `20`,`21`,`22` AI & BKT · `30` UI · `50` test.
+- `spec/` — nguồn quy chuẩn duy nhất. `00` quyết định · `01` kiến trúc & luồng · `02` mọi kiểu + bảng `CONFIG` · `03` API & DB · `04` triển khai · `10`,`11` engine, `12` bảng mẫu entry · `20`,`21`,`22` AI & BKT · `30` UI · `50` test.
 - `pitch/` — tài liệu thuyết trình, không dùng để code. `spec/` thắng khi lệch.
 - `doc-de-hieu/` — bản giải thích cho người đọc, không dùng để code. `spec/` thắng khi lệch. Riêng `07_ke_hoach_21h.md` là nơi gốc của lịch 21 giờ.
 - `.ai/` — chỉ có trên nhánh làm việc, không có trên `main`. Làm task thì đọc `.ai/QUY_TRINH.md` trước.

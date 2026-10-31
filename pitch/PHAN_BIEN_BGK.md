@@ -135,7 +135,10 @@ Mỗi câu chỉ một người trả lời, người đỡ chỉ thêm khi đư
 AI khi đó hỏi kiểu thuật toán: chạy tay với input nhỏ, Big-O, tình huống biên. Điểm dở như "hàm gánh quá nhiều việc" hiện ngay ở Tab 1 dưới nhãn "Nhận định của AI"; câu hỏi hỏi tiếp về hậu quả và cách sửa.
 
 **B7. "Monorepo, hay app mobile Flutter BLoC, React Native Redux thì sao?"**
-Đ: Monorepo: nhận ra cặp thư mục client/server, ưu tiên server, cho chọn lại thư mục trên giao diện. Có 6 loại dự án (web backend, frontend, mobile, desktop, CLI, thuật toán); entry có thể là route, command hoặc screen. Luồng đi qua `dispatch` sự kiện kiểu BLoC/Redux có thể thiếu một mắt xích — cầu nối sự kiện ở roadmap. Dart/Flutter chưa kiểm chứng ở bản thi.
+Đ: Monorepo: nhận ra cặp thư mục client/server, ưu tiên server, cho chọn lại thư mục trên giao diện. Có 6 loại dự án (web backend, frontend, mobile, desktop, CLI, thuật toán); entry có thể là route, command hoặc screen. Bản thi nhận màn hình của app mobile phổ biến — React Native (Stack, Tab, Drawer), Expo Router, Flutter (GoRouter hoặc `MaterialApp` routes / Navigator), Android (Activity, Fragment, Compose), iOS (UIViewController, SwiftUI) (D-57); các kiểu ít gặp để roadmap. Luồng đi qua `dispatch` sự kiện kiểu BLoC/Redux có thể thiếu một mắt xích — cầu nối sự kiện ở roadmap. Dart/Flutter và các framework mobile khác chưa kiểm chứng ở bản thi (chỉ TS/JS và Python được kiểm chứng).
+
+**B7b. "Code C, C++, Rust, C# không có route thì sao?"**
+Đ: Engine nhận hàm `main` của mọi ngôn ngữ có grammar làm điểm vào (D-58), và nhận thêm thư mục kiểu `controllers/`, `screens/`; thuật toán mà một luồng gọi tới được nối dây vào luồng đó, chỉ thuật toán không ai gọi hoặc gọi gián tiếp mới đứng riêng (D-56); mọi điểm bắt đầu xếp 1 hàng trên cùng bản đồ (D-55). Các ngôn ngữ này đều chưa kiểm chứng ở bản thi (chỉ TS/JS và Python được kiểm chứng).
 
 **B8. "Uncle Bob tính trên file không có interface thì chia cho 0, kết luận oan à?"**
 Đ: Không ạ. Khi mẫu số bằng 0, hoặc lát cắt không có cú pháp trừu tượng, chỉ số được miễn trừ (`is_exempt`, D = 0, `BALANCED`). Chỉ số này chỉ là gợi ý phụ cho AI, không phải điểm của người học.
@@ -207,12 +210,12 @@ Mỗi kỹ năng chỉ có vài quan sát trên một repo, nên điểm là ư�
 Đ: Là 16 xác suất, mỗi kỹ năng một số, cập nhật bằng BKT sau mỗi câu và phai dần theo thời gian. Đó là tên sản phẩm; về khoa học đây là mô hình người học đơn giản, đủ minh bạch để giải thích từng lần điểm đổi.
 
 **D3. "Người đã giỏi có phải làm lại hết không? Persona có phải gian lận?"**
-Đ: Không có ô nào được miễn (D-34). Ô mà mọi kỹ năng của người học đều ≥ `FAST_TRACK_MIN` (0,92) trên điểm đã phai thì chỉ hỏi **1 câu** ở mức khó nhất, cho kỹ năng điểm thấp nhất. Kỹ năng lâu không luyện không bị bắt ôn, chỉ hiện "đang mài mòn" (D-35). Điểm do server ghi, client không có quyền ghi bảng nào. Persona chỉ bật trên máy demo (`DEMO_MODE`), chỉ ghi đè điểm của tài khoản demo, và được nói rõ là giả lập.
+Đ: Không có ô nào được miễn (D-34). Ô mà mọi kỹ năng của người học đều ≥ `MASTERED_MIN` (0,92) trên điểm đã phai thì chỉ hỏi **1 câu** ở mức khó nhất, cho kỹ năng điểm thấp nhất. Kỹ năng lâu không luyện không bị bắt ôn, chỉ hiện "đang mài mòn" (D-35). Điểm do server ghi, client không có quyền ghi bảng nào. Persona chỉ bật trên máy demo (`DEMO_MODE`), chỉ ghi đè điểm của tài khoản demo, và được nói rõ là giả lập.
 
 ### E. Dữ liệu, vận hành, demo
 
-**E1. "Không lưu code thì sao nhớ học tới đâu? Đổi máy có mất không?"**
-Đ: Nhóm lưu tiến trình học, không lưu code. Postgres giữ điểm 16 kỹ năng, phiên học (mã commit + khung bản đồ không có code), tiến độ, câu trả lời, và văn bản AI đã qua kiểm (có thể chứa tên hàm). Khi mở lại, hệ thống tải lại đúng commit và dựng bản đồ y hệt nhờ engine tất định, rồi ghép tiến độ cũ vào. Phiên tạo từ `.zip` thì phải kéo thả lại đúng file. Bắt buộc đăng nhập GitHub qua Supabase Auth (D-44), nên đổi máy vẫn đăng nhập để học tiếp. Server là nơi duy nhất ghi điểm, nên người học không tự nâng điểm hay mở đáp án sớm được.
+**E1. "Có lưu code không? Đổi máy có mất không?"**
+Đ: Hệ thống **không lưu file mã nguồn** (không lưu file code đầy đủ, file zip, cây cú pháp). Thứ duy nhất có code được lưu là **đoạn code đã cắt của các node** trong phiên (mỗi bước tối đa vài chục dòng, đã che secret), ở bảng `session_snapshots`, để mọi lần mở lại phiên người học thấy đúng cùng đoạn code. Mở lại phiên không tải lại repo; phiên tạo từ `.zip` cũng mở lại được. Client không đọc trực tiếp bảng này. Ngoài ra, Postgres lưu điểm 16 kỹ năng, tiến độ, câu trả lời của người học, và văn bản AI đã qua kiểm (có thể chứa tên hàm). Bắt buộc đăng nhập GitHub qua Supabase Auth (D-44), nên đổi máy vẫn đăng nhập để học tiếp; xóa tài khoản thì xóa theo. Server là nơi duy nhất ghi điểm, nên người học không tự nâng điểm hay mở đáp án sớm được.
 
 **E2. "Code của sinh viên có bị gửi đi đâu không?"**
 Đ:
@@ -247,7 +250,7 @@ Hai cơ chế đầu chỉ là tối ưu trong 1 instance, đúng sai của hệ
 1. **Phiên gắn commit SHA (D-39):** trượt cache ⇒ tải lại zip theo đúng SHA của phiên và chạy lại engine tất định ⇒ bản đồ y hệt, tiến độ ghép lại từ Postgres.
 2. **Tiến độ, câu hỏi, đáp án đều ở Postgres**, không ở RAM ⇒ request rơi vào instance nào cũng chấm đúng (D-36).
 3. **Đổi lại:** miễn phí, deploy khi merge vào `main`, cùng vùng Singapore với Supabase, và người tự cài từ mã nguồn mở dùng được gói free (D-33).
-Giới hạn còn lại: phiên tạo từ file `.zip` (không có SHA) không dựng lại được khi trượt cache — người học phải kéo thả lại đúng file (`spec/00` Q-12).
+Từ D-59, phiên `.zip` cũng mở lại được vì đoạn code đã cắt được lưu theo phiên.
 
 **E8. "Hệ thống có nguy cơ bị tấn công thực thi mã từ xa (RCE) không?"**
 Đ: Hệ thống không có đường nào thực thi code người dùng (`spec/01` INV-03):
@@ -287,7 +290,7 @@ Nhóm kiểm soát bằng:
 | TS/JS và Python đã kiểm chứng | Chỉ nói sau khi chạy đủ test | INV-09 |
 | BKT: đạt ngay 0,25 → 0,5767; đạt sau gợi ý → 0,4202; trượt → 0,0791 | "tính theo công thức", không phải số đo trên người học | `50` Mục 3 |
 | Chu kỳ bán rã 14 ngày; 0,95 sau 30 ngày còn ~0,41 | Nói kèm "mô phỏng" | `DECAY_HALF_LIFE_DAYS`, `50` Mục 3.6 |
-| Ô mà mọi kỹ năng đã ≥ 0,92 vẫn hỏi 1 câu ở mức khó nhất; không ô nào được miễn | Khẳng định | `FAST_TRACK_MIN`, D-34 |
+| Ô mà mọi kỹ năng đã ≥ 0,92 vẫn hỏi 1 câu ở mức khó nhất; không ô nào được miễn | Khẳng định | `MASTERED_MIN`, D-34 |
 | Kỹ năng lâu không luyện hiện "đang mài mòn", chỉ hiển thị, không bắt ôn | Khẳng định | D-35 |
 | Mã nguồn mở, người dùng tự mang API key | Khẳng định | D-33 |
 | Đạt = điểm ≥ 70 **và** đủ ý bắt buộc có trích dẫn thật | Kèm "ngưỡng do nhóm đặt" | `PASS_CORE_ACCURACY`, D-13 |
@@ -301,7 +304,7 @@ Nhóm kiểm soát bằng:
 | :-- | :-- |
 | "Lần đầu tiên…", "đầu tiên ở Việt Nam" | "Cách kết hợp mới, áp vào học kiến trúc trên repo của chính người học" |
 | "Zero Hallucination", "triệt tiêu / diệt 100% ảo giác" | "Chặn tên bịa và công nghệ không có trong repo; không kiểm được nghĩa" |
-| "100% không rò rỉ", "an toàn tuyệt đối" | "Không lưu code xuống đĩa hay DB; mỗi lần gửi AI tối đa 100 dòng đã che secret" |
+| "100% không rò rỉ", "an toàn tuyệt đối" | "Không lưu file mã nguồn, chỉ lưu đoạn code đã cắt của từng ô trong phiên; mỗi lần gửi AI tối đa 100 dòng đã che secret" |
 | "Hỗ trợ hơn 100 ngôn ngữ", "liên kết chính xác 100%" | "Đã kiểm chứng TS/JS và Python; ngôn ngữ khác có grammar thì cạnh suy luận, chưa kiểm chứng" |
 | "Duolingo dùng BKT" | Không nhắc. BKT: Corbett & Anderson 1995, Cognitive Tutor |
 | "Program slicing", "inter-procedural slicing" | "Scoped Call-Chain Slicing" |
@@ -332,8 +335,8 @@ BGK hỏi tới hạng mục nào thì trích đúng dòng đó. Khi lệch, `sp
 | **Logging** | **Pino (JSON 1 dòng ra `stdout`)** | Vercel thu log của Function; log JSON dễ lọc theo `session_id`, `node_id`, `tokens_used`; cấu hình `serverExternalPackages: ['pino']` (D-28). | Winston, Morgan | Winston cấu hình cồng kềnh; Morgan chỉ ghi log HTTP thô. |
 | **Monitoring** | **Log + Vercel Observability + dashboard Supabase** | Có sẵn, không mất thời gian cấu hình lúc thi (D-29). | Datadog, Prometheus + Grafana | Cấu hình vượt thời gian cho phép của hackathon 21h. |
 | **CI/CD** | **GitHub Actions (`ci.yml`) + Vercel Git Integration** | Actions chạy `typecheck`, `lint`, `vitest` cho mọi PR; người giữ Vercel merge vào `main` để deploy (D-30). | Jenkins, GitLab CI, Deploy thủ công | Quy trình merge có kiểm soát giảm xung đột và lỗi thao tác tay trong giờ thi. |
-| **Deployment** | **Vercel gói free, region `sin1` (Singapore)** | Miễn phí, deploy khi merge vào `main` (D-30), cùng vùng với Supabase. Chấp nhận mất cache RAM giữa các instance vì đã có đường dựng lại theo SHA (D-27). | Railway, Render, Fly.io | Tốn phí hoặc cần tự quản lý tiến trình; nhóm theo hướng mã nguồn mở, người tự cài dùng gói free được (D-33). |
-| **File Storage** | **KHÔNG CÓ (Zero-Disk cho mã nguồn)** | `spec/01` INV-04: zip và mã nguồn chỉ nằm trong RAM khi phân tích rồi giải phóng; không ghi đĩa hay DB. Upload `.zip` ≤ `CONFIG.MAX_UPLOAD_BYTES` (giới hạn body của Vercel). | AWS S3, Google Cloud Storage, Supabase Storage | Vi phạm cam kết Zero-Disk; lưu mã nguồn người học lên đám mây tạo nguy cơ rò rỉ. |
+| **Deployment** | **Vercel gói free, region `sin1` (Singapore)** | Miễn phí, deploy khi merge vào `main` (D-30), cùng vùng với Supabase. Chấp nhận mất cache RAM giữa các instance vì đọc lại từ `session_snapshots` (D-27, D-59). | Railway, Render, Fly.io | Tốn phí hoặc cần tự quản lý tiến trình; nhóm theo hướng mã nguồn mở, người tự cài dùng gói free được (D-33). |
+| **File Storage** | **KHÔNG lưu file nguồn; chỉ lưu đoạn code đã cắt của phiên (D-59)** | `spec/01` INV-04: không lưu file mã nguồn (không lưu file code đầy đủ, file zip, cây cú pháp). Thứ duy nhất có code được lưu là đoạn code đã cắt của các node trong phiên (mỗi bước tối đa vài chục dòng, đã che secret) ở bảng `session_snapshots` (`spec/03`), để mọi lần mở lại phiên người học thấy đúng cùng đoạn code; phiên `.zip` cũng mở lại được; client không đọc trực tiếp bảng này; xóa tài khoản thì xóa theo. Upload `.zip` ≤ `CONFIG.MAX_UPLOAD_BYTES` (giới hạn body của Vercel). | AWS S3, Google Cloud Storage, Supabase Storage | Lưu cả file mã nguồn hay zip lên đám mây tạo nguy cơ rò rỉ; chỉ cần đoạn code đã cắt (nhỏ, nằm trong Postgres). |
 | **API Docs** | **Đặc tả nội bộ tại `spec/02_CONTRACTS.md` & `spec/03_API_VA_LUU_TRU.md`** | Mọi endpoint, schema request/response, mã lỗi TypeScript ở một nguồn duy nhất. | Swagger / OpenAPI UI công khai | Mọi route cần phiên Supabase; không phát hành API công khai trong hackathon. |
 | **Auth** | **Supabase Auth (GitHub OAuth)** | Bắt buộc đăng nhập GitHub trước khi dùng; lưu tiến độ theo tài khoản (`spec/03` §2, D-44). | Auth0, NextAuth tự dựng, đăng nhập ẩn danh | Supabase Auth tích hợp sẵn RLS; không tự quản lý session hay JWT; bỏ tài khoản dùng tạm để đơn giản hóa luồng dữ liệu. |
 | **Code Sandbox** | **KHÔNG CÓ / KHÔNG CẦN (Chỉ phân tích tĩnh)** | `spec/01` INV-03: chỉ bóc tách cú pháp tĩnh bằng Tree-sitter, không biên dịch hay chạy code người dùng. | Docker Sandbox, Firecracker microVM | Hệ thống là gia sư kiến trúc, không phải Online Judge; không chạy code nên không có đường thực thi code người dùng. |

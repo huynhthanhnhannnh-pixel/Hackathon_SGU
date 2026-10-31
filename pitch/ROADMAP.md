@@ -12,7 +12,7 @@
 - Không hứa thuật toán mà công cụ hiện có không làm được.
 - Số nào là ước lượng thì ghi "ước lượng".
 - Giữ nguyên các bất biến của `spec/`:
-  - không lưu mã nguồn xuống đĩa hay DB;
+  - không lưu file mã nguồn; chỉ lưu đoạn code đã cắt của phiên (D-59);
   - server là nơi duy nhất ghi tiến độ học;
   - mọi văn bản AI qua cổng gác;
   - đồ thị dựng tất định, không dùng LLM.
@@ -152,6 +152,7 @@ Theo lịch D-47, vòng 3 chỉ cách vòng 2 khoảng 1 ngày (08/11 → 09/11/
   - Luật kiến trúc khai báo kiểu ArchUnit, chỉ áp trên cạnh đủ tin cậy. Xuất SARIF 2.1, comment PR, GitHub Action / GitLab CI.
 - **Thứ tự kiểm chứng ngôn ngữ:** sau TS/JS và Python là Java (DI Spring), Go (interface ngầm), Dart (cầu nối sự kiện BLoC/Provider); tiếp theo là C#, PHP, Kotlin, Rust.
 - **Cầu nối sự kiện** (dispatch/on<Event>) cho BLoC, Redux, Provider để luồng mobile/frontend không bị đứt.
+- **Mobile ít phổ biến (D-57):** nhận màn hình của Ionic/Capacitor, .NET MAUI/Xamarin, NativeScript, Kotlin Multiplatform, router tự viết; và hiện cảnh báo khi biết là app mobile mà không tìm thấy màn hình nào (thay vì im lặng).
 
 ---
 
@@ -192,7 +193,7 @@ Các ý dưới đây có thể làm được về kỹ thuật nhưng **nhóm k
 
 | Tài liệu cũ ghi | Bây giờ |
 | :-- | :-- |
-| Fast-Track `P ≥ 0.85` | Bỏ khỏi bản thi (D-34): node mà mọi kỹ năng ≥ `CONFIG.FAST_TRACK_MIN` vẫn hỏi 1 câu; miễn thi chỉ còn là ý tương lai (Mục 6) |
+| Fast-Track `P ≥ 0.85` | Bỏ khỏi bản thi (D-34): node mà mọi kỹ năng ≥ `CONFIG.MASTERED_MIN` vẫn hỏi 1 câu; miễn thi chỉ còn là ý tương lai (Mục 6) |
 | Ngưỡng cứng "70/70" (`core_accuracy` và `simplicity`) | `PASS_CORE_ACCURACY` + luật D-13 (đủ ý bắt buộc có trích dẫn thật); `simplicity` **không** ảnh hưởng đạt |
 | Quota 10.000 token/phiên **đếm ở client** | `SESSION_TOKEN_QUOTA` (80.000), **đếm ở server** (API-06) |
 | Debounce bằng Jaccard | Độ giống `1 − Levenshtein/max(len)` ≥ `ANSWER_DUPLICATE_SIMILARITY` (0,8), kiểm ở server |
@@ -225,6 +226,6 @@ flowchart LR
 | Bậc kiến trúc | Dấu hiệu cần nâng bậc | Thay đổi trong Code | Hạ tầng bổ sung |
 | :-- | :-- | :-- | :-- |
 | **Bậc 1** *(Bản thi)* | Khởi đầu demo, nhóm nhỏ người học. | Giữ nguyên kiến trúc hiện tại (`spec/04`). | Vercel gói free (`sin1`) + Supabase Free + Gemini API. |
-| **Bậc 2: Cache dùng chung** | Log cho thấy nhiều lần dựng lại theo SHA vì trượt cache RAM giữa các instance. | Chuyển LRU cache `StaticEngineResult` sang bộ nhớ dùng chung. | **Upstash Redis** gói free làm tầng đệm dùng chung. |
+| **Bậc 2: Cache dùng chung** | Log cho thấy nhiều lần đọc lại `session_snapshots` từ Postgres vì trượt cache RAM giữa các instance. | Chuyển LRU cache `StaticEngineResult` sang bộ nhớ dùng chung. | **Upstash Redis** gói free làm tầng đệm dùng chung. |
 | **Bậc 3: Tách Ingest Worker** | Ingest chạm giới hạn thời gian / RAM của Vercel Functions; `ERR_SERVER_BUSY` thường xuyên. | Tách `engine/*` thành Worker riêng; `/api/ingest` đẩy job vào queue và trả job ID để polling. | Hàng đợi **`pgmq` (Supabase Queues)** chạy trên Postgres, hoặc BullMQ. |
 | **Bậc 4: Hàng đợi gọi AI** | Chạm trần quota gói Free của Gemini. | Chuyển `analyze-node`, `analyze-overview` qua worker bất đồng bộ theo batch. | Gắn Google Cloud Billing (Paid Tier, không dùng dữ liệu để huấn luyện); hàng đợi có rate-limit (vd Upstash QStash). |

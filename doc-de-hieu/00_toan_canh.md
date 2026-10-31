@@ -27,7 +27,7 @@ flowchart LR
 ### Ba nguyên tắc nền tảng của hệ thống
 
 - **Code thuần làm trước, AI làm sau:** Toàn bộ khâu đọc file, phân tích cú pháp, tìm mối quan hệ gọi hàm và dựng khung bản đồ đều do thuật toán code thuần thực hiện. AI chỉ được gọi ở bước sau cùng và chỉ đọc các lát cắt code ngắn để làm đúng nhiệm vụ phân tích nội dung và chấm bài.
-- **Không chạm ổ đĩa cho mã nguồn (Zero-Disk):** Mã nguồn dự án và file nén tải lên chỉ tồn tại tạm thời trong bộ nhớ RAM của máy chủ khi phân tích. Hệ thống không lưu trữ bất kỳ file code, đoạn trích dẫn code hay cây cú pháp nào vào ổ cứng hay cơ sở dữ liệu.
+- **Không lưu file mã nguồn:** Mã nguồn dự án (file code đầy đủ, file nén `.zip`, cây cú pháp) chỉ tồn tại tạm thời trong bộ nhớ RAM của máy chủ khi phân tích rồi giải phóng ngay. Thứ duy nhất có code được lưu vào Postgres là kết quả engine của phiên (`StaticEngineResult` gồm các node, đoạn code đã cắt của từng bước, tên hàm, danh sách file, tọa độ) ở bảng `session_snapshots` (D-59), giúp người học luôn thấy đúng đoạn code đó ở mọi lần vào lại phiên mà không cần tải lại file hay chạy lại engine.
 - **Máy chủ là nguồn chân lý duy nhất (Server Single Source of Truth):** Toàn bộ các quyết định về điểm số kỹ năng, số lượt trả lời, việc mở khóa các node và đáp án mẫu đều do máy chủ kiểm soát và lưu trữ trong cơ sở dữ liệu Postgres. Trình duyệt chỉ nhận bản sao hiển thị và không thể tự ý thay đổi tiến độ.
 
 Tra chi tiết: spec/01_KIEN_TRUC_VA_LUONG.md Mục 1 và 2.
@@ -179,7 +179,7 @@ flowchart TB
 ### Chuẩn hóa ghi nhận nhật ký (Logging)
 Hệ thống sử dụng thư viện `pino` xuất nhật ký theo định dạng JSON một dòng ra cổng xuất chuẩn `stdout` để nền tảng lưu trữ tự động thu gom. Mỗi dòng nhật ký chứa mã định danh yêu cầu, đường dẫn API, thời gian thực thi, số lượng token tiêu thụ và mã lỗi (nếu có).
 
-Nhằm tuân thủ nguyên tắc bảo mật và không lưu mã nguồn, hệ thống đặt ra **danh sách không được ghi vào nhật ký**:
+Nhằm tuân thủ nguyên tắc bảo mật và không lưu file mã nguồn, hệ thống đặt ra **danh sách không được ghi vào nhật ký**:
 1. **Không ghi mã nguồn:** Không in nội dung file code, đoạn code trích dẫn, cây cú pháp hay lát cắt code gửi cho AI.
 2. **Không ghi khóa bí mật:** Không in các khóa quản trị cơ sở dữ liệu hay khóa API dịch vụ AI.
 3. **Không ghi thông tin danh tính và mã token:** Không in mã token truy cập hay header xác thực người dùng.
@@ -193,7 +193,7 @@ Do hệ thống chạy trên nền tảng serverless, các cơ chế kiểm soá
 - **Kiểm soát hạn mức phiên học:** Mỗi phiên học được cấp hạn mức trần là 80.000 token (tính cả lượng gửi đi và nhận về). Máy chủ đếm số token sau từng lượt gọi; nếu vượt ngưỡng thì khóa các lượt gọi mới để tránh phát sinh chi phí ngoài ý muốn.
 
 ### Chiến lược bộ nhớ đệm (Cache)
-- **Bộ nhớ đệm RAM đồ thị trong tiến trình:** Kết quả phân tích đồ thị được lưu trong bộ nhớ RAM tối đa 20 repo gần nhất và tự hết hạn sau 10 phút. Bộ nhớ đệm này chỉ nhằm mục đích giúp phản hồi nhanh hơn, hệ thống không bao giờ phụ thuộc vào nó. Khi chuyển sang một tiến trình mới làm mất bộ nhớ đệm tạm, máy chủ tải lại mã nguồn theo đúng mã commit đã lưu và chạy lại Engine để dựng lại đồ thị như cũ. Riêng phiên từ file `.zip` thì không dựng lại được, người học phải upload lại file.
+- **Bộ nhớ đệm RAM đồ thị trong tiến trình:** Kết quả phân tích đồ thị được lưu trong bộ nhớ RAM tối đa 20 repo gần nhất và tự hết hạn sau 10 phút để tăng tốc độ phản hồi. Khi trượt bộ nhớ đệm RAM, máy chủ chỉ cần đọc lại kết quả đã lưu trong bảng `session_snapshots` ở Postgres qua hàm `getSessionStaticResult(session)` mà không cần tải lại file hay chạy lại engine. Nhờ vậy, cả phiên GitHub lẫn phiên từ file `.zip` đều mở lại được bình thường (D-59).
 - **Bộ nhớ đệm AI dùng chung (`ai_cache`):** Các văn bản do AI tạo ra sau khi đã qua cổng gác kiểm duyệt (bản phân tích node, tóm tắt tổng quan kiến trúc) được lưu vào bảng cơ sở dữ liệu Postgres. Khi một người học khác mở cùng repo đó ở cùng phiên bản, dữ liệu được lấy ngay từ cơ sở dữ liệu với chi phí 0 token.
 
 ### Các nút thắt kỹ thuật và lộ trình nâng cấp
@@ -202,7 +202,7 @@ Do hệ thống chạy trên nền tảng serverless, các cơ chế kiểm soá
 | :-- | :-- | :-- | :-- |
 | **1. Bộ nhớ RAM và thời gian chạy Function** | Giới hạn tài nguyên của gói dịch vụ miễn phí; tối đa 4 tác vụ nạp đồng thời | Xuất hiện lỗi máy chủ bận hoặc thời gian thực thi chạm trần | Tách Engine thành cụm máy chủ xử lý tác vụ nền riêng (Worker) qua hàng đợi tin nhắn |
 | **2. Hạn mức API của dịch vụ AI** | Hạn mức gói miễn phí của nhà cung cấp; hạn mức 80.000 token mỗi phiên | Xuất hiện lỗi quá hạn mức token hoặc lỗi từ chối dịch vụ từ AI | Đăng ký gói dịch vụ trả phí theo mức dùng thực tế, đưa các tác vụ phân tích nền vào hàng đợi |
-| **3. Bộ nhớ đệm RAM theo tiến trình đơn lẻ** | Bộ nhớ đệm tạm trong RAM bị mất khi nền tảng serverless thay đổi tiến trình | Máy chủ phải tải lại mã nguồn theo mã commit nhiều lần | Sử dụng bộ nhớ đệm phân tán dùng chung cho toàn hệ thống (như Redis) |
+| **3. Bộ nhớ đệm RAM theo tiến trình đơn lẻ** | Bộ nhớ đệm tạm trong RAM bị mất khi nền tảng serverless thay đổi tiến trình | Máy chủ phải đọc lại từ bảng `session_snapshots` trong Postgres | Sử dụng bộ nhớ đệm phân tán dùng chung cho toàn hệ thống (như Redis) |
 | **4. Số lượng kết nối cơ sở dữ liệu** | Giới hạn số lượng kết nối đồng thời của gói dịch vụ cơ sở dữ liệu | Xuất hiện lỗi không thể kết nối lưu trữ dữ liệu | Bật tính năng gom cụm kết nối giao dịch (Transaction Pooler) hoặc nâng cấp gói máy chủ |
 
 Tra chi tiết: spec/04_KIEN_TRUC_TRIEN_KHAI.md Mục 8, 9 và 14.
@@ -238,7 +238,7 @@ Bảng dưới đây tổng hợp toàn bộ các loại dữ liệu trong hệ 
 | Loại dữ liệu | Nơi lưu trữ | Thời gian tồn tại | Ai được ghi | Ai được đọc |
 | :-- | :-- | :-- | :-- | :-- |
 | **Mã nguồn dự án, file nén, cây cú pháp** | Bộ nhớ RAM máy chủ | Chỉ trong lúc Engine chạy | Engine nội bộ | Engine nội bộ |
-| **Kết quả đồ thị Engine hoàn chỉnh** | Bộ nhớ RAM máy chủ (LRU Cache 1 instance) | Tối đa 10 phút, có thể mất bất kỳ lúc nào khi đổi tiến trình | Engine nội bộ | Các route handler nội bộ |
+| **Kết quả engine của phiên (`StaticEngineResult`)** | Cơ sở dữ liệu Postgres (`session_snapshots`), cache tạm trong RAM | Lâu dài theo phiên học (xóa theo phiên/tài khoản) | Máy chủ dùng khóa quản trị | Máy chủ nội bộ (trình duyệt cấm đọc trực tiếp) |
 | **Lát cắt code hiển thị trên giao diện** | Trình duyệt người học (Zustand Store) | Trong phiên làm việc (mất khi tải lại trang hoặc đổi repo) | Máy chủ gửi về | Trình duyệt người học |
 | **Tài khoản, hồ sơ điểm 16 kỹ năng** | Cơ sở dữ liệu Supabase Postgres | Lâu dài (cho đến khi xóa tài khoản) | Máy chủ dùng khóa quản trị | Người sở hữu tài khoản qua token xác thực |
 | **Phiên học, tiến độ các node** | Cơ sở dữ liệu Supabase Postgres | Lâu dài theo phiên học | Máy chủ dùng khóa quản trị | Người sở hữu phiên học |
@@ -281,7 +281,7 @@ Tra chi tiết: doc-de-hieu/07_ke_hoach_21h.md Mục 1.
 | **Mô hình BKT** | Thuật toán xác suất Bayesian Knowledge Tracing dùng để ước lượng độ thuần thục của người học trên từng kỹ năng kỹ nghệ phần mềm. |
 | **Capstone ★** | Node có độ phức tạp nhận thức (`cognitive_complexity`) lớn nhất trong repo, mỗi đồ thị có đúng 1 node. |
 | **Mài mòn (Decay)** | Hiện tượng điểm kỹ năng tự động phai nhạt dần theo thời gian khi người học lâu ngày không luyện tập; thanh kỹ năng hiển thị nhạt dần, không có nút ôn tập. |
-| **Mã commit (Commit SHA)** | Chuỗi ký tự định danh duy nhất cho một phiên bản mã nguồn cụ thể trên Git; giúp hệ thống luôn dựng lại cùng một bản đồ học tập nhất quán. |
+| **Mã commit (Commit SHA)** | Chuỗi ký tự định danh duy nhất cho một phiên bản mã nguồn cụ thể trên Git; giúp hệ thống gắn phiên học với đúng phiên bản code nhất quán (D-39, D-59). |
 | **Báo sai** | Thao tác của người học khi thấy mình bị chấm trượt oan; máy chủ xử lý ngay, không có người duyệt, và hoàn lại điểm nếu điểm chưa bị câu khác đổi. |
 | **Câu hỏi bị bỏ qua (`DROPPED`)** | Câu hỏi mà AI không thể tạo thành công do vi phạm cổng gác kiểm duyệt sau 1 lần gọi lại; hệ thống bỏ qua câu hỏi này để người học tiếp tục, không phải phiên học bị hủy. |
 | **Chế độ Ngoại tuyến (Offline)** | Chế độ demo chạy bằng gói dữ liệu ghi sẵn từ một lần chạy thật đã được duyệt tay; phục vụ thuyết trình nhanh mà không ghi dữ liệu vào cơ sở dữ liệu. |

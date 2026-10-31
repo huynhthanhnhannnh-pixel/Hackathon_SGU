@@ -82,7 +82,7 @@ flowchart TD
 - **Bảng "Tiếp tục học":** Liệt kê các phiên học mà bạn đã thực hiện trước đây, sắp xếp phiên gần nhất lên đầu trang. Mỗi dòng tóm tắt thông tin gồm: tên repo, nhánh, 7 ký tự mã commit (nếu nạp từ file zip sẽ có thêm nhãn định danh "zip"), thư mục con nếu là dự án monorepo, số lượng node đã hoàn thành trên tổng số node và số node chưa đạt (ví dụ: `shop-api · main @ 5be1c2a · 3/7 node (1 ✗) · 2h`). Nút "Lịch sử" bên cạnh cho phép bạn xem lại chi tiết các câu trả lời mà mình từng nộp trước đây.
 - **Xử lý các tình huống mở lại phiên:**
   - *Phiên bình thường:* Nút "Học tiếp" sẽ mở lại chính xác trạng thái của phiên học cũ. Ngoài ra còn có nút "Học lại từ đầu"; khi bấm nút này, một hộp thoại sẽ hiện lên để bạn xác nhận: "Mở phiên mới cho repo này: tiến độ node làm lại, điểm kỹ năng giữ nguyên, câu hỏi sinh mới." Khi đồng ý, bạn sẽ được học lại từ con số 0 trên cùng một mã nguồn mà không bị mất đi điểm số kỹ năng đã tích lũy trong hồ sơ cá nhân.
-  - *Phiên nạp từ file zip hoặc GitHub không đọc được commit:* Do máy chủ áp dụng nguyên tắc không lưu trữ file mã nguồn trên ổ đĩa, sau khi bộ nhớ đệm hết hạn, máy chủ sẽ không còn giữ file zip cũ. Giao diện sẽ thông báo: "Phiên upload không mở lại được — hãy upload lại file .zip." và mở sẵn vùng kéo thả để bạn nạp lại file. Nếu file bạn vừa nạp khác với phiên bản cũ, hệ thống sẽ tự động khởi tạo một phiên học mới kèm thông báo nổi (toast): "File khác bản cũ — đã mở phiên mới". Nếu là repo GitHub không có mã commit, hệ thống sẽ nhắc bạn quét lại kho mã nguồn.
+  - *Phiên nạp từ file zip:* Nhờ kết quả engine của phiên đã được lưu trong bảng `session_snapshots` ở Postgres (D-59), phiên nạp từ file `.zip` vẫn mở lại được bình thường như phiên GitHub mà không bắt buộc người học phải upload lại file.
   - *Phiên học tạo bởi phiên bản engine cũ:* Nếu mã nguồn của hệ thống phân tích vừa được nâng cấp lên bản mới hơn, phiên cũ chỉ cho phép "Xem lịch sử" để tránh sai lệch cấu trúc bản đồ.
 - **Lớp phủ chờ quét:** Trong suốt thời gian máy chủ tải và dựng bản đồ, một lớp phủ mờ sẽ xuất hiện cùng vòng xoay tiến trình và đồng hồ đếm giây thực tế, đồng thời khóa toàn bộ ô nhập và vùng kéo thả. Khi hoàn tất, giao diện tự động chuyển bạn vào Buồng lái 3 cột ở tab Tổng quan. Nếu bạn mở lại một phiên cũ thành công, một thông báo nổi sẽ chào đón: "Đã mở lại {repo_name} — {completed}/{total} node".
 
@@ -234,7 +234,7 @@ Trên từng thẻ node còn được trang bị các ký hiệu đặc biệt g
 Động cơ phân tích luôn cố gắng đặt tên cho node bằng tên hàm điểm đón (entry point) hoặc tên miền nghiệp vụ chính. Tuy nhiên, nếu tên gọi này được suy đoán gián tiếp từ tên thư mục, từ khóa lặp lại hoặc tên file, giao diện sẽ tự động thêm tiền tố dấu ngã `~` ở phía trước tên (ví dụ: `~products`).
 - Nếu tên node dài quá 32 ký tự, giao diện sẽ cắt bớt và thêm dấu ba chấm "…".
 - Khi bạn rê chuột vào thẻ node, tooltip sẽ hiện đầy đủ tên gốc trọn vẹn, căn cứ mà hệ thống dùng để đặt tên đó, cùng dòng lưu ý minh bạch: "Tên suy ra — gần đúng".
-- Nếu đây là một node ảo do động cơ tự tạo ra, tooltip sẽ ghi rõ: "Node ảo do engine tạo".
+- Nếu đây là một node ảo, tooltip sẽ ghi rõ: "Chặng tách từ hàm dài — code thật, engine chia theo vai trò câu lệnh".
 - Ngay dưới tên node là dòng thông tin phụ tóm tắt quy mô: "{số lượng} file · {ngôn ngữ}" (ví dụ: "3 file · TypeScript").
 
 ### 4.5. Phân loại cạnh nối và độ tin cậy
@@ -492,7 +492,7 @@ Node đã xong thì Tab Feynman chỉ đọc: vẫn xem được câu hỏi, k�
 ### 6.3. Tab Tổng quan — Bức tranh kiến trúc toàn cảnh
 
 Tab Tổng quan là nơi giúp bạn tổng hợp lại toàn bộ bức tranh kiến trúc của cả dự án sau khi đã đi qua các lát cắt:
-- **Khi các node chưa phân tích xong:** Tab hiển thị các dữ kiện lấy từ kết quả engine (phong cách kiến trúc, framework, `tech_stack`, "Bắt đầu từ" là node gốc) kèm thông báo tiến độ: "Nhận định của AI sẽ hiện khi mọi node phân tích xong ({số node xong}/{tổng số node})".
+- **Khi các node chưa phân tích xong:** Tab hiển thị các dữ kiện lấy từ kết quả engine (phong cách kiến trúc, framework, `tech_stack`, mọi node gốc (có thể nhiều)) kèm thông báo tiến độ: "Nhận định của AI sẽ hiện khi mọi node phân tích xong ({số node xong}/{tổng số node})".
 - **Khi đã có bản tổng quan:** Tab hiện `overview.facts`, "Luồng chính", và khung mang tiêu đề **"Nhận định của AI — có thể chưa chính xác"** gồm phong cách kiến trúc, tóm tắt, luồng chính, các tầng và ghi chú. Nếu `ai = null` thì không có khung này. Mọi node được nhắc đến là chip bấm được, trừ node `LOCKED`.
 
 Tra chi tiết: spec/30_UI.md Mục 6.
@@ -694,7 +694,7 @@ Giao diện không hiển thị lỗi bừa bãi mà phân chia thông minh thà
 | `ERR_AI_REJECTED` | AI chưa đặt được câu hỏi hợp lệ cho node này. | Nút Thử lại chuẩn bị câu hỏi |
 | `ERR_TOKEN_QUOTA_EXCEEDED` | Phiên này đã dùng hết hạn mức AI: vẫn đọc được bản phân tích đã có và bỏ qua câu để xem đáp án, nhưng không chấm được bài mới. | Thước đo token chuyển màu đỏ; vô hiệu hóa nút Nộp bài; dừng toàn bộ hàng đợi phân tích |
 | `ERR_UNAUTHENTICATED` | Phiên đăng nhập đã hết hạn. | Trình duyệt tự động làm mới phiên 1 lần; nếu vẫn thất bại thì hiện nút "Đăng nhập lại" đưa về màn hình Đăng nhập GitHub |
-| `ERR_SESSION_NOT_FOUND` | Không tìm thấy phiên học này. <br/>*Nếu là phiên nạp từ file zip:* "Phiên upload không mở lại được — hãy upload lại file .zip." | Dọn sạch mã phiên trong bộ nhớ cục bộ, đưa về màn hình tiếp nhận và tải lại danh sách phiên |
+| `ERR_SESSION_NOT_FOUND` | Không tìm thấy phiên học này. | Dọn sạch mã phiên trong bộ nhớ cục bộ, đưa về màn hình tiếp nhận và tải lại danh sách phiên |
 | `ERR_SESSION_ENGINE_OUTDATED` | Phiên này tạo bằng phiên bản engine cũ — chỉ xem lại lịch sử. Quét lại repo để học bằng bản mới. | Hiện hai nút: "Xem lịch sử" và "Quét lại" |
 | `ERR_PERSISTENCE_UNAVAILABLE` | Máy chủ lưu tiến độ đang gặp sự cố — thao tác chưa thực hiện, bạn không mất lượt. | Giữ nguyên nội dung ô nhập, hiện nút Thử lại |
 | `ERR_DEMO_MODE_DISABLED` | Chế độ đổi persona đang tắt trên máy chủ. | Tự động ẩn menu chọn persona trên thanh tiêu đề |
