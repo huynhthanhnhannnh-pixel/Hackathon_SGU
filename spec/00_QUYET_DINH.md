@@ -6,10 +6,10 @@
 
 ## Đọc nhanh
 
-- **Mục 1 — Quyết định đang có hiệu lực:** gồm mọi D chưa hủy, xếp theo mã tăng dần (D-01 … D-10, D-12, D-13, D-15, D-16, D-18 … D-20, D-22 … D-24, D-27 … D-51). Viết thẳng theo nội dung hiện hành, không giữ chữ cũ đã bị bãi bỏ.
+- **Mục 1 — Quyết định đang có hiệu lực:** gồm mọi D chưa hủy, xếp theo mã tăng dần (D-01 … D-10, D-12, D-13, D-15, D-16, D-18 … D-20, D-22, D-23, D-27 … D-52). Viết thẳng theo nội dung hiện hành, không giữ chữ cũ đã bị bãi bỏ.
 - **Mục 2 — Chờ chốt:** hiện không còn quyết định nào.
 - **Mục 3 — Câu hỏi còn mở:** Q-03, Q-10. Không chặn việc code; có người chịu trách nhiệm và mặc định nếu chưa trả lời.
-- **Mục 4 — Lịch sử:** các D đã hủy hoặc thay thế (D-11, D-14, D-17, D-21, D-25, D-26) và các câu hỏi đã đóng (Q-01, Q-02, Q-04 … Q-09, Q-11, Q-12).
+- **Mục 4 — Lịch sử:** các D đã hủy hoặc thay thế (D-11, D-14, D-17, D-21, D-24, D-25, D-26) và các câu hỏi đã đóng (Q-01, Q-02, Q-04 … Q-09, Q-11, Q-12).
 - **Đổi một quyết định:** sửa dòng D-xx ở file này trước, rồi mới sửa file đích (cột "Áp dụng ở").
 
 | Mục | Nội dung | File được trỏ tới |
@@ -17,7 +17,7 @@
 | 1 | Quyết định đang có hiệu lực (45 quyết định) | `01`, `02`, `03`, `04`, `10`, `11`, `20`, `21`, `22`, `30`, `50`, `doc-de-hieu/`, `pitch/` |
 | 2 | Chờ chốt (không còn) | — |
 | 3 | Câu hỏi còn mở (Q-03, Q-10) | `02`, `50` |
-| 4 | Lịch sử (6 D đã hủy/thay thế, 10 Q đã đóng) | — |
+| 4 | Lịch sử (7 D đã hủy/thay thế, 10 Q đã đóng) | — |
 
 ---
 
@@ -32,7 +32,7 @@
 | **D-05** | **Tài liệu hợp nhất thành `spec/` (để code) + `pitch/` (để thuyết trình).**<br>File cũ chuyển nguyên vẹn vào `archive/2026-10-28_truoc-hop-nhat/`, không còn là căn cứ. | toàn repo |
 | **D-06** | **Định nghĩa node:** 1 node = 1 lát cắt mở đầu bằng **1 hàm entry đã đăng ký** (route handler / controller method / command / screen).<br>• Đi xuôi đồ thị gọi hàm tối đa `SLICE_MAX_HOPS` bước; **1 step = 1 hàm** được giữ.<br>• Layer gán theo luật cố định (`11` ENG-82):<br>– entry ⇒ `ENTRY_POINT`;<br>– hàm đăng ký làm middleware của route ⇒ `MIDDLEWARE`;<br>– hàm nằm trong file vai trò repository/dao/model, hoặc tự gọi DATA_SINK mà không qua hàm repository nào trong repo ⇒ `DATA_ACCESS`;<br>– còn lại ⇒ `BUSINESS_LOGIC`.<br>• Hàm VIP (độ phức tạp > `VIP_COMPLEXITY_MIN`) chưa thuộc lát cắt nào ⇒ node `ALGORITHMIC_CORE`. | `11` |
 | **D-07** | **Cạnh giữa các node:** A → B khi lát cắt A và B **dùng chung ≥ 1 hàm** và A "dễ hơn" B.<br>• A "dễ hơn" B: độ phức tạp nhỏ hơn; hòa ⇒ Rank Score lớn hơn; hòa ⇒ `id` tăng dần.<br>• Sau đó rút gọn bắc cầu (transitive reduction).<br>• Node không chung hàm với ai là gốc. | `11` |
-| **D-08** | **`node.id` tất định:**<br>• `slice-<slug(title)>-<hash6(entry_symbol_key)>`<br>• `algo-<slug>-<hash6>`<br>• `vroot-algorithms`<br>• `vnode-<hash6(file_path + "#" + nhãn chặng)>` (1 file sinh nhiều chặng `PROCEDURAL`)<br>• `hash6` = 6 ký tự hex đầu của SHA-1. | `11` |
+| **D-08** | **`node.id` tất định:**<br>• `slice-<slug(title)>-<hash6(entry_symbol_key)>`<br>• `algo-<slug>-<hash6>`<br>• `vnode-<hash6(file_path + "#" + nhãn chặng)>` (1 file sinh nhiều chặng `PROCEDURAL`)<br>• `hash6` = 6 ký tự hex đầu của SHA-1. | `11` |
 | **D-09** | **Hub chỉ được bầu trong tập file Ingress**; PageRank chỉ dùng để xếp hạng lát cắt. | `11` |
 | **D-10** | **Engine tất định tuyệt đối:**<br>• Bỏ việc cắt file theo thời gian chạy (`ENGINE_BUDGET_MS` chỉ còn là ngưỡng cảnh báo).<br>• `ARCHIVE_HASH` băm **toàn bộ** buffer.<br>• Thêm `engine_version` vào kết quả, khóa cache và `learning_sessions`.<br>• Phiên tạo bằng `engine_version` khác ⇒ chỉ xem lịch sử, không học tiếp. | `02`, `03`, `10`, `11` |
 | **D-12** | **`cognitive_complexity` của node = max** độ phức tạp các hàm trong lát cắt.<br>**Capstone** = node có `cognitive_complexity` lớn nhất (hòa ⇒ Rank Score lớn nhất ⇒ `id` nhỏ nhất); đúng 1 Capstone / đồ thị.<br>Trường `is_capstone` nằm trên `HybridArchitecturalNode`. | `02`, `11`, `22` |
@@ -44,7 +44,6 @@
 | **D-20** | **`overall_tier`** (chỉ để hiển thị) = tier của **trung bình** điểm đã decay trên các kỹ năng có `practice_count > 0`.<br>Chưa luyện kỹ năng nào ⇒ `NOVICE`.<br>Tier ≥ `FAST_TRACK_MIN` vẫn hiển thị `ARCHITECT`. | `22` |
 | **D-22** | **Báo sai:** chỉ dùng cho câu có kết quả `FAILED`.<br>Hệ quả:<br>• Câu chuyển 🚩.<br>• Nếu `p_mastery` hiện tại của kỹ năng vẫn đúng bằng giá trị câu đó đã ghi thì hoàn lại giá trị trước.<br>• Node tính lại màu bỏ qua câu 🚩.<br>Ghi log cho nhóm. | `03`, `22` |
 | **D-23** | **Prompt chấm luôn nhận** `feynman_question`, `reference_answer`, `must_have_points`, các bước, số lần nộp hiện tại và câu trả lời (không nhận `code_context`).<br>Mọi lời gọi AI dùng **responseSchema** JSON cố định. | `20` |
-| **D-24** | **Node gom nhóm `vroot-*` chỉ để hiển thị** (`is_group_root = true`):<br>• không có `trace_steps`;<br>• không phân tích, không học;<br>• không tính vào Display Budget;<br>• không nằm trong `prerequisites` của node khác (node con của nó là node gốc).<br>Node ảo `vnode-*` của chế độ `PROCEDURAL` có code thật ⇒ học như node thường. | `02`, `11`, `30` |
 | **D-27** | **Host = Vercel (gói free), region `sin1`.**<br>• Cache RAM chỉ giúp nhanh hơn, **không được dựa vào**: mất cache ⇒ tải lại zip theo commit SHA + chạy lại engine (`03` Mục 4).<br>• Upload zip bị Vercel chặn theo giới hạn body ⇒ `CONFIG.MAX_UPLOAD_BYTES`; link GitHub không bị chặn.<br>• Bỏ Railway. | `02`, `03` API-08, `04`, `10` |
 | **D-28** | **Logging:** Pino xuất JSON 1 dòng ra stdout (Vercel thu log); cấu hình `serverExternalPackages: ['pino']` trong `next.config.ts`; cấm ghi mã nguồn, snippet, bí mật, token, câu trả lời người học. | `04` |
 | **D-29** | **Monitoring:** log + Observability có sẵn của Vercel + dashboard Supabase. | `04` |
@@ -70,12 +69,13 @@
 | **D-49** | **Giấy phép mã nguồn:** Mã nguồn repo thi dùng giấy phép MIT. | `04`, repo thi |
 | **D-50** | **Model AI:** `gemini-3.5-flash-lite`, gọi bằng `generateContent` + `responseSchema` (đã thử thật 31/10). `gemini-2.5-flash` không còn mở cho người dùng mới; `gemini-3.8-flash` hạn mức quá thấp. Dự phòng: Groq `openai/gpt-oss-120b`. Gói free nên chỉ dùng repo công khai. Web deploy dùng key riêng; mỗi người test bằng key của mình. | `02`, `20`, `21`, `doc-de-hieu/07`, `pitch/` |
 | **D-51** | **Tăng số node lên tối đa 20:**<br>• Bản đồ tối đa 20 node (`CONFIG.DISPLAY_MAX_NODES = 20`, tối thiểu vẫn là 6); đường chính tối đa 6 node (`CONFIG.CRITICAL_PATH_MAX_NODES = 6`); thứ tự chọn ENG-114 giữ nguyên.<br>• Bỏ node thừa ngoài 20 ⇒ ghi `IngestionReport.omitted_node_count` + warning "{n} luồng khác không hiển thị trên bản đồ".<br>• Tab Tổng quan giữ luật D-46 (đợi mọi node phân tích xong).<br>• Nâng `CONFIG.ENGINE_VERSION` từ `"1.0.0"` lên `"1.1.0"`. | `02`, `11`, `30`, `50`, `doc-de-hieu/`, `pitch/` |
+| **D-52** | **Bỏ chế độ `ALGORITHM_COLLECTION` (bản demo, giảm code):**<br>• Bảng chọn chế độ ENG-51 còn 3 dòng: có entry `REGISTERED`/`GENERIC` ⇒ NORMAL; số file ≤ `CONFIG.PROCEDURAL_MAX_FILES` ⇒ `PROCEDURAL`; còn lại ⇒ NORMAL (dùng entry `PROGRAM` nếu có).<br>• Repo toàn hàm thuật toán rời, không có entry ⇒ node `ALGORITHMIC_CORE` sinh theo ENG-90 như repo thường; không hàm nào đủ ngưỡng ⇒ `ERR_NO_ARCHITECTURAL_SLICE`.<br>• Bỏ node gom nhóm `vroot-algorithms`, trường `is_group_root`, `CONFIG.VIRTUAL_ROOT_MIN_COMPONENTS`, `CONFIG.DEGRADED_TOP_FUNCTIONS`; `DegradedMode` chỉ còn `"PROCEDURAL"`. Thay D-24.<br>• Giữ node `ALGORITHMIC_CORE`.<br>• Nâng `CONFIG.ENGINE_VERSION` từ `"1.1.0"` lên `"1.2.0"`. | `01`, `02`, `03`, `11`, `20`, `30`, `doc-de-hieu/`, `pitch/` |
 
 ---
 
 ## 2. Quyết định chờ chốt
 
-Hiện không còn quyết định nào chờ chốt. D-08, D-09, D-16, D-24 đã chốt ngày 31/10/2026 và chuyển lên Mục 1.
+Hiện không còn quyết định nào chờ chốt. D-08, D-09, D-16, D-24 đã chốt ngày 31/10/2026 và chuyển lên Mục 1. D-24 sau đó bị hủy bởi D-52.
 
 ---
 
@@ -96,6 +96,7 @@ Hiện không còn quyết định nào chờ chốt. D-08, D-09, D-16, D-24 đ�
 - **D-14:** Vé chấm bài `challenge_token` mang theo `code_context` (hủy, thay bởi D-36: lưu DB, AI chấm không nhận `code_context`).
 - **D-17:** Sync receipt khi lỗi ghi DB (hủy, thay bởi D-40: bỏ biên nhận, DB lỗi trả `ERR_PERSISTENCE_UNAVAILABLE` + nút "Thử lại").
 - **D-21:** Thêm persona `SENIOR_ACTIVE` để demo Fast-Track (hủy, thay bởi D-34: bỏ Fast-Track).
+- **D-24:** Node gom nhóm `vroot-*` chỉ để hiển thị (hủy, thay bởi D-52: bỏ chế độ `ALGORITHM_COLLECTION` và node gom nhóm).
 - **D-25:** Câu ôn biến thể `|v{n}` tránh trùng câu đã lộ đáp án (hủy, thay bởi D-35: bỏ ôn tập).
 - **D-26:** Phiên GitHub rơi về `ARCHIVE_HASH` khi cache RAM trượt (hủy, thay bởi D-39: phiên gắn commit SHA).
 

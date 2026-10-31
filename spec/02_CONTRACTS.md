@@ -30,7 +30,7 @@
 ```typescript
 export const CONFIG = {
   // ---------- Phiên bản (đổi ⇒ khóa cache mới) ----------
-  ENGINE_VERSION: "1.1.0",            // Đổi khi đổi bất kỳ luật Tầng 0–2 làm đổi đồ thị / node_id (D-10, D-51)
+  ENGINE_VERSION: "1.2.0",            // Đổi khi đổi bất kỳ luật Tầng 0–2 làm đổi đồ thị / node_id (D-10, D-51, D-52)
   PROMPT_VERSION: "1.0.0",            // Đổi khi đổi prompt hoặc responseSchema của 4 lời gọi AI
 
   // ---------- Tầng 0: tải & lọc (10_ENGINE_INGEST) ----------
@@ -94,8 +94,6 @@ export const CONFIG = {
   DISPLAY_MIN_NODES: 6,
   DISPLAY_MAX_NODES: 20,              // D-51
   CRITICAL_PATH_MAX_NODES: 6,         // D-51
-  VIRTUAL_ROOT_MIN_COMPONENTS: 4,     // > 3 thành phần rời ⇒ thêm Virtual Root
-  DEGRADED_TOP_FUNCTIONS: 6,
   DAGRE_RANKDIR: "TB",
   DAGRE_RANKSEP: 100,
   DAGRE_NODESEP: 80,
@@ -219,7 +217,7 @@ export type ArchitecturalLayer =
   | "ALGO_SETUP" | "ALGO_EXECUTION" | "ALGO_TERMINATION";                // Node thuật toán
 
 export type NodeType = "ARCHITECTURAL_DATA_FLOW" | "ALGORITHMIC_CORE";
-export type DegradedMode = "PROCEDURAL" | "ALGORITHM_COLLECTION";
+export type DegradedMode = "PROCEDURAL";
 export type GraphConfidence = "HIGH" | "MIXED" | "LOW";
 
 // Danh mục mẫu kiến trúc cố định (AI chỉ được chọn trong danh mục)
@@ -291,7 +289,6 @@ export interface HybridArchitecturalNode {
   rank_score: number;                  // PageRank + ingress bonus của file entry
   is_vip_algorithm: boolean;
   is_capstone: boolean;                // Đúng 1 node / đồ thị (D-12)
-  is_group_root: boolean;              // vroot-* chỉ để hiển thị (D-24): trace_steps rỗng, không học, không là prerequisite
   uncle_bob: UncleBobMetrics;
   trace_steps: ExecutionTraceStep[];   // Tổng dòng snippet ≤ CONFIG.NODE_MAX_LINES
   dto_snippet: string;                 // Khai báo kiểu dữ liệu mà các step dùng (≤ 30 dòng), "" nếu không có

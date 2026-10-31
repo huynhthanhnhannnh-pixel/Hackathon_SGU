@@ -270,7 +270,7 @@ Kiểm tất định khi dựng lại: khung đồ thị dựng lại phải tr�
 
 ### 5.1. `deriveNodeStates(skeleton, progressRows): Record<node_id, NodeStateView-lite>`
 
-Node `is_group_root` (D-24) không có trong `graph_skeleton` và không bao giờ là node cha. Duyệt các node còn lại theo thứ tự tô-pô (hòa ⇒ `node_id` tăng dần):
+Duyệt các node theo thứ tự tô-pô (hòa ⇒ `node_id` tăng dần):
 1. Dòng `node_progress` có `status` ≠ null ⇒ dùng `status` đó.
 2. Ngược lại ⇒ `AVAILABLE` nếu mọi node cha **đã thông**, nếu không ⇒ `LOCKED`. Node gốc luôn thỏa.
    - Node cha **đã thông** khi trạng thái của nó ∈ {`COMPLETED`, `FAILED`} **hoặc** (nó `AVAILABLE` **và** `analysis_failed = true`) — D-03.

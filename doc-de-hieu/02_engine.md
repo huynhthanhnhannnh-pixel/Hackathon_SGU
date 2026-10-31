@@ -715,16 +715,12 @@ flowchart TD
   CHK_ENTRY -- "Có" --> MODE_NORMAL["Chế độ BÌNH THƯỜNG (NORMAL):<br/>Dựng lát cắt theo luồng nghiệp vụ"]
   CHK_ENTRY -- "Không" --> CHK_FILES{"Số file mã nguồn ≤ 2 file?"}
   CHK_FILES -- "Đúng" --> MODE_PROC["Chế độ THỦ TỤC (PROCEDURAL):<br/>Bóc tách các chặng trong file script dài"]
-  CHK_FILES -- "Sai" --> CHK_EDGES{"Các file có gọi nhau không? (|E| = 0)"}
-  CHK_EDGES -- "Không gọi nhau" --> MODE_ALGO["Chế độ BỘ SƯU TẬP THUẬT TOÁN (ALGORITHM_COLLECTION):<br/>Gom các hàm thuật toán độc lập"]
-  CHK_EDGES -- "Có gọi nhau" --> CHK_MAIN{"Có hàm main() khởi chạy?"}
-  CHK_MAIN -- "Có" --> MODE_NORMAL
-  CHK_MAIN -- "Không" --> MODE_ALGO
+  CHK_FILES -- "Sai" --> MODE_NORMAL
 ```
 
 1. **Chế độ BÌNH THƯỜNG (NORMAL):** Áp dụng cho các dự án ứng dụng web, microservices có điểm đầu vào rõ ràng. Đây là chế độ mặc định của dự án `shop-api` của chúng ta. Hệ thống sẽ đi theo từng điểm vào để cắt lát luồng dữ liệu.
 2. **Chế độ THỦ TỤC (PROCEDURAL):** Áp dụng khi dự án chỉ có 1 đến 2 file mã nguồn (ví dụ một file `main.py` dài hàng trăm dòng). Vì không có route, hệ thống sẽ dùng kỹ thuật đặc biệt để chia file dài đó thành các chặng logic (nhận dữ liệu, kiểm tra hợp lệ, xử lý tính toán, lưu trữ) thành các node ảo độc lập.
-3. **Chế độ BỘ SƯU TẬP THUẬT TOÁN (ALGORITHM_COLLECTION):** Áp dụng khi dự án gồm nhiều file bài tập riêng lẻ (ví dụ: `quicksort.py`, `dijkstra.py`, `binary_tree.py`) mà các file này hoàn toàn không gọi nhau. Hệ thống sẽ tự động tìm kiếm các hàm thuật toán có độ phức tạp cao nhất trong từng file và gom chúng dưới một nút gốc chung.
+3. **Repo toàn bài tập thuật toán rời** (ví dụ `quicksort.py`, `dijkstra.py` không gọi nhau, không có `main`): vẫn chạy chế độ BÌNH THƯỜNG. Không có lát cắt nào, nên bản đồ chỉ gồm các node thuật toán sinh từ những hàm có độ phức tạp cao (Mục 9). Bản demo không còn chế độ gom nhóm riêng cho loại repo này (D-52).
 
 Tra chi tiết: spec/11_ENGINE_DO_THI.md Mục 5.
 
@@ -940,11 +936,11 @@ Tra chi tiết: spec/11_ENGINE_DO_THI.md Mục 9.
 
 ---
 
-## 10. Hai chế độ suy biến đặc biệt: Khi dự án không có Route chuẩn
+## 10. Chế độ suy biến đặc biệt: Khi dự án không có Route chuẩn
 
-Trong thế giới thực, không phải dự án nào cũng được viết theo mô hình chuẩn Express hay NestJS. Khi gặp những kho chứa có cấu trúc "khác thường", hệ thống không bao giờ báo lỗi đầu hàng mà kích hoạt **Hai chế độ suy biến thông minh**:
+Trong thế giới thực, không phải dự án nào cũng được viết theo mô hình chuẩn Express hay NestJS. Khi gặp những kho chứa có cấu trúc "khác thường", hệ thống không bao giờ báo lỗi đầu hàng mà kích hoạt **chế độ suy biến thủ tục**:
 
-### Chế độ suy biến 1: Kiến trúc thủ tục tuần tự (PROCEDURAL)
+### Kiến trúc thủ tục tuần tự (PROCEDURAL)
 Chế độ này tự động kích hoạt khi dự án chỉ có 1 đến 2 file mã nguồn (ví dụ một file script `main.py` dài 400 dòng do sinh viên viết để cào dữ liệu hoặc tự động hóa tác vụ).
 Trong file script này, không hề có khái niệm Route, Service hay Controller; toàn bộ code được viết tuần tự từ trên xuống dưới.
 
@@ -958,15 +954,6 @@ Hệ thống soi từng dòng lệnh cấp 1 trong hàm dài nhất và dán cho
 Mỗi nhãn xuất hiện sẽ được hệ thống đóng gói thành một **Node ảo (Virtual Node)**. Bốn node ảo này được tự động liên kết với nhau theo thứ tự:
 $$\text{Input} \longrightarrow \text{Validation} \longrightarrow \text{Compute \& Output} \longrightarrow \text{Data Access}$$
 Nhờ vậy, một file script đơn điệu bỗng chốc biến thành một quy trình kiến trúc 4 chặng vô cùng trực quan và dễ hiểu!
-
-### Chế độ suy biến 2: Bộ sưu tập thuật toán (ALGORITHM_COLLECTION)
-Chế độ này kích hoạt khi dự án gồm nhiều file bài tập thuật toán riêng lẻ (ví dụ 20 bài tập thực hành môn Cấu trúc dữ liệu) mà các file này hoàn toàn độc lập, không hề gọi nhau.
-
-Nếu vẽ theo cách thông thường, chúng ta sẽ có 20 node nằm rải rác trôi nổi trên màn hình, không có bất kỳ mũi tên kết nối nào, khiến người học không biết nên bấm vào đâu.
-
-Hệ thống xử lý tình huống này bằng hai bước:
-1. **Tuyển chọn tinh hoa:** Lọc ra tối đa 6 hàm có độ phức tạp thuật toán cao nhất đại diện cho kho chứa.
-2. **Tạo Nút gốc gom nhóm ảo (Virtual Root):** Hệ thống tự động sinh thêm một nút ảo đặc biệt ở trên đỉnh có tên là `"Algorithm Collection"`. Nút này đóng vai trò như một điểm neo trung tâm, vẽ các đường liên kết tỏa xuống từng bài tập thuật toán bên dưới. Người học bước vào sẽ thấy một cây phân cấp rõ ràng, từ nút gốc tỏa ra các bài tập trọng điểm của môn học.
 
 Tra chi tiết: spec/11_ENGINE_DO_THI.md Mục 10.
 
@@ -1024,7 +1011,7 @@ Dự án có từ 20 node trở xuống thì giữ hết toàn bộ. Nếu vư�
 4. Kết quả: Giữ trọn vẹn cả 10 node L1–L10 (≤ 20 nên không bỏ node nào). Mũi tên được tính trên toàn bộ 10 node này.
 
 ### Bổ nhiệm Nút Đỉnh cao (Nút Capstone ★)
-Trong số các node còn lại sau khi áp ngân sách hiển thị (không tính node gom nhóm), hệ thống chọn đúng 1 node có độ phức tạp nhận thức cao nhất làm **Nút Capstone (★)**. Hòa thì lấy `rank_score` lớn hơn, hòa nữa thì lấy `id` nhỏ hơn. Capstone không nhất thiết nằm cuối bản đồ: N5 vẫn có mũi tên sang N6, N7.
+Trong số các node còn lại sau khi áp ngân sách hiển thị, hệ thống chọn đúng 1 node có độ phức tạp nhận thức cao nhất làm **Nút Capstone (★)**. Hòa thì lấy `rank_score` lớn hơn, hòa nữa thì lấy `id` nhỏ hơn. Capstone không nhất thiết nằm cuối bản đồ: N5 vẫn có mũi tên sang N6, N7.
 Trong dự án `shop-api`, N5 (Thanh toán) được chọn làm Capstone vì nó chứa logic phức tạp nhất: vừa duyệt giỏ hàng, vừa kiểm tra tồn kho, vừa cập nhật nhiều bảng dữ liệu trong cơ sở dữ liệu. Nút Capstone đóng vai trò như "bài thi tốt nghiệp" của đồ án, nơi hội tụ mọi kỹ năng mà người học cần làm chủ!
 
 Tra chi tiết: spec/11_ENGINE_DO_THI.md Mục 11.
@@ -1078,7 +1065,7 @@ flowchart LR
   $$D = |0 + 0 - 1| = 1.0 \ge 0.50 \quad \text{và} \quad A + I = 0 < 1$$
   Node này rơi thẳng vào **VÙNG ĐAU KHỔ (ZONE_OF_PAIN)**!
 
-Một số node được miễn đánh giá và xếp thẳng là Cân bằng, để tránh kết luận oan: node ảo và node gom nhóm; node giao diện trong dự án frontend, mobile, desktop; node toàn code JavaScript; node không có liên kết ra vào ($C_a + C_e = 0$) hoặc không có lớp nào ($N_a + N_c = 0$).
+Một số node được miễn đánh giá và xếp thẳng là Cân bằng, để tránh kết luận oan: node ảo; node giao diện trong dự án frontend, mobile, desktop; node toàn code JavaScript; node không có liên kết ra vào ($C_a + C_e = 0$) hoặc không có lớp nào ($N_a + N_c = 0$).
 
 Tra chi tiết: spec/11_ENGINE_DO_THI.md Mục 12.
 

@@ -234,7 +234,7 @@ Trên từng thẻ node còn được trang bị các ký hiệu đặc biệt g
 Động cơ phân tích luôn cố gắng đặt tên cho node bằng tên hàm điểm đón (entry point) hoặc tên miền nghiệp vụ chính. Tuy nhiên, nếu tên gọi này được suy đoán gián tiếp từ tên thư mục, từ khóa lặp lại hoặc tên file, giao diện sẽ tự động thêm tiền tố dấu ngã `~` ở phía trước tên (ví dụ: `~products`).
 - Nếu tên node dài quá 32 ký tự, giao diện sẽ cắt bớt và thêm dấu ba chấm "…".
 - Khi bạn rê chuột vào thẻ node, tooltip sẽ hiện đầy đủ tên gốc trọn vẹn, căn cứ mà hệ thống dùng để đặt tên đó, cùng dòng lưu ý minh bạch: "Tên suy ra — gần đúng".
-- Nếu đây là một node ảo gom nhóm do động cơ tự tạo ra, tooltip sẽ ghi rõ: "Node gom nhóm do engine tạo".
+- Nếu đây là một node ảo do động cơ tự tạo ra, tooltip sẽ ghi rõ: "Node ảo do engine tạo".
 - Ngay dưới tên node là dòng thông tin phụ tóm tắt quy mô: "{số lượng} file · {ngôn ngữ}" (ví dụ: "3 file · TypeScript").
 
 ### 4.5. Phân loại cạnh nối và độ tin cậy
@@ -248,7 +248,7 @@ Thanh thông tin tổng hợp của Cột 1 cho bạn cái nhìn bao quát về 
 - Mức độ tin cậy của đồ thị (xanh lá cây biểu thị độ tin cậy cao, vàng trung bình, đỏ thấp).
 - Các thẻ phân bổ ngôn ngữ lập trình theo tỉ lệ phần trăm dung lượng code (ví dụ: `TypeScript 85%`).
 - Tổng số lượng node trong bản đồ (ví dụ: "7 node").
-- Thông báo chế độ suy thoái nếu repo viết theo kiểu tuần tự đơn giản hoặc chỉ là một tập các thuật toán rời rạc.
+- Thông báo chế độ suy thoái nếu repo viết theo kiểu tuần tự đơn giản.
 - Thông báo bảo mật: "Đã che {số lượng} bí mật" (cho biết các chuỗi mật khẩu, private key hay token nhạy cảm trong code đã được che đi).
 - Cảnh báo khi kết quả bị cắt bớt (`truncated`) hoặc có `warnings`; cảnh báo độ tin cậy `LOW` không đóng được. Có popover liệt kê các file bị bỏ qua (`skipped`).
 - Hộp chú giải tóm tắt ý nghĩa của 4 màu sắc, dấu cảnh báo và đường nét đứt.
@@ -332,7 +332,6 @@ Trình đọc code Monaco được tinh chỉnh tối đa cho mục đích học
 - Đầu Cột 2 luôn có thanh thông tin hiển thị rõ: "Bước {k}/{n} · {tầng kiến trúc} · {đường dẫn file} · {tên hàm}".
 - Ngay phía dưới là dãy các chip bước nhỏ để bạn nhấp chuyển nhanh giữa các bước.
 - Nếu bạn chưa chọn node nào trên bản đồ, Cột 2 sẽ hiển thị dòng hướng dẫn: "Chọn một node — mỗi node là một lát cắt xuyên file".
-- Node không có bước code (node gom nhóm) hiện: "Node gom nhóm — không có code riêng", kèm danh sách file.
 
 Tra chi tiết: spec/30_UI.md Mục 5.
 

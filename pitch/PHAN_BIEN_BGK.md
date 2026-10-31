@@ -120,7 +120,7 @@ Không tự nhận đã phát minh Compound AI, BKT, PageRank, hay repo-map bằ
 
 **B6. "Code spaghetti dồn hết vào 1 file thì sao?"**
 Đ: Engine chuyển sang chế độ suy biến:
-- không có cạnh và ≤ 2 file thì dùng `PROCEDURAL`; nhiều file rời thì dùng `ALGORITHM_COLLECTION`;
+- ≤ 2 file thì dùng `PROCEDURAL`; nhiều file rời không có entry thì vẫn chạy chế độ thường, chỉ ra node thuật toán;
 - hàm có độ phức tạp nhận thức > `VIP_COMPLEXITY_MIN` (15, trùng ngưỡng mặc định của SonarQube) thành một node thuật toán riêng.
 AI khi đó hỏi kiểu thuật toán: chạy tay với input nhỏ, Big-O, tình huống biên. Điểm dở như "hàm gánh quá nhiều việc" hiện ngay ở Tab 1 dưới nhãn "Nhận định của AI"; câu hỏi hỏi tiếp về hậu quả và cách sửa.
 

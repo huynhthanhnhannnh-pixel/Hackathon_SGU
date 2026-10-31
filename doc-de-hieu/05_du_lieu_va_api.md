@@ -246,7 +246,7 @@ stateDiagram-v2
 
 Hàm thuần `deriveNodeStates(skeleton, progressRows)` được dùng chung ở cả máy chủ lẫn trình duyệt, đảm bảo giao diện và backend luôn hiểu trạng thái bản đồ học tập giống hệt nhau.
 
-Node gom nhóm (`is_group_root`) không có trong `graph_skeleton` và không bao giờ là node cha. Thuật toán duyệt qua từng node còn lại theo thứ tự sắp xếp tô-pô (topological order) – tức là các node cha đi trước, các node con đi sau (nếu có hai node ngang hàng thì sắp xếp theo thứ tự mã định danh `node_id` tăng dần):
+Thuật toán duyệt qua từng node theo thứ tự sắp xếp tô-pô (topological order) – tức là các node cha đi trước, các node con đi sau (nếu có hai node ngang hàng thì sắp xếp theo thứ tự mã định danh `node_id` tăng dần):
 
 1. **Kiểm tra dữ liệu đã lưu:** Tìm xem node hiện tại đã có dòng ghi nhận trong bảng `node_progress` hay chưa. Nếu đã có và cột `status` mang giá trị khác rỗng, trạng thái của node chính là giá trị đó (`AVAILABLE`, `COMPLETED` hoặc `FAILED`).
 2. **Suy luận trạng thái cho node chưa có dữ liệu:** Nếu node chưa có trong bảng hoặc cột `status` mang giá trị rỗng (`null`):

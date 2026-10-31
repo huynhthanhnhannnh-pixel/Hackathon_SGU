@@ -62,7 +62,7 @@ interface RouteBinding { file_path: string; line_start: number; line_end: number
 interface EntryPoint { key: string; binding: RouteBinding | null; source: "REGISTERED" | "GENERIC" | "PROGRAM" }
 interface Candidate extends Pick<HybridArchitecturalNode, "id" | "node_type" | "entry_symbol" | "trace_steps" | "dto_snippet" |
   "cognitive_complexity" | "rank_score" | "title_source" | "title_evidence"> {
-  kind: "SLICE" | "ALGO" | "VNODE" | "VROOT"; order_key: string; functions: string[]; binding: RouteBinding | null; base_title: string }
+  kind: "SLICE" | "ALGO" | "VNODE"; order_key: string; functions: string[]; binding: RouteBinding | null; base_title: string }
 export async function runEngine(src: IngestSource): Promise<StaticEngineResult>;   // runIngest (10) + buildGraph
 export function buildGraph(input: IngestOutput): StaticEngineResult;
 ```
@@ -152,9 +152,8 @@ Mục đích: hàm entry đã đăng ký (D-06); chạy trước Mục 5. Output
 1. Sau Mục 4. `n` = số file đã parse trong scope; `|E_x|` = số cạnh đồ thị file.
 2. **ENG-51 Bảng quyết định** (dòng đầu khớp; `degraded_mode` áp cả repo):
    1. Có entry `REGISTERED`/`GENERIC` ⇒ NORMAL (`null`).
-   2. `n ≤ CONFIG.PROCEDURAL_MAX_FILES` ⇒ `PROCEDURAL` (Mục 10.1).
-   3. `|E_x| = 0` ⇒ `ALGORITHM_COLLECTION` (Mục 10.2).
-   4. Có entry `PROGRAM` ⇒ NORMAL với các entry đó; không ⇒ `ALGORITHM_COLLECTION`.
+   2. `n ≤ CONFIG.PROCEDURAL_MAX_FILES` ⇒ `PROCEDURAL` (Mục 10).
+   3. Còn lại ⇒ NORMAL (`null`) với các entry `PROGRAM` nếu có; không có entry ⇒ chỉ có node thuật toán theo ENG-90 (D-52).
 
 ---
 
@@ -185,7 +184,7 @@ Mục đích: hàm entry đã đăng ký (D-06); chạy trước Mục 5. Output
 
 3. **Mức lồng** tăng khi vào thân `if`/`else if`/`else`, `switch`, vòng lặp, `catch`, ba ngôi, hàm/lambda lồng; `try`/`finally` không tăng. Theo loại node AST, không đếm ngoặc.
 4. **VIP** = `complexity > CONFIG.VIP_COMPLEXITY_MIN`.
-5. **ENG-74 Dự phòng** (ENG-90, ENG-103): không VIP ⇒ tối đa `CONFIG.VIP_FALLBACK_TOP_K` hàm có `complexity ≥ CONFIG.VIP_FALLBACK_MIN_SCORE`; thiếu ⇒ `CONFIG.VIP_FALLBACK_LAST_RESORT_TOP` hàm cao nhất + warning "Repository có độ phức tạp thấp". Thứ tự: `complexity` giảm, `rank_score` file giảm, khóa tăng.
+5. **ENG-74 Dự phòng** (ENG-90): không VIP ⇒ tối đa `CONFIG.VIP_FALLBACK_TOP_K` hàm có `complexity ≥ CONFIG.VIP_FALLBACK_MIN_SCORE`; thiếu ⇒ `CONFIG.VIP_FALLBACK_LAST_RESORT_TOP` hàm cao nhất + warning "Repository có độ phức tạp thấp". Thứ tự: `complexity` giảm, `rank_score` file giảm, khóa tăng.
 
 ---
 
@@ -216,9 +215,9 @@ export function buildSlice(entry: EntryPoint, ctx: EngineContext): Candidate;
 
 ## 9. Node thuật toán — `nodes.ts`
 
-1. **ENG-90 Khi nào tạo.** (a) VIP trong scope không là bước lát cắt (sau ENG-81, ENG-88). (b) NORMAL có `< CONFIG.DISPLAY_MIN_NODES` candidate sau ENG-110 ⇒ thêm hàm có `complexity ≥ CONFIG.VIP_FALLBACK_MIN_SCORE` (thứ tự ENG-74). (c) `ALGORITHM_COLLECTION` (ENG-103).
+1. **ENG-90 Khi nào tạo.** (a) VIP trong scope không là bước lát cắt (sau ENG-81, ENG-88). (b) NORMAL có `< CONFIG.DISPLAY_MIN_NODES` candidate sau ENG-110 ⇒ thêm hàm có `complexity ≥ CONFIG.VIP_FALLBACK_MIN_SCORE` (thứ tự ENG-74).
 2. **ENG-91 Chia bước** (các bước cùng `function_name`). Câu chính = vòng lặp cấp 1 nhiều dòng nhất (hòa ⇒ đầu tiên); thiếu ⇒ câu có điểm ENG-71 lớn nhất. `ALGO_SETUP` = chữ ký + câu trước; `ALGO_EXECUTION` = câu chính; `ALGO_TERMINATION` = câu sau + đóng. Không câu điều khiển ⇒ SETUP = mọi câu trừ cuối, TERMINATION = câu cuối. Bỏ bước rỗng; clamp ENG-87 (mốc: trước câu chính / header / câu đầu); rồi ENG-88, ENG-89.
-3. `entry_symbol` = khóa hàm; `cognitive_complexity = complexity`; `is_vip_algorithm = true`; `functions = [khóa]`.
+3. `ALGORITHMIC_CORE`; `entry_symbol` = khóa hàm; `cognitive_complexity = complexity`; `rank_score` = của file chứa hàm; `is_vip_algorithm = true`; `functions = [khóa]`.
 
 ---
 
@@ -229,22 +228,18 @@ export function buildSlice(entry: EntryPoint, ctx: EngineContext): Candidate;
 2. **P2.** Chạy khi P1 có `< CONFIG.FUNCTION_GRAPH_MIN_NODES` candidate, 0 cạnh, hoặc hàm dài nhất `> CONFIG.LONG_FUNCTION_LINES` dòng. `M` = hàm nhiều dòng nhất (hòa ⇒ khóa nhỏ). Câu lệnh cấp 1 của `M` nhận nhãn: `DATA` (`DATA_SINK`) · `VALIDATE` (guard clause, `assert`, `.parse(`/`.validate(`) · `INPUT` (đọc `req.body|params|query`, `request.json|args`, `input(`, `sys.argv`, `process.argv`, `parse_args(`, `Scanner`) · còn lại `COMPUTE_OUTPUT`. Mỗi nhãn có lệnh ⇒ 1 node ảo; < 2 nhãn ⇒ bỏ P2. Kết quả = node ảo của `M` + candidate P1 không chứa `M`.
 3. **ENG-102 Node ảo.** `id = vnode-<hash6(file_path + "#" + NHÃN)>`; 1 bước, layer `INPUT`⇒`ENTRY_POINT`, `VALIDATE`⇒`MIDDLEWARE`, `COMPUTE_OUTPUT`⇒`BUSINESS_LOGIC`, `DATA`⇒`DATA_ACCESS`; snippet = chữ ký + lệnh nhãn (ENG-86, ENG-87 mốc = câu đầu nhãn); `entry_symbol = null`; `ARCHITECTURAL_DATA_FLOW`; `cognitive_complexity` = tổng điểm ENG-71; `rank_score` = của file. Cạnh: chuỗi theo dòng đầu mỗi nhãn, `RESOLVED` (ngoại lệ D-07 vì cùng `M`).
 
-**10.2 `ALGORITHM_COLLECTION`**
-4. **ENG-103** Ứng viên = hàm trong scope (`<module>` khi file không có hàm khác); VIP, thiếu ⇒ ENG-74; lấy tối đa `CONFIG.DEGRADED_TOP_FUNCTIONS` theo thứ tự ENG-74; mỗi hàm ⇒ ENG-91. Sau Display Budget, số thành phần liên thông yếu `≥ CONFIG.VIRTUAL_ROOT_MIN_COMPONENTS` ⇒ thêm node gom nhóm.
-5. **ENG-104 Node gom nhóm (D-24).** `id = vroot-algorithms`, `is_group_root = true`, `title = "Algorithm Collection"`, `VIRTUAL`, evidence = số node con, `ALGORITHMIC_CORE`, `entry_symbol = null`, `trace_steps = files = languages = []`, `dto_snippet = ""`, `support_tier` = thấp nhất của node con, `cognitive_complexity = rank_score = 0`, `is_vip_algorithm = is_capstone = false`, Uncle Bob miễn trừ. Không tính vào Display Budget. Cạnh tới mỗi node gốc (`RESOLVED`) chỉ để vẽ, không vào `prerequisites`. Node `vnode-*` (10.1) có code thật, học như thường.
-
 ---
 
 ## 11. Ghép node, id, cạnh, Display Budget, Capstone — `nodes.ts`
 
 1. **ENG-110 Gộp.** Cùng tập `functions` ⇒ giữ `order_key` nhỏ nhất (`order_key` = `entry_symbol`; node ảo = khóa băm). Tập con không gộp.
-2. **ENG-111 Tên gốc & id (D-08).** Thang tên Mục 13 chạy trên mọi candidate ⇒ `base_title`, `title_source`, `title_evidence`. `slug(t)`: NFD bỏ dấu, `đ`⇒`d`, lowercase, ngoài `[a-z0-9]` ⇒ `-`, gộp `-`, bỏ `-` hai đầu, cắt `CONFIG.TITLE_MAX_CHARS` ký tự, rỗng ⇒ `node`. `hash6(s)` = 6 hex đầu SHA-1(UTF-8). Lát cắt `slice-<slug(base_title)>-<hash6(entry_symbol)>`; thuật toán `algo-<slug>-<hash6(khóa hàm)>`; node ảo ENG-102; Virtual Root ENG-104.
+2. **ENG-111 Tên gốc & id (D-08).** Thang tên Mục 13 chạy trên mọi candidate ⇒ `base_title`, `title_source`, `title_evidence`. `slug(t)`: NFD bỏ dấu, `đ`⇒`d`, lowercase, ngoài `[a-z0-9]` ⇒ `-`, gộp `-`, bỏ `-` hai đầu, cắt `CONFIG.TITLE_MAX_CHARS` ký tự, rỗng ⇒ `node`. `hash6(s)` = 6 hex đầu SHA-1(UTF-8). Lát cắt `slice-<slug(base_title)>-<hash6(entry_symbol)>`; thuật toán `algo-<slug>-<hash6(khóa hàm)>`; node ảo ENG-102.
 3. **ENG-112 Cạnh D-07.** Cặp có `functions` giao ≠ ∅: A → B nếu `cognitive_complexity` A nhỏ hơn; hòa ⇒ `rank_score` lớn hơn; hòa ⇒ `id` nhỏ hơn. Thứ tự toàn phần ⇒ `G0` không chu trình (assert `tarjanScc`).
 4. Rút gọn bắc cầu `G0` ⇒ `G0r` (bỏ `u → v` khi còn đường dài ≥ 2).
-5. **ENG-114 Display Budget.** `max = CONFIG.DISPLAY_MAX_NODES`, không đếm `is_group_root`. ≤ `max` ⇒ giữ hết. Ngược lại: (1) đường dài nhất trên `G0r` (DP theo Kahn, hòa ⇒ `id` nhỏ), chọn đỉnh trước/cuối dài nhất, hòa ⇒ `rank_score` lớn, hòa ⇒ `id` nhỏ; giữ tối đa `CONFIG.CRITICAL_PATH_MAX_NODES` node đầu; (2) thêm: `cognitive_complexity > CONFIG.VIP_COMPLEXITY_MIN` trước, `rank_score` giảm, `cognitive_complexity` giảm, `id` tăng — tới `max`. Bỏ không gộp file. Số node bị bỏ ⇒ `ingestion_report.omitted_node_count` + warning "{n} luồng khác không hiển thị trên bản đồ".
-6. **Cạnh trên tập giữ `K`** = rút gọn bắc cầu của `{(u,v) ∈ K² : v đến được từ u trong G0}`. `confidence = RESOLVED` khi: cạnh D-07 có hàm chung `f` mà đường DFS (ENG-80) tới `f` ở cả hai lát cắt toàn `RESOLVED`; hoặc đường trong `G0` toàn `RESOLVED`; hoặc là cạnh node ảo/gom nhóm. Còn lại `INFERRED`. `GraphEdge.id = "${source}->${target}"`; `prerequisites` = nguồn cạnh vào trừ node `is_group_root`, sort.
-7. **Capstone (D-12).** Trong node cuối trừ node `is_group_root`: `cognitive_complexity` lớn nhất, hòa ⇒ `rank_score` lớn nhất, hòa ⇒ `id` nhỏ nhất; đúng 1.
-8. **Trường.** `files` = file các bước theo thứ tự, không trùng; `languages` = `LanguageId` của `files`, sort; `support_tier` = `STRUCTURAL` nếu có file `STRUCTURAL`, ngược lại `RESOLVED`; lát cắt: `cognitive_complexity` = max `complexity` các hàm (D-12), `rank_score = rank_score(files[0])`, `ARCHITECTURAL_DATA_FLOW`, `is_vip_algorithm = false`. `is_group_root = false` trừ ENG-104.
+5. **ENG-114 Display Budget.** `max = CONFIG.DISPLAY_MAX_NODES`. ≤ `max` ⇒ giữ hết. Ngược lại: (1) đường dài nhất trên `G0r` (DP theo Kahn, hòa ⇒ `id` nhỏ), chọn đỉnh trước/cuối dài nhất, hòa ⇒ `rank_score` lớn, hòa ⇒ `id` nhỏ; giữ tối đa `CONFIG.CRITICAL_PATH_MAX_NODES` node đầu; (2) thêm: `cognitive_complexity > CONFIG.VIP_COMPLEXITY_MIN` trước, `rank_score` giảm, `cognitive_complexity` giảm, `id` tăng — tới `max`. Bỏ không gộp file. Số node bị bỏ ⇒ `ingestion_report.omitted_node_count` + warning "{n} luồng khác không hiển thị trên bản đồ".
+6. **Cạnh trên tập giữ `K`** = rút gọn bắc cầu của `{(u,v) ∈ K² : v đến được từ u trong G0}`. `confidence = RESOLVED` khi: cạnh D-07 có hàm chung `f` mà đường DFS (ENG-80) tới `f` ở cả hai lát cắt toàn `RESOLVED`; hoặc đường trong `G0` toàn `RESOLVED`; hoặc là cạnh node ảo. Còn lại `INFERRED`. `GraphEdge.id = "${source}->${target}"`; `prerequisites` = nguồn cạnh vào, sort.
+7. **Capstone (D-12).** Trong node cuối: `cognitive_complexity` lớn nhất, hòa ⇒ `rank_score` lớn nhất, hòa ⇒ `id` nhỏ nhất; đúng 1.
+8. **Trường.** `files` = file các bước theo thứ tự, không trùng; `languages` = `LanguageId` của `files`, sort; `support_tier` = `STRUCTURAL` nếu có file `STRUCTURAL`, ngược lại `RESOLVED`; lát cắt: `cognitive_complexity` = max `complexity` các hàm (D-12), `rank_score = rank_score(files[0])`, `ARCHITECTURAL_DATA_FLOW`, `is_vip_algorithm = false`.
 9. 0 node sau mọi bước ⇒ `ERR_NO_ARCHITECTURAL_SLICE`.
 
 ---
@@ -253,7 +248,7 @@ export function buildSlice(entry: EntryPoint, ctx: EngineContext): Candidate;
 
 1. **ENG-120** `S` = `files` của node. `Ce` = file ngoài `S` là đích cạnh đồ thị file từ `S`; `Ca` = file ngoài `S` có cạnh vào `S`. $I = C_e/(C_a+C_e)$.
 2. `Na` = kiểu trừu tượng khai báo trong `S` (`INTERFACE`, abstract class, `TYPE` dạng object, Python `ABC`/`Protocol`, Go `interface`, loại trong `abstraction_kinds`); `Nc` = lớp/struct cụ thể. $A = N_a/(N_a+N_c)$, $D = |A+I-1|$.
-3. **Miễn trừ** (`is_exempt`, `I = A = D = 0`, `BALANCED`): node ảo, gom nhóm; archetype ∈ {WEB_FRONTEND, MOBILE_APP, DESKTOP_APP} và `files[0]` là UI (`.tsx/.jsx`, `.vue/.svelte`, `.dart` import react/vue/svelte/flutter); mọi file của `S` là `JAVASCRIPT` hoặc `STRUCTURAL` thiếu `abstraction_kinds`; `Ca + Ce = 0`; `Na + Nc = 0`.
+3. **Miễn trừ** (`is_exempt`, `I = A = D = 0`, `BALANCED`): node ảo; archetype ∈ {WEB_FRONTEND, MOBILE_APP, DESKTOP_APP} và `files[0]` là UI (`.tsx/.jsx`, `.vue/.svelte`, `.dart` import react/vue/svelte/flutter); mọi file của `S` là `JAVASCRIPT` hoặc `STRUCTURAL` thiếu `abstraction_kinds`; `Ca + Ce = 0`; `Na + Nc = 0`.
 4. `D < CONFIG.UNCLE_BOB_BALANCED_MAX_D` ⇒ `BALANCED`; `D ≥ CONFIG.UNCLE_BOB_ZONE_MIN_D` và `A + I < 1` ⇒ `ZONE_OF_PAIN`; `D ≥ CONFIG.UNCLE_BOB_ZONE_MIN_D` và `A + I > 1` ⇒ `ZONE_OF_USELESSNESS`; còn lại `BALANCED`.
 
 ---
@@ -268,7 +263,7 @@ Mục đích: `title`, `title_source`, `title_evidence` từ code (0 token AI). 
 4. **Bậc 3 `DOMAIN_TERMS`.** Token (bỏ `GENERIC_NAMES`) từ tên lớp/hàm/interface/DTO trong `files`; $\text{score}(t) = \text{tf}(t)(\ln\frac{1+N}{1+\text{df}(t)}+1)$, `N` = `|file_index|`, `df` = số file chứa `t`. Tối đa `CONFIG.DOMAIN_TERMS_MAX` token cao nhất có `tf ≥ CONFIG.DOMAIN_TERM_MIN_TF`, nối `" / "`. Evidence `"order×6, inventory×3"`.
 5. **Bậc 4 `DIRECTORY`.** Thư mục đầu tiên (ngược từ `files[0]`) ∉ `GENERIC_DIRS` = src lib app internal pkg cmd main java kotlin com org net controllers services repositories repos routes handlers api modules core common shared utils components pages views features domain infra infrastructure.
 6. **Bậc 5 `FILE_BASENAME`.** Basename `files[0]` bỏ đuôi và vai trò ⇒ `normalizeTokens`; rỗng ⇒ basename nguyên.
-7. **Đặc biệt.** Virtual Root: ENG-104. Node ảo: `"<tên gốc>: <Chặng>"` (tên gốc = bậc 2→5 trên `M`; Chặng = Input / Validation / Compute & Output / Data Access), `VIRTUAL`.
+7. **Đặc biệt.** Node ảo: `"<tên gốc>: <Chặng>"` (tên gốc = bậc 2→5 trên `M`; Chặng = Input / Validation / Compute & Output / Data Access), `VIRTUAL`.
 8. **Giới hạn.** Tối đa `CONFIG.TITLE_MAX_TOKENS` token (không tính hậu tố khử trùng); ký tự: chữ, số, khoảng trắng, `/ & : - ( ) #`; không lấy chữ từ comment/string. Cắt `CONFIG.TITLE_MAX_CHARS` + `…` thuộc UI.
 9. **Khử trùng (sau Display Budget).** Duyệt node theo `id`; nhóm `base_title` trùng: (1) cùng `ROUTE` khác method ⇒ `" (GET)"`…; (2) còn trùng ⇒ thư mục gần nhất khác nhau của `files[0]` `" (cart)"`; (3) còn trùng ⇒ `" #2"`, `" #3"` theo `id` ⇒ `title`. `id` không đổi.
 
@@ -294,7 +289,7 @@ export function mainPath(graph: StaticEngineResult): string[];   // → RepoOver
 3. **Report.** Điền `skipped.parse_error`, `degraded_mode`, `engine_ms` = `performance.now()` cuối G13 − đầu G1. `engine_ms > CONFIG.ENGINE_BUDGET_MS` ⇒ warning, không đổi hành vi. Ghi theo thứ tự giai đoạn.
 4. `engine_version = CONFIG.ENGINE_VERSION`; `repo_name`, `snapshot`, `fingerprint` từ `IngestOutput`; `nodes`, `edges` sort theo `id`.
 5. **`toClientResult`** dựng object mới từng trường (API-03, không spread): mọi trường trừ `symbol_whitelist`; `ingestion_report` trừ `suspicious_instruction_files`.
-6. **ENG-155 `mainPath`** (chỉ đọc `nodes`, `edges`): bỏ `is_group_root` và cạnh; đường dài nhất trên DAG bằng DP như ENG-114 (1) nhưng không giới hạn `CONFIG.CRITICAL_PATH_MAX_NODES`, hòa chỉ theo `id` nhỏ hơn (tô-pô Kahn). Trả `id` từ gốc tới cuối; rỗng ⇒ `[]`. Dùng cho `RepoOverviewView.facts.main_path_node_ids` (`20`).
+6. **ENG-155 `mainPath`** (chỉ đọc `nodes`, `edges`): đường dài nhất trên DAG bằng DP như ENG-114 (1) nhưng không giới hạn `CONFIG.CRITICAL_PATH_MAX_NODES`, hòa chỉ theo `id` nhỏ hơn (tô-pô Kahn). Trả `id` từ gốc tới cuối; rỗng ⇒ `[]`. Dùng cho `RepoOverviewView.facts.main_path_node_ids` (`20`).
 
 ---
 
@@ -320,12 +315,12 @@ export function mainPath(graph: StaticEngineResult): string[];   // → RepoOver
 | T-ENG-23 | `crawler/run.py` `main()`, crawler×4, page×3 · hai "Checkout" ở `cart/`, `payment/` | "Crawler / Page" · "Checkout (cart)", "Checkout (payment)", `id` không đổi |
 | T-ENG-25 | 1 file Express 5 route · `main.py` không route, 5 hàm gọi nhau | NORMAL 5 lát cắt · `PROCEDURAL` P1 |
 | T-ENG-27 | `main.py` 1 hàm 400 dòng: `input()`, `if … raise`, tính, `cursor.execute` | 4 node ảo Input → Validation → Compute & Output → Data Access; id node đầu `vnode-c5e5ae` (`hash6("main.py#INPUT")`) |
-| T-ENG-28 | 20 file bài tập, 0 cạnh, 0 entry, 6 hàm > 15 | `ALGORITHM_COLLECTION`: 6 `algo-*` (đều `prerequisites []`) + `vroot-algorithms` (`is_group_root`, `trace_steps []`), 6 cạnh vẽ từ vroot; Capstone là 1 node `algo-*` |
+| T-ENG-28 | 20 file bài tập, 0 cạnh, 0 entry, 6 hàm > 15 | NORMAL (`degraded_mode null`): 6 `algo-*` theo ENG-90, đều `prerequisites []`, không có node gom nhóm; Capstone là 1 node `algo-*` |
 | T-ENG-29 | 3 câu khởi tạo, `while` 20 dòng, `return` | `ALGO_SETUP` / `ALGO_EXECUTION` / `ALGO_TERMINATION` |
-| T-ENG-30 | `ALGORITHM_COLLECTION`, không hàm nào ≥ 5 | 3 hàm cao nhất + warning |
+| T-ENG-30 | > `CONFIG.PROCEDURAL_MAX_FILES` file, 0 entry, không hàm nào ≥ 5 | `ERR_NO_ARCHITECTURAL_SLICE` |
 | T-ENG-31 | File 40% byte trong `ERROR` · mọi file như vậy | Bỏ file, `parse_error 1`, không trong `file_index` · `ERR_NO_ARCHITECTURAL_SLICE` |
 | T-ENG-32 | `OrderService.checkout(userId, items)`, DTO field `qty` | Whitelist ⊇ `OrderService`, `checkout`, `OrderService.checkout`, `userId`, `items`, `qty`; sort; không `<module>` |
 | T-ENG-33 | `toClientResult` | Không `symbol_whitelist`, không `suspicious_instruction_files` |
 | T-ENG-34 | `runEngine` 2 lần cùng zip (X-01) | `nodes`, `edges`, `symbol_whitelist` giống hệt khi `JSON.stringify` |
-| T-ENG-35 | `mainPath`: cạnh `n-a→n-b→n-d`, `n-a→n-c→n-d`, `vroot-algorithms→n-a` | `["n-a","n-b","n-d"]` (hòa theo `id`; không có vroot) |
-| T-ENG-36 | 25 candidate | Giữ 20 (= CONFIG.DISPLAY_MAX_NODES), omitted_node_count = 5, warning "5 luồng khác không hiển thị trên bản đồ", node is_group_root không tính |
+| T-ENG-35 | `mainPath`: cạnh `n-a→n-b→n-d`, `n-a→n-c→n-d` | `["n-a","n-b","n-d"]` (hòa theo `id`) |
+| T-ENG-36 | 25 candidate | Giữ 20 (= CONFIG.DISPLAY_MAX_NODES), omitted_node_count = 5, warning "5 luồng khác không hiển thị trên bản đồ" |

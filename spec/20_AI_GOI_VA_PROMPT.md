@@ -141,7 +141,7 @@ CHẾ ĐỘ B — THUẬT TOÁN / CODE TUẦN TỰ: lát cắt là một hàm th
 
 ### Luồng phân tích (AI-15)
 
-Gọi từ `POST /api/analyze-node` khi trượt cache `NODE_ANALYSIS` (`03` Mục 6.7), qua in-flight map. Node `is_group_root` (D-24) không phân tích.
+Gọi từ `POST /api/analyze-node` khi trượt cache `NODE_ANALYSIS` (`03` Mục 6.7), qua in-flight map.
 
 ```typescript
 export async function analyzeNode(session: SessionRow, graph: StaticEngineResult, node: HybridArchitecturalNode): Promise<NodeAnalysis | null> {
@@ -245,7 +245,7 @@ export const ANALYZE_SCHEMA = obj({                                // = NodeAnal
 
 Gọi khi trượt cache `REPO_OVERVIEW` và mọi node không `analysis_failed` đã phân tích (`03` Mục 6.7). Không gửi code. `analyzeOverview(session, graph, analyses: Record<string, NodeAnalysis>, failedIds: Set<string>): Promise<RepoOverviewRaw | null>` — `checkOverview` (`21` GUARD-11) = `null` ⇒ `GUARD` ⇒ gọi lại; hết lượt ⇒ `null`, không cache.
 
-Thân `<repo_summary>` (bỏ node `is_group_root`; thứ tự tô-pô, hòa ⇒ `id`; node trong `failedIds` chỉ có dòng `NODE` và `tang`):
+Thân `<repo_summary>` (thứ tự tô-pô, hòa ⇒ `id`; node trong `failedIds` chỉ có dòng `NODE` và `tang`):
 
 ```text
 repo: {repo_name} · loai_du_an: {archetype} · framework: {detected_framework | không rõ}

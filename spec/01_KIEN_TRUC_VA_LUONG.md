@@ -231,7 +231,7 @@ Lượt tối đa: `CONFIG.MAX_ATTEMPTS_PER_QUESTION`. Lượt nào là lượt 
 
 ## 9. Chế độ suy biến & giới hạn phải nói thật
 
-- **Repo không có kiến trúc tầng** (`PROCEDURAL`) hoặc **tập thuật toán rời** (`ALGORITHM_COLLECTION`) ⇒ engine dựng node ảo theo `11`; AI dùng chế độ B (câu hỏi về thuật toán, Big-O, tình huống biên).
+- **Repo không có kiến trúc tầng** (`PROCEDURAL`) ⇒ engine dựng node ảo theo `11`; repo toàn thuật toán rời không có entry chạy chế độ thường, chỉ có node thuật toán (D-52). AI dùng chế độ B (câu hỏi về thuật toán, Big-O, tình huống biên).
 - **Ngôn ngữ `STRUCTURAL`** ⇒ cạnh nét đứt, huy hiệu độ tin cậy thấp, cổng gác chạy Relaxed Mode (`21`).
 - **AI hiểu sai nghĩa** ⇒ code không bắt được (INV-08). Bù lại bằng 3 cách:
   - duyệt tay toàn bộ output của repo demo (`21` Mục 6);
