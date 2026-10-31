@@ -267,7 +267,7 @@ Sử dụng thư viện `pino` xuất log định dạng JSON 1 dòng (NDJSON) r
 }
 ```
 
-Số trong ví dụ chỉ minh họa định dạng, không phải số đo.
+Số trong ví dụ chỉ minh họa định dạng, không phải số đo. Dòng log cổng gác chặn dùng `GuardLogEntry` (`02` Mục 5), theo `21` GUARD-22.
 
 ### 9.2. Danh sách CẤM ghi log tuyệt đối (Zero-Disk & Security)
 
@@ -276,6 +276,7 @@ Số trong ví dụ chỉ minh họa định dạng, không phải số đo.
 2. **Khóa bí mật:** Không ghi `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY`.
 3. **Thông tin định danh & Token:** Không ghi header `Authorization`, bearer token, refresh token.
 4. **Dữ liệu bài làm của người học:** Không ghi nội dung câu trả lời `student_answer`.
+5. Dòng `guard_blocked` chỉ có các trường của `GuardLogEntry`; `node_id` giữ như Mục 9.1; không ghi thêm tên hàm, văn bản AI hoặc tên trong `GuardIssue`.
 
 ---
 
@@ -404,7 +405,7 @@ Bản thi phục vụ mục tiêu thử thách 21 giờ. Bảng dưới đây ch
     │   ├── engine/ingest/*.ts                   # 10
     │   ├── engine/graph/*.ts · engine/graph/resolvers/*.ts   # 11
     │   ├── ai/{gemini,analyze,overview,questions,grade}.ts · ai/prompts/*.ts · ai/schemas.ts      # 20
-    │   └── ai/guard/{text,names,forbidden,lines,analysis,overview,questions,followup,injection}.ts  # 21
+    │   └── ai/guard/{text,names,forbidden,lines,analysis,overview,questions,followup,injection,log}.ts  # 21
     ├── lib/{bkt-engine,plan,derive,similarity}.ts   # 22 — hàm thuần dùng chung server + client
     ├── lib/{api,offline,messages}.ts            # Client gọi API có kiểu · bản Offline cùng chữ ký · bảng thông điệp lỗi (30)
     ├── store/workbench.ts                       # Zustand (30)

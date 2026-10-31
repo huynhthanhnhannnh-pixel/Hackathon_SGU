@@ -585,13 +585,13 @@ Kịch bản dưới đây bám theo Kịch bản A trong `spec/50`: người h�
 2. Máy chủ nạp hồ sơ từ `skill_states`. Lan chưa có dòng nào nên cả hai kỹ năng là 0.25, dưới ngưỡng đã thạo 0.92. Kế hoạch gồm 2 câu: câu 1 `DB_OPTIMIZATION`, bậc `NOVICE`, góc `WEAKNESS`; câu 2 `LAYERED_SEPARATION`, bậc `NOVICE`, góc `FLOW`.
 3. Máy chủ gửi code các bước tương ứng cho Gemini: bước 2 cho câu 1, cả 3 bước cho câu 2.
 4. AI trả câu hỏi, đáp án mẫu và ý bắt buộc. Câu 1 theo fixture của `spec/50`:
-   - *Câu hỏi Feynman:* "Cửa hàng có 200 sản phẩm. Mở trang danh sách 1 lần thì database nhận bao nhiêu truy vấn? Chỉ ra dòng code tạo ra chúng."
-   - *Các ý bắt buộc (`must_have_points`):* (1) Ra 201 truy vấn (hoặc 1 + 200); (2) Chỉ ra vòng lặp gọi `findById` (dòng 16–18) là nguồn của 200 truy vấn.
+   - *Câu hỏi Feynman:* "Trang danh sách có 200 sản phẩm. Vì sao càng nhiều sản phẩm thì trang càng chậm?"
+   - *Các ý bắt buộc (`must_have_points`):* (1) Mỗi sản phẩm tốn thêm 1 truy vấn để lấy loại hàng; (2) Số truy vấn tăng theo số sản phẩm, không cố định.
    - *Cách sửa (`fix`):* Cho `findAll` lấy kèm loại hàng để còn 1 truy vấn, hoặc gom các `categoryId` rồi tìm 1 lần để còn 2 truy vấn.
 5. Máy chủ lưu toàn bộ câu hỏi và đáp án mẫu vào trường `questions` của một dòng mới trong bảng `node_runs`. Khi trả về cho trình duyệt, máy chủ loại bỏ trường `reference_answer` và `must_have_points`.
 
 #### Bước 3: Lan nộp câu 1 lượt 1 và nhận gợi ý
-1. Lan gõ: *"200 truy vấn, vì có 200 sản phẩm."* rồi nộp. Trình duyệt gửi:
+1. Lan gõ: *"Vì có 200 sản phẩm nên dữ liệu nhiều."* rồi nộp. Trình duyệt gửi:
    ```json
    POST /api/evaluate-feynman
    {
@@ -599,21 +599,21 @@ Kịch bản dưới đây bám theo Kịch bản A trong `spec/50`: người h�
      "run_id": "d14c...98ef",
      "question_index": 1,
      "attempt_number": 1,
-     "student_answer": "200 truy vấn, vì có 200 sản phẩm."
+     "student_answer": "Vì có 200 sản phẩm nên dữ liệu nhiều."
    }
    ```
 2. Máy chủ kiểm tra độ dài chuỗi (hợp lệ), sau đó đọc câu hỏi và đáp án mẫu từ DB ra bộ nhớ (không khóa dòng).
 3. Máy chủ gửi câu trả lời kèm danh sách ý bắt buộc tới AI để chấm (không gửi code thô).
-4. AI đánh giá: `core_accuracy` 50, cả 2 ý đều chưa đạt, vì Lan chỉ đếm truy vấn trong vòng lặp và quên lần `findAll`. Kết quả: Chưa đạt (`is_passed: false`). Trường `misconception` chỉ ở máy chủ, không gửi xuống trình duyệt.
-5. Gợi ý loại `CONCEPT`: "Trước khi vòng lặp chạy được, code phải có sẵn danh sách 200 sản phẩm. Danh sách đó lấy từ đâu, có tốn thêm lần hỏi database nào không?"
+4. AI đánh giá: `core_accuracy` 50, cả 2 ý đều chưa đạt, vì Lan nghĩ trang chậm do dữ liệu lớn, chưa thấy mỗi sản phẩm tốn thêm một truy vấn. Kết quả: Chưa đạt (`is_passed: false`). Trường `misconception` chỉ ở máy chủ, không gửi xuống trình duyệt.
+5. Gợi ý loại `CONCEPT`: "Sau khi có danh sách, trang còn cần thêm thông tin gì cho từng sản phẩm? Thông tin đó được lấy bằng cách nào?"
 6. Máy chủ mở transaction ngắn: khóa dòng `node_runs` bằng `SELECT ... FOR UPDATE`, thêm một dòng vào `question_attempts`, tăng `attempts_used` lên 1, rồi commit. Điểm BKT chưa đổi vì câu chưa xong.
 7. Máy chủ trả về phản hồi: chưa đạt, kèm gợi ý.
 
 #### Bước 4: Lan nộp câu 1 lượt 2 và đạt
-1. Lan viết lại: *"201: dòng 15 findAll lấy danh sách 1 lần, rồi vòng for ở dòng 16–18 gọi findById 200 lần."*
+1. Lan viết lại: *"Vì lấy danh sách xong, code còn hỏi database thêm một lần cho mỗi sản phẩm để lấy loại hàng. 200 sản phẩm là 201 lần hỏi, càng nhiều sản phẩm càng nhiều lần hỏi."*
 2. Trình duyệt gửi yêu cầu nộp lượt 2 (`attempt_number = 2`).
 3. Máy chủ thấy câu chưa xong và `attempts_used` đang là 1 (khớp `attempt_number - 1`), rồi gọi AI chấm ngoài transaction.
-4. AI đánh giá: `core_accuracy` 90, cả 2 ý đạt kèm đoạn trích. Code kiểm thấy đoạn trích có thật trong câu trả lời nên Đạt (`is_passed: true`).
+4. AI đánh giá: `core_accuracy` 90, cả 2 ý đạt kèm đoạn trích ("hỏi database thêm một lần cho mỗi sản phẩm" và "càng nhiều sản phẩm càng nhiều lần hỏi"). Nhận xét của AI: "Chính xác! Bạn giải thích đúng vì sao số truy vấn tăng theo số sản phẩm." Code kiểm thấy đoạn trích có thật trong câu trả lời nên Đạt (`is_passed: true`).
 5. Máy chủ mở transaction ngắn:
    - Khóa dòng bản ghi `node_runs`.
    - Ghi lượt thứ hai vào `question_attempts`.

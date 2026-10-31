@@ -507,7 +507,7 @@ Ví dụ với hai ô mẫu trong bộ test (không thuộc `shop-api`), đều 
 
 **Độ sâu câu hỏi tương ứng với bậc trình độ:**
 Dù ở bất kỳ góc độ nào, AI khi đặt câu hỏi đều phải tuân thủ độ sâu nhận thức theo bậc:
-- Bậc Tập sự: Chỉ yêu cầu chỉ ra vị trí, lần theo luồng có sẵn hoặc đếm số lượng.
+- Bậc Tập sự: Chỉ yêu cầu giải thích vì sao một tình huống xảy ra hoặc dữ liệu từ đâu mà có, không cần đếm hay chỉ dòng.
 - Bậc Thực hành: Yêu cầu giải thích nguyên nhân, hậu quả và nêu giải pháp khắc phục.
 - Bậc Kiến trúc sư: Yêu cầu phân tích tình huống dữ liệu biên, bài toán chịu tải cao, xử lý đồng thời và các đánh đổi kiến trúc.
 

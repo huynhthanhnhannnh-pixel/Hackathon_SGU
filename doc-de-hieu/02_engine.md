@@ -720,7 +720,7 @@ flowchart TD
 
 1. **Chế độ BÌNH THƯỜNG (NORMAL):** Áp dụng cho các dự án ứng dụng web, microservices có điểm đầu vào rõ ràng. Đây là chế độ mặc định của dự án `shop-api` của chúng ta. Hệ thống sẽ đi theo từng điểm vào để cắt lát luồng dữ liệu.
 2. **Chế độ THỦ TỤC (PROCEDURAL):** Áp dụng khi dự án chỉ có 1 đến 2 file mã nguồn (ví dụ một file `main.py` dài hàng trăm dòng). Vì không có route, hệ thống sẽ dùng kỹ thuật đặc biệt để chia file dài đó thành các chặng logic (nhận dữ liệu, kiểm tra hợp lệ, xử lý tính toán, lưu trữ) thành các node ảo độc lập.
-3. **Repo toàn bài tập thuật toán rời** (ví dụ `quicksort.py`, `dijkstra.py` không gọi nhau, không có `main`): vẫn chạy chế độ BÌNH THƯỜNG. Không có lát cắt nào, nên bản đồ chỉ gồm các node thuật toán sinh từ những hàm có độ phức tạp cao (Mục 9). Bản demo không còn chế độ gom nhóm riêng cho loại repo này (D-52).
+3. **Repo toàn bài tập thuật toán rời** (ví dụ `quicksort.py`, `dijkstra.py` không gọi nhau, không có `main`): vẫn chạy chế độ BÌNH THƯỜNG. Không có lát cắt nào, nên bản đồ chỉ gồm các node thuật toán sinh từ những hàm có độ phức tạp cao (Mục 9). Bản demo không còn chế độ gom nhóm riêng cho loại repo này (D-54).
 
 Tra chi tiết: spec/11_ENGINE_DO_THI.md Mục 5.
 

@@ -153,7 +153,7 @@ Mục đích: hàm entry đã đăng ký (D-06); chạy trước Mục 5. Output
 2. **ENG-51 Bảng quyết định** (dòng đầu khớp; `degraded_mode` áp cả repo):
    1. Có entry `REGISTERED`/`GENERIC` ⇒ NORMAL (`null`).
    2. `n ≤ CONFIG.PROCEDURAL_MAX_FILES` ⇒ `PROCEDURAL` (Mục 10).
-   3. Còn lại ⇒ NORMAL (`null`) với các entry `PROGRAM` nếu có; không có entry ⇒ chỉ có node thuật toán theo ENG-90 (D-52).
+   3. Còn lại ⇒ NORMAL (`null`) với các entry `PROGRAM` nếu có; không có entry ⇒ chỉ có node thuật toán theo ENG-90 (D-54).
 
 ---
 

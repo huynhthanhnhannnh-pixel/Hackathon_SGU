@@ -1,7 +1,7 @@
 # 21 — AI: CỔNG GÁC, KIỂM TRA & DUYỆT TAY
 
 > Quy định mọi kiểm tra bằng code đặt lên văn bản AI và câu trả lời người học (tên, công nghệ, dòng, bằng chứng, regex tấn công, độ dài, trùng lặp), cùng quy trình duyệt tay output AI của repo demo · đọc: Vai C.
-> Code trong repo thi: `src/server/ai/guard/{text,names,forbidden,lines,analysis,overview,questions,followup,injection}.ts` · `src/lib/similarity.ts` (dùng chung client + server) · `scripts/review-run.ts`, `scripts/record-bundle.ts` · thư mục `review/`.
+> Code trong repo thi: `src/server/ai/guard/{text,names,forbidden,lines,analysis,overview,questions,followup,injection,log}.ts` · `src/lib/similarity.ts` (dùng chung client + server) · `scripts/review-run.ts`, `scripts/record-bundle.ts` · thư mục `review/`.
 > Kiểu: `02_CONTRACTS.md` · hằng số: `CONFIG.*` · lời gọi, prompt, luật Đạt: `20_AI_GOI_VA_PROMPT.md`.
 
 ## Đọc nhanh
@@ -17,7 +17,7 @@ Năm lớp chặn ảo giác và sinh nhầm, theo thứ tự dữ liệu đi qu
 flowchart TB
   L1["1 · Đầu vào sạch<br/>code thuần dựng bản đồ · chỉ gửi lát cắt đã che secret<br/>dữ liệu bọc trong thẻ · danh mục đóng<br/>(INV-02 · 20 AI-03, AI-04, AI-13, AI-14)"]
   L2["2 · Ép khuôn khi gọi<br/>JSON theo schema · temperature 0<br/>không chắc thì để trống · bằng chứng trước điểm<br/>(20 AI-02, AI-11, AI-16, AI-29)"]
-  L3["3 · Cổng gác bằng code<br/>tên · bước bằng chứng · danh mục · từ cấm · số dòng · câu hỏi<br/>sai ⇒ gọi lại 1 lần ⇒ bản khung / DROPPED<br/>(Mục 2–5 · 20 AI-12)"]
+  L3["3 · Cổng gác bằng code<br/>tên · bước bằng chứng · danh mục · từ cấm · số dòng · câu hỏi<br/>sai ⇒ gọi lại 1 lần kèm lý do ⇒ bản khung / DROPPED<br/>(Mục 2–5 · 20 AI-12)"]
   L4["4 · Server quyết chấm<br/>regex tấn công · Đạt cần trích dẫn có thật<br/>gợi ý lộ đáp án ⇒ mẫu tĩnh<br/>(Mục 6–8 · 20 AI-30, AI-32)"]
   L5["5 · Người duyệt + nhãn trung thực<br/>duyệt tay, đóng băng · Nhận định của AI · Báo sai<br/>(Mục 9–11)"]
   R["Vẫn lọt: sai nghĩa với tên có thật · đáp án mẫu sai · chấm lệch (GUARD-21)"]
@@ -191,24 +191,27 @@ export function symbolInStep(symbol: string, step: ExecutionTraceStep): boolean 
 ## 3. `checkAnalysis` — `guard/analysis.ts` (GUARD-10)
 
 ```typescript
-export function checkAnalysis(raw: NodeAnalysisRaw, node: HybridArchitecturalNode, graph: StaticEngineResult): NodeAnalysis | null {
+export function checkAnalysis(raw: NodeAnalysisRaw, node: HybridArchitecturalNode, graph: StaticEngineResult,
+  issues: GuardIssue[] = []): NodeAnalysis | null {
   const n = node.trace_steps.length;
   const st = (k: number) => (Number.isInteger(k) && k >= 1 && k <= n ? node.trace_steps[k - 1] : null);
   const skills: AnalysisSkill[] = [];                                                       // A1
   for (const s of raw.skills) {
     const step = st(s.step);
     if (SWE_SKILLS.includes(s.skill) && step && symbolInStep(s.symbol, step) && !skills.some((k) => k.skill === s.skill)) skills.push(s);
+    else issues.push({ code: "A1", step: step ? s.step : undefined, name: s.symbol });
   }
   skills.splice(CONFIG.ANALYSIS_MAX_SKILLS);
-  if (skills.length < CONFIG.ANALYSIS_MIN_SKILLS) return null;
+  if (skills.length < CONFIG.ANALYSIS_MIN_SKILLS) { issues.push({ code: "A1" }); return null; }
   const patterns = [...new Set(raw.architecture.patterns.map((p) => (ARCHITECTURE_PATTERNS.includes(p) ? p : "OTHER")))]
     .slice(0, CONFIG.ANALYSIS_MAX_PATTERNS);                                                  // A2
   if (patterns.length === 0) patterns.push("OTHER");
   const weak: AnalysisWeakPoint[] = [];                                                     // A3
   for (const w of raw.weak_points) {
     const step = st(w.step);
-    if (step && skills.some((k) => k.skill === w.skill) && symbolInStep(w.symbol, step)
-        && weak.filter((x) => x.skill === w.skill).length < CONFIG.WEAK_POINTS_PER_SKILL_MAX) weak.push(w);
+    if (!step || !skills.some((k) => k.skill === w.skill) || !symbolInStep(w.symbol, step))
+      issues.push({ code: "A3", step: step ? w.step : undefined, name: w.symbol });
+    else if (weak.filter((x) => x.skill === w.skill).length < CONFIG.WEAK_POINTS_PER_SKILL_MAX) weak.push(w);
   }
   const strengths = raw.strengths.filter((s, i, a) => st(s.step) && a.findIndex((x) => x.step === s.step) === i);  // A4
   const stepNums = raw.steps.map((s) => s.step).sort((a, b) => a - b);                     // A5
@@ -216,10 +219,18 @@ export function checkAnalysis(raw: NodeAnalysisRaw, node: HybridArchitecturalNod
   const texts = [raw.architecture.summary, ...raw.steps.map((s) => s.text), ...strengths.map((s) => s.text),
     ...weak.flatMap((w) => [w.what, w.consequence]), ...skills.map((s) => s.reason)];       // A6
   const all = Array.from({ length: n }, (_, i) => i + 1);
-  const textOk = stepsOk && texts.every((t) => t.trim().length > 0)
-    && checkNames(texts, nodeScope(node, graph)).length === 0
-    && findForbidden(texts, forbiddenKeywords(graph.fingerprint, nodeCodeText(node))).length === 0
-    && texts.every((t) => invalidLineRefs(t, stepLines(node, all)).length === 0);
+  const a6: GuardIssue[] = [
+    ...checkNames(texts, nodeScope(node, graph)).map((name) => ({ code: "A6" as const, name })),
+    ...findForbidden(texts, forbiddenKeywords(graph.fingerprint, nodeCodeText(node))).map((name) => ({ code: "A6" as const, name })),
+    ...(texts.some((t) => t.trim().length === 0 || invalidLineRefs(t, stepLines(node, all)).length > 0) ? [{ code: "A6" as const }] : []),
+  ];
+  if (!stepsOk) issues.push({ code: "A5" });
+  issues.push(...a6);
+  const textOk = stepsOk && a6.length === 0;
+  if (!textOk) issues.push({ code: "A7" });
+
+
+
   return textOk
     ? { node_id: node.id, skills, architecture: { patterns, summary: raw.architecture.summary },
         steps: [...raw.steps].sort((a, b) => a.step - b.step), strengths, weak_points: weak, skeleton_only: false }
@@ -241,24 +252,24 @@ export function checkAnalysis(raw: NodeAnalysisRaw, node: HybridArchitecturalNod
 
 ## 4. `checkOverview` — `guard/overview.ts` (GUARD-11)
 
-`checkOverview(raw: RepoOverviewRaw, graph: StaticEngineResult, analyses: Record<string, NodeAnalysis>): RepoOverviewRaw | null`
+`checkOverview(raw: RepoOverviewRaw, graph: StaticEngineResult, analyses: Record<string, NodeAnalysis>, issues: GuardIssue[] = []): RepoOverviewRaw | null`
 
 1. `architecture_style` ngoài danh mục ⇒ `"OTHER"`.
 2. `layers`: `layer` phải là `ArchitecturalLayer`; `nodes` chỉ giữ id có thật **và** có bước mang `layer` đó; trùng `layer` ⇒ giữ mục đầu; `nodes` rỗng ⇒ bỏ mục.
 3. `notes`: `nodes` chỉ giữ id có thật; giữ nhận xét khi còn ≥ 1 node **và** mọi node trong đó có bản phân tích với `weak_points.length > 0` (tổng quan không được nêu điểm dở mới); ngược lại gạch.
-4. Chữ (`summary`, `main_flow`, `layers[].role`, `notes[].text` còn giữ): `summary`, `main_flow` khác rỗng; `checkNames(·, repoScope(graph))` rỗng; `findForbidden(·, forbiddenKeywords(fp, code mọi node))` rỗng; **không** có số dòng (`invalidLineRefs(·, ∅)` rỗng). Sai ⇒ `null` (gọi lại; hết lượt ⇒ `ai = null`).
+4. Chữ (`summary`, `main_flow`, `layers[].role`, `notes[].text` còn giữ): `O1` rỗng · `O2` tên sai (`checkNames(·, repoScope(graph))`) · `O3` từ cấm (`findForbidden(·, forbiddenKeywords(fp, code mọi node))`) · `O4` có số dòng (`invalidLineRefs(·, ∅)`); sai ⇒ thêm `GuardIssue` rồi `null` (gọi lại; hết lượt ⇒ `ai = null`).
 
 ---
 
 ## 5. `checkQuestions` — `guard/questions.ts` (GUARD-12)
 
 ```typescript
-interface QuestionCheck { item: QuestionPlanItem; question: GeneratedQuestionRaw | null; errors: string[] }   // nội bộ
+interface QuestionCheck { item: QuestionPlanItem; question: GeneratedQuestionRaw | null; issues: GuardIssue[] }   // nội bộ
 export function checkQuestions(raw: { questions: GeneratedQuestionRaw[] }, items: QuestionPlanItem[], node: HybridArchitecturalNode,
   graph: StaticEngineResult, analysis: NodeAnalysis): QuestionCheck[];
 ```
 
-Câu thứ `i` của `raw` ứng với `items[i]` (theo vị trí). Câu qua khi mọi mục sau đúng:
+Câu thứ `i` của `raw` ứng với `items[i]` (theo vị trí). Mã lỗi trong `issues` theo bảng Q1–Q8; tên từ `checkNames`, `findForbidden` đưa vào `name`. Câu qua khi mọi mục sau đúng:
 
 | # | Kiểm |
 | :-: | :-- |
@@ -297,7 +308,7 @@ export function leaksNumbers(text: string, t: GradeContext, answer: string): boo
 
 `feedback_ok` = `f = g.feedback` khác rỗng ∧ không từ cấm ∧ `checkNames([f], gradeScope)` rỗng ∧ (đạt **hoặc** cả 3: (a) mọi từ dạng tên trong backtick của `f` ∈ `identWords(answer)`; (b) `LOC_RE` khớp ⇒ cụm khớp (sau `normText`) phải có trong câu trả lời; (c) `!leaksNumbers(f)`).
 
-Sai ⇒ gợi ý thay bằng `staticHint`, feedback thay bằng `staticFeedback` (`20` AI-32). Không gọi lại AI.
+Sai ⇒ gợi ý thay bằng `staticHint`, feedback thay bằng `staticFeedback` (`20` AI-32); `follow_up_ok = false` ⇒ mã `G1`, `feedback_ok = false` ⇒ mã `G2`, ghi log GUARD-22, vẫn không gọi lại AI.
 
 ### Trích dẫn ý bắt buộc (D-13)
 
@@ -306,6 +317,14 @@ So khớp **lỏng**: `points[].quote` sau `normText` (bỏ dấu câu ở hai �
 ### Làm sạch (GUARD-14)
 
 `feedback` ⇒ `firstSentences(·, CONFIG.FEEDBACK_MAX_SENTENCES)`. `detected_jargons` ⇒ giữ mục có `normText(j)` khác rỗng và nằm trong `normText(answer)`, bỏ trùng.
+
+### Ghi mã lỗi (GUARD-22, D-51)
+
+```typescript
+export function logGuardBlock(call: GuardCall, attempt: number, nodeId: string | null, issues: GuardIssue[]): void;   // guard/log.ts
+```
+
+Bị chặn = `checkAnalysis` trả `null` hoặc `skeleton_only`, `checkOverview` trả `null`, một câu hỏi hỏng, `follow_up_ok` hoặc `feedback_ok` là `false`. Mỗi lần ghi 1 dòng `GuardLogEntry` (`02` Mục 5, `04` Mục 9): `codes` lấy từ `issues`, bỏ trùng; không ghi `name`, `step`, code, văn bản AI, bài làm. Không thêm bảng Postgres. `scripts/review-run.ts` đếm số lần chặn theo `GuardCode` từ các dòng của chính lần chạy và ghi vào kết quả chạy.
 
 ---
 
@@ -393,6 +412,22 @@ Không kiểm entropy ký tự, không cắt câu trả lời.
 
 ### Quy trình (GUARD-18)
 
+```mermaid
+flowchart TD
+  subgraph TRONG["Vòng trong · analyze, overview, questions"]
+    C["Gọi AI"] --> G{"Cổng gác"}
+    G -- "qua" --> OK["Dùng kết quả"]
+    G -- "bị chặn · còn lượt" --> R["Gọi lại kèm lý do"] --> C
+    G -- "bị chặn · hết lượt" --> F["Bản khung · DROPPED"]
+  end
+  subgraph NGOAI["Vòng ngoài · nhóm làm tay"]
+    L["Mã lỗi · Báo sai · duyệt tay"] --> P["Người phân loại"] --> T["Ca test"] --> B["Bài học"] --> K{"Kiểm tra"}
+    K -- "không tụt" --> S["Phát hành PROMPT_VERSION mới"]
+    K -- "tụt" --> X["Gỡ bài học"]
+  end
+  G -. "guard_blocked" .-> L
+```
+
 **Khi nào:**
 - Trước giờ thi (khuyến nghị): chạy thử các prompt của `20` trên `50` Mục 1 (hoặc repo chốt ở Q-03) bằng AI Studio để sửa prompt sớm; chỉ ghi kết luận vào `00`, không mang code vào repo thi.
 - **Bắt buộc ở mốc H+17** (`doc-de-hieu/07_ke_hoach_21h.md`), sau khi chốt `CONFIG.LLM_MODEL` và `PROMPT_VERSION`. Đổi model, prompt, schema, `ENGINE_VERSION` hoặc commit repo demo ⇒ duyệt lại từ đầu.
@@ -402,8 +437,9 @@ Không kiểm entropy ký tự, không cắt câu trả lời.
 2. **Tự giải trước, đọc AI sau:** người duyệt che đáp án AI, tự giải (đếm truy vấn, lần luồng…) rồi mới so.
 3. **Duyệt theo bảng kiểm** dưới đây, mỗi mục ✅ đúng / ❌ sai / ❓ chưa chắc. Mục khác nhau giữa 3 lần chạy ⇒ ❓ dù lần này đúng. Ghi riêng thứ AI **bỏ sót** (lỗi rõ mà AI không nêu).
 4. **Người thứ 2** xem lại mọi ô ❌ / ❓; không thống nhất ⇒ cả nhóm chốt, ghi lý do.
-5. **Có ❌ ⇒ sửa nguyên nhân, không sửa output:** thiếu luật trong prompt, gửi thiếu bước, model yếu. Sửa xong ⇒ tăng `PROMPT_VERSION`, chạy lại không cache, duyệt lại **toàn bộ**; lỗi đã gặp ghi vào `review/loi_da_gap.md` và kiểm lại mỗi vòng.
-6. **Đóng băng** theo GUARD-19.
+5. **Có ❌ ⇒ sửa nguyên nhân, không sửa output:** thiếu luật trong prompt, gửi thiếu bước, model yếu. Sửa xong ⇒ tăng `PROMPT_VERSION`, chạy lại không cache, duyệt lại **toàn bộ**; lỗi đã gặp ghi vào `review/loi_da_gap.md` và kiểm lại mỗi vòng. Mỗi ❌ có ít nhất 1 ca test trong `review/loi_da_gap.md` (đầu vào, mã lỗi nếu có, kỳ vọng). Đổi `PROMPT_VERSION` ⇒ chạy lại mọi ca và repo đo riêng nếu có (Số đo báo cáo); ca đã qua nay hỏng hoặc kết quả repo đo riêng thấp hơn ⇒ không nhận bản đó.
+6. **Bài học vào prompt (D-51):** chỉ thêm sau khi qua bước 5, do nhóm tự viết thành luật hoặc ví dụ ngắn, không chép code repo người dùng; chỉ nạp vào đúng lời gọi liên quan; mỗi bài ghi model và `PROMPT_VERSION`, đổi model ⇒ kiểm lại từng bài. Trần số bài: Q-13. Log và Báo sai chỉ là đầu vào cho người phân loại, không tự sửa prompt.
+7. **Đóng băng** theo GUARD-19.
 
 | Output | Câu hỏi khi duyệt |
 | :-- | :-- |
@@ -471,8 +507,10 @@ Fixture `50` Mục 1–2; `tech_stack = ["express","typeorm","pg","zod","jsonweb
 | GUARD-05 | `` `userService.fooBar` ``: node `STRUCTURAL` ⇒ hợp lệ; node `RESOLVED` ⇒ không. `symbolInStep("fooBar")` ở node `STRUCTURAL` ⇒ vẫn `false` |
 | GUARD-06 | Stack trên ⇒ cấm đủ 12 công nghệ. Thêm `ioredis` ⇒ redis hết cấm; `@aws-sdk/client-s3` ⇒ aws hết cấm; `mongoose` ⇒ mongodb hết cấm. Code bước có chú thích "dùng redis" ⇒ redis hết cấm cho node đó |
 | GUARD-07 | "drawShapes draws" ⇒ không khớp `aws`; "dùng AWS S3" ⇒ khớp; "redisClient" ⇒ không khớp `redis`; "Redis" ⇒ khớp; "kiến trúc vi dịch vụ" ⇒ khớp |
-| GUARD-13 | `50` 2.4 lượt 1: gợi ý `CONCEPT` ("…200 sản phẩm…") ⇒ `follow_up_ok`; feedback ⇒ `feedback_ok` |
+| GUARD-13 | `50` 2.4 lượt 1: gợi ý `CONCEPT` ("…từng sản phẩm…") ⇒ `follow_up_ok`; feedback ⇒ `feedback_ok` |
 | GUARD-13 | `CONCEPT` "Hãy nhìn bước 2" hoặc chứa `listProducts` ⇒ sai. Feedback chưa đạt "Bạn quên `findAll`" (câu trả lời không có `findAll`) ⇒ sai. Feedback chưa đạt "Tổng phải là 201" ⇒ lộ số ⇒ sai |
+| GUARD-22 | `steps` chỉ có 2 mục ⇒ `issues` có `A5`, `checkAnalysis` vẫn trả `skeleton_only = true`; dòng log có `A5`, `A7`, không có `name` |
+| GUARD-22 | Gọi `checkAnalysis` không truyền `issues` ⇒ kết quả giống hệt khi truyền; câu hỏi có "Redis" ⇒ `issues` có `Q5`; gợi ý trượt gác ⇒ log mã `G1` |
 | GUARD-14 | Câu trả lời có "database"; AI trả `["database","N+1"]` ⇒ `["database"]` |
 | GUARD-15 | Mọi dòng cột "Phải khớp" ⇒ `true`; mọi dòng cột "Không được khớp" ⇒ `false` |
 | GUARD-16 | "  abc  def  " ⇒ `TOO_SHORT`; 2001 ký tự ⇒ `TOO_LONG`; 2000 ký tự ⇒ `null`; `similarity("200 truy vấn", " 200  Truy vấn ") = 1` ⇒ trùng; `similarity("200 truy vấn, vì có 200 sản phẩm.", "201: findAll 1 lần rồi findById 200 lần") < 0.8` |

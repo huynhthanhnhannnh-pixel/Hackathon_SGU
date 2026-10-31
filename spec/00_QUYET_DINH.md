@@ -6,17 +6,17 @@
 
 ## Đọc nhanh
 
-- **Mục 1 — Quyết định đang có hiệu lực:** gồm mọi D chưa hủy, xếp theo mã tăng dần (D-01 … D-10, D-12, D-13, D-15, D-16, D-18 … D-20, D-22, D-23, D-27 … D-52). Viết thẳng theo nội dung hiện hành, không giữ chữ cũ đã bị bãi bỏ.
+- **Mục 1 — Quyết định đang có hiệu lực:** gồm mọi D chưa hủy, xếp theo mã tăng dần (D-01 … D-10, D-12, D-13, D-15, D-16, D-18 … D-20, D-22, D-23, D-27 … D-54). Viết thẳng theo nội dung hiện hành, không giữ chữ cũ đã bị bãi bỏ.
 - **Mục 2 — Chờ chốt:** hiện không còn quyết định nào.
-- **Mục 3 — Câu hỏi còn mở:** Q-03, Q-10. Không chặn việc code; có người chịu trách nhiệm và mặc định nếu chưa trả lời.
+- **Mục 3 — Câu hỏi còn mở:** Q-03, Q-10, Q-13. Không chặn việc code; có người chịu trách nhiệm và mặc định nếu chưa trả lời.
 - **Mục 4 — Lịch sử:** các D đã hủy hoặc thay thế (D-11, D-14, D-17, D-21, D-24, D-25, D-26) và các câu hỏi đã đóng (Q-01, Q-02, Q-04 … Q-09, Q-11, Q-12).
 - **Đổi một quyết định:** sửa dòng D-xx ở file này trước, rồi mới sửa file đích (cột "Áp dụng ở").
 
 | Mục | Nội dung | File được trỏ tới |
 | :-: | :-- | :-- |
-| 1 | Quyết định đang có hiệu lực (45 quyết định) | `01`, `02`, `03`, `04`, `10`, `11`, `20`, `21`, `22`, `30`, `50`, `doc-de-hieu/`, `pitch/` |
+| 1 | Quyết định đang có hiệu lực (47 quyết định) | `01`, `02`, `03`, `04`, `10`, `11`, `20`, `21`, `22`, `30`, `50`, `doc-de-hieu/`, `pitch/` |
 | 2 | Chờ chốt (không còn) | — |
-| 3 | Câu hỏi còn mở (Q-03, Q-10) | `02`, `50` |
+| 3 | Câu hỏi còn mở (Q-03, Q-10, Q-13) | `02`, `50` |
 | 4 | Lịch sử (7 D đã hủy/thay thế, 10 Q đã đóng) | — |
 
 ---
@@ -68,14 +68,16 @@
 | **D-48** | **Giao diện nhập repo:** Không làm ô "Thư mục" cạnh ô link. | `02`, `30` |
 | **D-49** | **Giấy phép mã nguồn:** Mã nguồn repo thi dùng giấy phép MIT. | `04`, repo thi |
 | **D-50** | **Model AI:** `gemini-3.5-flash-lite`, gọi bằng `generateContent` + `responseSchema` (đã thử thật 31/10). `gemini-2.5-flash` không còn mở cho người dùng mới; `gemini-3.8-flash` hạn mức quá thấp. Dự phòng: Groq `openai/gpt-oss-120b`. Gói free nên chỉ dùng repo công khai. Web deploy dùng key riêng; mỗi người test bằng key của mình. | `02`, `20`, `21`, `doc-de-hieu/07`, `pitch/` |
-| **D-51** | **Tăng số node lên tối đa 20:**<br>• Bản đồ tối đa 20 node (`CONFIG.DISPLAY_MAX_NODES = 20`, tối thiểu vẫn là 6); đường chính tối đa 6 node (`CONFIG.CRITICAL_PATH_MAX_NODES = 6`); thứ tự chọn ENG-114 giữ nguyên.<br>• Bỏ node thừa ngoài 20 ⇒ ghi `IngestionReport.omitted_node_count` + warning "{n} luồng khác không hiển thị trên bản đồ".<br>• Tab Tổng quan giữ luật D-46 (đợi mọi node phân tích xong).<br>• Nâng `CONFIG.ENGINE_VERSION` từ `"1.0.0"` lên `"1.1.0"`. | `02`, `11`, `30`, `50`, `doc-de-hieu/`, `pitch/` |
-| **D-52** | **Bỏ chế độ `ALGORITHM_COLLECTION` (bản demo, giảm code):**<br>• Bảng chọn chế độ ENG-51 còn 3 dòng: có entry `REGISTERED`/`GENERIC` ⇒ NORMAL; số file ≤ `CONFIG.PROCEDURAL_MAX_FILES` ⇒ `PROCEDURAL`; còn lại ⇒ NORMAL (dùng entry `PROGRAM` nếu có).<br>• Repo toàn hàm thuật toán rời, không có entry ⇒ node `ALGORITHMIC_CORE` sinh theo ENG-90 như repo thường; không hàm nào đủ ngưỡng ⇒ `ERR_NO_ARCHITECTURAL_SLICE`.<br>• Bỏ node gom nhóm `vroot-algorithms`, trường `is_group_root`, `CONFIG.VIRTUAL_ROOT_MIN_COMPONENTS`, `CONFIG.DEGRADED_TOP_FUNCTIONS`; `DegradedMode` chỉ còn `"PROCEDURAL"`. Thay D-24.<br>• Giữ node `ALGORITHMIC_CORE`.<br>• Nâng `CONFIG.ENGINE_VERSION` từ `"1.1.0"` lên `"1.2.0"`. | `01`, `02`, `03`, `11`, `20`, `30`, `doc-de-hieu/`, `pitch/` |
+| **D-51** | **Giảm lỗi lặp lại của AI, không đổi model** (chốt 31/10/2026):<br>• **Gọi lại kèm lý do:** analyze, overview, questions bị cổng gác chặn thì request kế tiếp có khối lý do do code dựng; lỗi mạng và JSON hỏng thì không. Chấm giữ mẫu tĩnh, không gọi lại. Số request không đổi.<br>• **Ghi mã lỗi:** mỗi lần chặn ghi 1 dòng log, không lưu code, văn bản AI, bài làm; không thêm bảng Postgres.<br>• **Lỗi thành ca test:** mỗi lỗi ❌ có ít nhất 1 ca trong `review/loi_da_gap.md`; đổi `PROMPT_VERSION` phải chạy lại, tụt thì không nhận.<br>• **Bài học vào prompt:** chỉ sau khi qua ca test, do nhóm tự viết, nạp đúng lời gọi liên quan, ghi model và `PROMPT_VERSION`; trần số bài ở Q-13.<br>• **Trình bày:** 2 mục "Lỗi thành ca test" và "Bài học vào prompt" là định hướng tương lai; không demo, chỉ nói khi BGK hỏi. | `02`, `04`, `20`, `21`, `pitch/` |
+| **D-52** | **Định hướng câu hỏi:** câu hỏi nêu 1 tình huống rồi hỏi vì sao, từ đâu hoặc chuyện gì xảy ra, để người học tự giải thích bằng lời của mình. Ý bắt buộc là ý giải thích; không đòi số dòng hay tên hàm, trừ góc `CHANGE` cần nêu file. Luật Đạt, BKT, cổng gác giữ nguyên. | `20`, `22`, `50`, `doc-de-hieu/`, `pitch/` |
+| **D-53** | **Tăng số node lên tối đa 20:**<br>• Bản đồ tối đa 20 node (`CONFIG.DISPLAY_MAX_NODES = 20`, tối thiểu vẫn là 6); đường chính tối đa 6 node (`CONFIG.CRITICAL_PATH_MAX_NODES = 6`); thứ tự chọn ENG-114 giữ nguyên.<br>• Bỏ node thừa ngoài 20 ⇒ ghi `IngestionReport.omitted_node_count` + warning "{n} luồng khác không hiển thị trên bản đồ".<br>• Tab Tổng quan giữ luật D-46 (đợi mọi node phân tích xong).<br>• Nâng `CONFIG.ENGINE_VERSION` từ `"1.0.0"` lên `"1.1.0"`. | `02`, `11`, `30`, `50`, `doc-de-hieu/`, `pitch/` |
+| **D-54** | **Bỏ chế độ `ALGORITHM_COLLECTION` (bản demo, giảm code):**<br>• Bảng chọn chế độ ENG-51 còn 3 dòng: có entry `REGISTERED`/`GENERIC` ⇒ NORMAL; số file ≤ `CONFIG.PROCEDURAL_MAX_FILES` ⇒ `PROCEDURAL`; còn lại ⇒ NORMAL (dùng entry `PROGRAM` nếu có).<br>• Repo toàn hàm thuật toán rời, không có entry ⇒ node `ALGORITHMIC_CORE` sinh theo ENG-90 như repo thường; không hàm nào đủ ngưỡng ⇒ `ERR_NO_ARCHITECTURAL_SLICE`.<br>• Bỏ node gom nhóm `vroot-algorithms`, trường `is_group_root`, `CONFIG.VIRTUAL_ROOT_MIN_COMPONENTS`, `CONFIG.DEGRADED_TOP_FUNCTIONS`; `DegradedMode` chỉ còn `"PROCEDURAL"`. Thay D-24.<br>• Giữ node `ALGORITHMIC_CORE`.<br>• Nâng `CONFIG.ENGINE_VERSION` từ `"1.1.0"` lên `"1.2.0"`. | `01`, `02`, `03`, `11`, `20`, `30`, `doc-de-hieu/`, `pitch/` |
 
 ---
 
 ## 2. Quyết định chờ chốt
 
-Hiện không còn quyết định nào chờ chốt. D-08, D-09, D-16, D-24 đã chốt ngày 31/10/2026 và chuyển lên Mục 1. D-24 sau đó bị hủy bởi D-52.
+Hiện không còn quyết định nào chờ chốt. D-08, D-09, D-16, D-24 đã chốt ngày 31/10/2026 và chuyển lên Mục 1. D-24 sau đó bị hủy bởi D-54.
 
 ---
 
@@ -85,6 +87,7 @@ Hiện không còn quyết định nào chờ chốt. D-08, D-09, D-16, D-24 đ�
 | :-- | :-- | :-- | :-- | :-- |
 | **Q-03** | **Repo demo thật** (thay repo minh họa `shop-api`).<br>Tiêu chí:<br>• public<br>• TS/JS Express hoặc NestJS<br>• 20–50 file code<br>• có ≥ 1 điểm dở rõ (truy vấn trong vòng lặp / thiếu transaction / secret viết thẳng)<br>• ≤ 15 MB nén | Cả nhóm | Trước ngày thi | Dùng repo mẫu tự viết theo `50_TEST_VA_FIXTURE.md` Mục 1, đẩy lên GitHub cá nhân trước giờ thi (đây là repo **dữ liệu demo**, không phải code sản phẩm) |
 | **Q-10** | **Giới hạn tốc độ tải zip không xác thực từ `codeload.github.com`:** GitHub không công bố quota số cụ thể cho codeload ngoài secondary rate limits / abuse detection (trả 429 / 403 khi quá nhiều request từ 1 IP/dải IP). Cần kiểm chứng hành vi probe và tải zip ở giờ H+1. | Vai B | Trước ngày thi | Giữ semaphore `MAX_CONCURRENT_INGESTIONS` và cache RAM để giảm thiểu số lần tải; gặp 429 trả `ERR_GITHUB_RATE_LIMIT_CDN` |
+| **Q-13** | **Trần số bài học nạp vào prompt (D-51):** chưa có số đo nên chưa đặt số. | _chờ điền_ | _chờ điền_ | Chưa nạp bài học nào vào prompt |
 
 ---
 
@@ -96,7 +99,7 @@ Hiện không còn quyết định nào chờ chốt. D-08, D-09, D-16, D-24 đ�
 - **D-14:** Vé chấm bài `challenge_token` mang theo `code_context` (hủy, thay bởi D-36: lưu DB, AI chấm không nhận `code_context`).
 - **D-17:** Sync receipt khi lỗi ghi DB (hủy, thay bởi D-40: bỏ biên nhận, DB lỗi trả `ERR_PERSISTENCE_UNAVAILABLE` + nút "Thử lại").
 - **D-21:** Thêm persona `SENIOR_ACTIVE` để demo Fast-Track (hủy, thay bởi D-34: bỏ Fast-Track).
-- **D-24:** Node gom nhóm `vroot-*` chỉ để hiển thị (hủy, thay bởi D-52: bỏ chế độ `ALGORITHM_COLLECTION` và node gom nhóm).
+- **D-24:** Node gom nhóm `vroot-*` chỉ để hiển thị (hủy, thay bởi D-54: bỏ chế độ `ALGORITHM_COLLECTION` và node gom nhóm).
 - **D-25:** Câu ôn biến thể `|v{n}` tránh trùng câu đã lộ đáp án (hủy, thay bởi D-35: bỏ ôn tập).
 - **D-26:** Phiên GitHub rơi về `ARCHIVE_HASH` khi cache RAM trượt (hủy, thay bởi D-39: phiên gắn commit SHA).
 

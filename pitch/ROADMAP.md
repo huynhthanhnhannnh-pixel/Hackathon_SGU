@@ -65,6 +65,7 @@ Theo lịch D-47, vòng 3 chỉ cách vòng 2 khoảng 1 ngày (08/11 → 09/11/
 | G5 | Trần `MAX_CLEAN_FILES` / `MAX_STREAM_BYTES` / `MAX_UPLOAD_BYTES`, `DISPLAY_MAX_NODES`; chỉ nhánh mặc định (D-38) | Chưa dùng được cho repo rất lớn hay nhánh khác | Phân cụm cộng đồng, index tăng dần theo commit; chọn nhánh |
 | G6 | Cổng gác: tên, từ cấm, bằng chứng kỹ năng; regex chặn câu lệnh | Chưa phát hiện nhờ AI trả lời hộ | Tín hiệu hành vi và câu hỏi nối tiếp |
 | G7 | Phai trí nhớ theo `DECAY_HALF_LIFE_DAYS` cố định, chỉ hiển thị mài mòn (D-35) | Ai cũng quên với cùng tốc độ | Half-Life Regression (Settles & Meeder, 2016) |
+| G8 | Gọi lại kèm lý do, ghi mã lỗi khi cổng gác chặn (D-51) | Lỗi gặp nhiều chưa được đưa ngược vào prompt | Người review viết ca test cho lỗi đó, qua ca test mới nâng system prompt; kết quả tụt thì không nhận |
 
 ---
 
