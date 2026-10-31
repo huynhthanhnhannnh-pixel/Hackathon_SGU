@@ -7,10 +7,10 @@
 ## Đọc nhanh
 
 - Nhận request ở 13 endpoint (kiểu ở `02` Mục 8) ⇒ xác thực phiên Supabase, kiểm `session_id` thuộc người gọi ⇒ gọi service ở `src/server/*.ts` ⇒ trả response dựng theo danh sách trường cho phép.
-- Server là nơi ghi duy nhất vào Postgres; Postgres không chứa mã nguồn (API-01, API-02).
+- Server là nơi ghi duy nhất vào Postgres; Postgres không chứa file nguồn, chỉ lưu đoạn code đã cắt của phiên trong `session_snapshots` (API-01, API-02, D-59).
 - `evaluate-feynman`: đọc câu hỏi + đáp án từ DB, kiểm không khóa ⇒ gọi AI ngoài transaction ⇒ transaction ngắn ghi lượt và BKT; ghi hỏng ⇒ `ERR_PERSISTENCE_UNAVAILABLE`, người học bấm "Thử lại" (Mục 6.2).
 - Trạng thái node suy ra khi đọc từ khung đồ thị + `node_progress` (`deriveNodeStates`, Mục 5.1); `LOCKED` không bao giờ được lưu.
-- Chạy trên Vercel; cache RAM chỉ giúp nhanh, không được dựa vào (API-08).
+- Chạy trên Vercel; cache RAM chỉ giúp nhanh, bản gốc của phiên ở `session_snapshots` (API-08).
 
 ```mermaid
 flowchart LR
@@ -18,16 +18,16 @@ flowchart LR
   R --> S["src/server/*<br/>nghiệp vụ"]
   S -- "ghi duy nhất (service-role)" --> D[("Postgres")]
   S -- "ngoài transaction" --> A["Gemini"]
-  S --> M["Cache RAM 1 instance<br/>StaticEngineResult"]
+  S --> M["Cache RAM 1 instance<br/>StaticEngineResult (bản sao)"]
   B -. "chỉ select (RLS)" .-> D
 ```
 
 | Mục | Nói về | Code (file / hàm chính) |
 | :-: | :-- | :-- |
-| 1 | Nguyên tắc: không lưu mã nguồn, server ghi duy nhất, xác thực, quota token, AI ngoài transaction, Vercel | — |
+| 1 | Nguyên tắc: không lưu file nguồn, server ghi duy nhất, xác thực, quota token, AI ngoài transaction, Vercel | — |
 | 2 | 13 endpoint (request → response, bảng ghi, lỗi riêng); `GET /api/sessions` | `src/app/api/**/route.ts` |
 | 3 | Lược đồ Postgres; 3.1 `RunQuestion`; 3.2 RLS; 3.3 khóa cache AI | `supabase/migrations/0001_init.sql` |
-| 4 | Khóa phiên, cache RAM, dựng lại `StaticEngineResult` | `getOrRebuildStaticResult` |
+| 4 | Khóa phiên, cache RAM, đọc `StaticEngineResult` của phiên | `getSessionStaticResult` |
 | 5 | Suy ra trạng thái node (5.1), mài mòn (5.2), kế hoạch không rỗng (5.3), đổi persona (5.4) | `deriveNodeStates` (`src/lib/derive.ts`) |
 | 6.1 | `enrich-node`: tạo run, lưu câu hỏi + đáp án | `src/server/enrich.ts` (`enrichNode`) |
 | 6.2 | `evaluate-feynman`: kiểm ⇒ chấm ⇒ khóa ⇒ ghi | `src/server/evaluate.ts` (`evaluateFeynman`) |
@@ -43,14 +43,14 @@ flowchart LR
 
 ## 1. Nguyên tắc
 
-- **Không lưu mã nguồn.** Postgres không chứa file code, `snippet`, `trace_steps`, `StaticEngineResult`. Được lưu: tài khoản, điểm kỹ năng, phiên học (commit SHA + khung đồ thị không có code), tiến độ, câu trả lời của người học, văn bản AI **đã qua kiểm** trong `ai_cache` và `node_runs` (câu hỏi, đáp án mẫu — D-36), tên bước / tên hàm (API-01).
+- **Không lưu file nguồn.** Postgres không chứa file code, buffer zip, AST. Code duy nhất được lưu là đoạn code đã cắt của các node (`trace_steps[].snippet`, `dto_snippet`) trong `StaticEngineResult` của phiên, bảng `session_snapshots` (D-59). Được lưu thêm: tài khoản, điểm kỹ năng, phiên học (snapshot + khung đồ thị), tiến độ, câu trả lời của người học, văn bản AI **đã qua kiểm** trong `ai_cache` và `node_runs` (câu hỏi, đáp án mẫu — D-36), tên bước / tên hàm (API-01).
 - **Server là nơi ghi duy nhất.** Client không có quyền `insert/update/delete` trên bảng nào; mọi lệnh ghi đi qua route handler bằng service-role key (API-02).
 - **Trả về theo danh sách trường cho phép.** Mỗi response dựng bằng một hàm map tường minh (`toClientResult`, `toAnalysisView`, `toEvaluateResponse`…). Cấm spread object thô của AI hay của DB vào response, để không lộ `misconception`, đáp án, `suspicious_instruction_files` (API-03).
 - **Mọi request cần phiên Supabase.** Header `Authorization: Bearer <access_token>`; server xác thực bằng `supabase.auth.getUser(token)`. Thiếu / sai ⇒ `ERR_UNAUTHENTICATED` (API-04).
 - **Kiểm quyền sở hữu.** `session_id` (và `run_id`) phải thuộc `user_id` hiện tại, nếu không ⇒ `ERR_SESSION_NOT_FOUND`; không tiết lộ đó là phiên của người khác (API-05).
 - **Đếm token ở server.** Sau mỗi lời gọi AI thật (không tính trúng cache), cộng `usage_metadata` vào `learning_sessions.tokens_used`. Trước mỗi lời gọi AI: `tokens_used ≥ CONFIG.SESSION_TOKEN_QUOTA` ⇒ `ERR_TOKEN_QUOTA_EXCEEDED` (API-06).
 - **Gọi AI ngoài transaction.** Không giữ khóa DB trong lúc chờ AI (D-18, API-07).
-- **Triển khai trên Vercel** (region `sin1`, D-27). Cache RAM `StaticEngineResult`, semaphore ingest và in-flight map chỉ sống trong 1 instance: giúp nhanh hơn, **không được dựa vào**. Cache trượt ⇒ dựng lại theo commit SHA (Mục 4). Upload zip ≤ `CONFIG.MAX_UPLOAD_BYTES` (giới hạn body của Vercel); link GitHub không bị giới hạn này (API-08).
+- **Triển khai trên Vercel** (region `sin1`, D-27). Cache RAM `StaticEngineResult`, semaphore ingest và in-flight map chỉ sống trong 1 instance: giúp nhanh hơn, **không được dựa vào**. Cache trượt ⇒ đọc `session_snapshots` (Mục 4). Upload zip ≤ `CONFIG.MAX_UPLOAD_BYTES` (giới hạn body của Vercel); link GitHub không bị giới hạn này (API-08).
 
 ---
 
@@ -77,15 +77,14 @@ flowchart LR
 Không lặp ở cột "Lỗi riêng":
 - Mọi endpoint ⇒ `ERR_UNAUTHENTICATED` (API-04), `ERR_PERSISTENCE_UNAVAILABLE` (Postgres lỗi khi đọc hoặc ghi, D-40).
 - Endpoint nhận `session_id` / `run_id` ⇒ `ERR_SESSION_NOT_FOUND` (API-05).
-- Endpoint gọi `getOrRebuildStaticResult` (`ingest { session_id }`, `analyze-node`, `analyze-overview`, `enrich-node`) ⇒ `ERR_SESSION_ENGINE_OUTDATED` và các lỗi của Mục 4.
+- Endpoint gọi `getSessionStaticResult` (`ingest { session_id }`, `analyze-node`, `analyze-overview`, `enrich-node`) ⇒ `ERR_SESSION_ENGINE_OUTDATED` và các lỗi của Mục 4.
 
 ### `GET /api/sessions`
 
 Mỗi `LearningSessionSummary` được tính khi đọc, không lưu:
 - `completed_count` / `failed_count` đếm `node_progress.status`; `total_nodes = graph_skeleton.length`.
 - `engine_version ≠ CONFIG.ENGINE_VERSION` ⇒ `can_resume = false`, `resume_blocker = "ENGINE_UPDATED"`.
-- Ngược lại, `ARCHIVE_HASH` (nguồn `ZIP`, hoặc GitHub không đọc được SHA) mà cache RAM không còn kết quả ⇒ `false`, `"ZIP_SOURCE"` (D-39, Q-12).
-- Còn lại (phiên `COMMIT_SHA`) ⇒ `true`, `null`.
+- Còn lại ⇒ `true`, `null` (mọi phiên, kể cả `.zip`, mở lại từ `session_snapshots` — D-59).
 
 ### Đăng nhập GitHub
 
@@ -99,6 +98,7 @@ Client gọi `supabase.auth.signInWithOAuth({ provider: "github" })` (scope mặ
 erDiagram
   profiles ||--o{ skill_states : "điểm kỹ năng"
   profiles ||--o{ learning_sessions : "phiên học"
+  learning_sessions ||--|| session_snapshots : "đoạn code đã cắt (D-59)"
   learning_sessions ||--o{ node_progress : "trạng thái node"
   learning_sessions ||--o{ node_runs : "lần học"
   node_runs ||--o{ question_attempts : "lượt trả lời"
@@ -151,6 +151,12 @@ create table learning_sessions (
   last_active_at   timestamptz not null default now()
 );
 create index on learning_sessions (user_id, source, snapshot_id, subdir, engine_version);  -- Khóa phiên, không unique: "Học lại từ đầu" tạo phiên mới (D-42)
+
+create table session_snapshots (                       -- D-59: kết quả engine của phiên; client không đọc (Mục 3.2)
+  session_id  uuid primary key references learning_sessions on delete cascade,
+  result      jsonb not null,                          -- StaticEngineResult: node + đoạn code đã cắt + tên; KHÔNG có file nguồn
+  created_at  timestamptz not null default now()
+);
 
 create table node_progress (                           -- Chỉ node đã có sự kiện; thiếu dòng ⇒ suy ra (Mục 5.1)
   session_id       uuid not null references learning_sessions on delete cascade,
@@ -230,7 +236,7 @@ interface RunQuestion extends QuestionPlanItem, Omit<GeneratedQuestionRaw, "skil
 
 - Bật RLS trên **mọi** bảng.
 - `select` cho client: `profiles`, `skill_states`, `learning_sessions`, `dispute_reports` khi `auth.uid() = user_id`; `node_progress` khi `session_id` thuộc phiên của `auth.uid()`.
-- `ai_cache`, `node_runs`, `question_attempts`: **không có chính sách nào** cho client (chứa đáp án — INV-07; lịch sử đọc qua endpoint 4).
+- `ai_cache`, `node_runs`, `question_attempts`, `session_snapshots`: **không có chính sách nào** cho client (chứa đáp án — INV-07; chứa `symbol_whitelist`, `suspicious_instruction_files` — API-03; đọc qua endpoint).
 - Không có chính sách `insert/update/delete` cho client ở bất kỳ bảng nào (API-02).
 
 ### 3.3. Khóa cache AI
@@ -248,21 +254,18 @@ Câu hỏi không cache: mỗi run sinh mới và lưu trong `node_runs`; chấm
 - **Khóa phiên:** `(user_id, source, snapshot_id, subdir, engine_version)`; trùng khóa ⇒ mở phiên có `last_active_at` mới nhất.
   - GitHub: `snapshot_id` = commit SHA 40 hex đọc từ comment EOCD của zip codeload (`10` Mục snapshot). Comment không khớp `/^[0-9a-f]{40}$/` ⇒ `ARCHIVE_HASH` = SHA-256 của **toàn bộ** buffer zip, kèm cảnh báo "phiên không mở lại được" (`10`).
   - Upload `.zip`: `ARCHIVE_HASH` = SHA-256 của buffer.
-- **Phiên gắn commit SHA (D-39):** dựng lại luôn theo đúng SHA của phiên. Repo có commit mới ⇒ dán link ra SHA mới ⇒ bản đồ và phiên mới.
+- **Phiên gắn snapshot (D-39, D-59):** phiên luôn dùng `StaticEngineResult` đã lưu lúc tạo; không chạy lại engine, không tải lại zip. Repo có commit mới ⇒ dán link ra SHA mới ⇒ bản đồ và phiên mới.
 - **Cache RAM `StaticEngineResult`** (API-08): LRU `CONFIG.INGESTION_CACHE_MAX_ENTRIES`, TTL `CONFIG.INGESTION_CACHE_TTL_MS`, hai tầng:
   - alias `owner/repo` + `subdir_override` (link đã chuẩn hóa, `10` ING-04) `⇒ snapshot_id`;
   - kết quả `snapshot_id|subdir|engine_version ⇒ StaticEngineResult`.
 
-### `getOrRebuildStaticResult(session)`
+### `getSessionStaticResult(session)`
 
 | Tình huống | Xử lý |
 | :-- | :-- |
-| Trúng cache | Dùng kết quả đó |
-| Trượt, `COMMIT_SHA` | Tải `codeload.github.com/{owner}/{repo}/zip/{sha}` rồi chạy lại Tầng 0–2 |
-| Trượt, `ARCHIVE_HASH` | Không dựng lại được ⇒ `ERR_SESSION_NOT_FOUND` (Q-12, V-5). Nguồn `ZIP` chỉ best-effort: UI báo "phiên upload không mở lại được, hãy upload lại .zip" (`30` Mục 10); trùng khóa phiên ⇒ mở lại phiên đó |
-| codeload 404 theo SHA (commit bị force-push xóa) | `ERR_SESSION_NOT_FOUND` (Q-12); phiên chỉ còn xem lịch sử |
-
-Kiểm tất định khi dựng lại: khung đồ thị dựng lại phải trùng `graph_skeleton` đã lưu (so `node_id` + `prerequisites`). Lệch ⇒ ghi log lỗi và trả `ERR_SESSION_ENGINE_OUTDATED`.
+| Trúng cache RAM | Dùng kết quả đó |
+| Trượt cache | Đọc `session_snapshots.result` của phiên, nạp vào cache RAM. Giống hệt lần đầu, kể cả phiên `.zip` (D-59) |
+| Phiên thiếu dòng `session_snapshots` (lỗi bất thường) | `COMMIT_SHA` ⇒ tải `codeload.github.com/{owner}/{repo}/zip/{sha}`, chạy lại Tầng 0–2, so `node_id` + `prerequisites` với `graph_skeleton`, khớp ⇒ ghi bù `session_snapshots`; lệch ⇒ ghi log lỗi, `ERR_SESSION_ENGINE_OUTDATED`; 404 hoặc `ARCHIVE_HASH` ⇒ `ERR_SESSION_NOT_FOUND` |
 
 ---
 
@@ -284,7 +287,7 @@ Không đổi trạng thái node, không có nút ôn. Client tính từ `profil
 
 ### 5.3. Kế hoạch câu hỏi không bao giờ rỗng (D-34)
 
-Không có Fast-Track, không có node miễn thi. Mọi kỹ năng của node đã thạo ⇒ `planNodeQuestions` vẫn trả 1 câu cho kỹ năng có điểm thấp nhất của node (`22`). Node chỉ `COMPLETED` / `FAILED` khi run `LEARN` xong (Mục 6.6).
+Không có node miễn thi. Mọi kỹ năng của node đã thạo ⇒ `planNodeQuestions` vẫn trả 1 câu cho kỹ năng có điểm thấp nhất của node (`22`). Node chỉ `COMPLETED` / `FAILED` khi run `LEARN` xong (Mục 6.6).
 
 ### 5.4. Đổi persona
 
@@ -309,7 +312,7 @@ async function enrichNode(req: EnrichNodeRequest, userId: string): Promise<Enric
   const analysis = await aiCache.get(analysisKey(session, req.node_id));
   if (!analysis) throw ERR_ANALYSIS_NOT_READY;
   const profile = await loadProfile(userId);                             // skill_states ⇒ LearnerCognitiveProfile
-  const graph = await getOrRebuildStaticResult(session);                 // Cần snippet để AI đặt câu hỏi
+  const graph = await getSessionStaticResult(session);                   // Đoạn code đã lưu (D-59) để AI đặt câu hỏi
   const node = mustFindNode(graph, req.node_id);
   const plan = planNodeQuestions(analysis, profile.skills, now, node.trace_steps.length); // 22; luôn ≥ 1 câu (Mục 5.3)
   const questions: RunQuestion[] = await generateQuestions(session, graph, node, analysis, plan); // 20: không cache (D-37); câu hỏng ⇒ gọi lại riêng 1 lần ⇒ vẫn hỏng ⇒ DROPPED
@@ -420,9 +423,9 @@ Run xong khi mọi câu `finished`. Câu `DROPPED` và câu `disputed` không t�
 - **`ingest`:**
   - Semaphore `MAX_CONCURRENT_INGESTIONS` (trong 1 instance); chờ quá `INGEST_QUEUE_TIMEOUT_MS` ⇒ `ERR_SERVER_BUSY`.
   - Upload zip: client kiểm `CONFIG.MAX_UPLOAD_BYTES` trước khi gửi; vượt ⇒ `ERR_STREAM_QUOTA_EXCEEDED`.
-  - `{ repo_url }` / upload: chạy Tầng 0–2 (`10`, `11`) ⇒ trùng khóa phiên ⇒ mở phiên đó (`resumed = true`), không ⇒ tạo phiên mới. Ghi chạy **sau** khi có kết quả, không tính vào mục tiêu cold-start.
-  - `{ session_id }`: `engine_version` khác `CONFIG.ENGINE_VERSION` ⇒ `ERR_SESSION_ENGINE_OUTDATED`; dựng lại theo Mục 4.
-  - `{ session_id, restart: true }` — "Học lại từ đầu" (D-42): tạo phiên mới cùng snapshot + `graph_skeleton`; `node_progress` trống; `skill_states` giữ nguyên; câu hỏi sinh mới khi `enrich-node`.
+  - `{ repo_url }` / upload: chạy Tầng 0–2 (`10`, `11`) ⇒ trùng khóa phiên ⇒ mở phiên đó (`resumed = true`) và trả kết quả đã lưu của phiên đó; không ⇒ tạo phiên mới, ghi `learning_sessions` + `session_snapshots` trong 1 transaction (D-59). Ghi chạy **sau** khi có kết quả, không tính vào mục tiêu cold-start.
+  - `{ session_id }`: `engine_version` khác `CONFIG.ENGINE_VERSION` ⇒ `ERR_SESSION_ENGINE_OUTDATED`; đọc theo Mục 4.
+  - `{ session_id, restart: true }` — "Học lại từ đầu" (D-42): tạo phiên mới cùng snapshot + `graph_skeleton` + chép `session_snapshots.result`; `node_progress` trống; `skill_states` giữ nguyên; câu hỏi sinh mới khi `enrich-node`.
   - Trả `analyses` có sẵn trong cache.
 
 ### 6.8. `demo/persona`
@@ -441,7 +444,7 @@ Run xong khi mọi câu `finished`. Câu `DROPPED` và câu `disputed` không t�
 | Postgres lỗi (đọc hoặc ghi) | `ERR_PERSISTENCE_UNAVAILABLE`, không tính lượt; UI hiện nút "Thử lại" (D-40) |
 | AI lỗi khi chấm | `ERR_AI_UNAVAILABLE`, không tính lượt, UI hiện "Thử lại" (D-03) |
 | Hết quota phiên | `ERR_TOKEN_QUOTA_EXCEEDED` cho mọi lời gọi AI mới; câu đang làm không nộp được; chế độ Offline chỉ dành cho repo demo |
-| Commit bị force-push xóa | `ERR_SESSION_NOT_FOUND` (Q-12); phiên chỉ còn xem lịch sử; điểm kỹ năng không ảnh hưởng |
+| Commit bị force-push xóa / repo bị xóa hoặc chuyển private | Phiên cũ vẫn học tiếp từ `session_snapshots` (D-59); dán link mới ⇒ phiên mới |
 | Chế độ Offline (`Ctrl+Shift+D`) | Không gọi API học; không ghi Postgres; nhãn "Chế độ Offline — dữ liệu ghi lại, không lưu tiến độ" |
 | Câu trả lời chứa thông tin cá nhân | Lưu ≤ `ANSWER_MAX_CHARS`, chỉ đọc qua API của chủ tài khoản, xóa theo tài khoản |
 

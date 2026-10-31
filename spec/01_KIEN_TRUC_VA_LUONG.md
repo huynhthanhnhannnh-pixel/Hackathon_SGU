@@ -23,7 +23,7 @@ Mô hình **BKT** ghi nhận năng lực của 16 kỹ năng lâu dài trong Pos
 | **INV-01** | **1 node = 1 lát cắt xuyên file** mở đầu bằng 1 hàm entry đã đăng ký (D-06); không bao giờ là 1 file đơn lẻ. Node thuật toán (`ALGORITHMIC_CORE`) là 1 hàm phức tạp tách riêng. |
 | **INV-02** | **Code thuần trước, AI sau.** Bản đồ (Tầng 0–2) không gọi AI, mục tiêu < 1.5 s. AI chỉ chạy ở **4 lời gọi**: `analyze-node`, `analyze-overview`, `enrich-node` (đặt câu hỏi), `evaluate-feynman` (chấm). Không có Intent Router, không có Actor-Critic nhiều lượt. |
 | **INV-03** | **Zero-Trust:** không `git clone`, không chạy code người dùng; chỉ phân tích tĩnh. Tải từ `codeload.github.com` sau HEAD probe; file zip upload chỉ nằm trong RAM. |
-| **INV-04** | **Zero-Disk cho mã nguồn:** code, `snippet`, `StaticEngineResult` không bao giờ ghi đĩa hay DB. Postgres chỉ chứa dữ liệu học tập + khung đồ thị không code + văn bản AI đã qua kiểm (API-01). |
+| **INV-04** | **Không lưu file mã nguồn:** file code, buffer zip, AST không bao giờ ghi đĩa hay DB. Thứ duy nhất có code được lưu là **đoạn code đã cắt của các node** trong `StaticEngineResult` của phiên (bảng `session_snapshots`, D-59), để mọi lần vào phiên hiện cùng đoạn code; client không đọc trực tiếp bảng này. Ngoài ra Postgres chỉ chứa dữ liệu học tập + văn bản AI đã qua kiểm (API-01). |
 | **INV-05** | **Server là nơi ghi duy nhất** của tiến độ học: lập kế hoạch câu hỏi, BKT, đếm lượt, mở khóa, quyết định mở đáp án. Client giữ bản sao chỉ đọc. `localStorage` chỉ giữ tiện ích giao diện, không giữ hồ sơ người học. |
 | **INV-06** | **Tab 1 (X-Ray)** hiện luồng, kiến trúc, điểm hay **và điểm dở** do AI tìm, gắn nhãn "Nhận định của AI". Tab 1 **không** nêu con số theo tình huống, cách sửa, tình huống biên — đó là thứ câu hỏi hỏi. |
 | **INV-07** | **Đáp án** (`reference_answer`, `must_have_points`, `fix`) chỉ nằm ở server: cột câu hỏi của `node_runs` (`03` Mục 3.1), client không có quyền đọc bảng này (RLS, `03`); chỉ gửi xuống client khi câu **xong** (đạt / hết lượt / bỏ qua). |
@@ -48,7 +48,7 @@ flowchart LR
         ENG["Engine Tầng 0–2<br/>(10, 11) — RAM"]
         AI["AI client + cổng gác<br/>(20, 21)"]
         BKT["bkt-engine + planNodeQuestions<br/>(22)"]
-        CACHE["LRU StaticEngineResult<br/>(RAM 1 instance, INGESTION_CACHE_TTL_MS,<br/>không được dựa vào)"]
+        CACHE["LRU StaticEngineResult<br/>(RAM 1 instance, INGESTION_CACHE_TTL_MS,<br/>chỉ để nhanh; bản gốc ở session_snapshots)"]
     end
     GH[("codeload.github.com")]
     GEM[("Gemini API")]
@@ -98,7 +98,7 @@ sequenceDiagram
     U->>FE: Dán link / kéo thả .zip
     FE->>BE: POST /api/ingest
     BE->>BE: Tầng 0–2 trong RAM (0 token)
-    BE->>DB: Tạo / mở learning_sessions (khung, không code)
+    BE->>DB: Tạo / mở learning_sessions + session_snapshots (đoạn code đã cắt, D-59)
     BE-->>FE: IngestResponse (bản đồ + progress + analyses có sẵn trong cache)
     loop Node đang mở và 1–2 node kế tiếp (tối đa ANALYZE_CONCURRENCY cùng lúc, D-46)
         FE->>BE: POST /api/analyze-node
@@ -165,7 +165,7 @@ sequenceDiagram
 
 ### 5.4. Mở lại phiên
 
-Màn hình trống hiện danh sách "Tiếp tục học" (`GET /api/sessions`). Bấm mở ⇒ `POST /api/ingest { session_id }` ⇒ server dựng lại đúng commit SHA của phiên (trúng cache hoặc tải lại theo SHA; kết quả giống hệt nhờ INV-10) ⇒ ghép `node_progress` và các run (D-39). Repo có commit mới ⇒ dán link ⇒ bản đồ và phiên mới. Phiên từ `.zip` chỉ best-effort (Q-12) ⇒ mời kéo thả lại đúng file (so SHA-256). Phiên tạo bằng `engine_version` cũ ⇒ chỉ xem lịch sử.
+Màn hình trống hiện danh sách "Tiếp tục học" (`GET /api/sessions`). Bấm mở ⇒ `POST /api/ingest { session_id }` ⇒ server đọc `StaticEngineResult` đã lưu của phiên (trúng cache RAM hoặc đọc `session_snapshots`, không tải lại zip) ⇒ ghép `node_progress` và các run (D-39, D-59). Mọi lần vào phiên hiện đúng cùng bản đồ và đoạn code, kể cả phiên từ `.zip`. Repo có commit mới ⇒ dán link ⇒ bản đồ và phiên mới. Phiên tạo bằng `engine_version` cũ ⇒ chỉ xem lịch sử.
 
 "Học lại từ đầu" ⇒ phiên mới cùng repo: tiến độ node làm lại, điểm kỹ năng giữ nguyên, câu hỏi sinh mới (D-42).
 
@@ -218,8 +218,8 @@ Lượt tối đa: `CONFIG.MAX_ATTEMPTS_PER_QUESTION`. Lượt nào là lượt 
 | Dữ liệu | Vị trí lưu | Thời gian sống (TTL) | Ai được ghi | Ai được đọc |
 | :-- | :-- | :-- | :-- | :-- |
 | **Mã nguồn repo, buffer zip, AST** | RAM server (`RAMCodeStore`, `ManifestStore`) | Chỉ trong lúc chạy Tầng 0–2 | Engine | Engine nội bộ |
-| **`StaticEngineResult` đầy đủ** | RAM server (LRU Cache, 1 instance), không được dựa vào (D-27) | Tối đa `CONFIG.INGESTION_CACHE_TTL_MS`; mất bất kỳ lúc nào khi instance bị thay | Engine | Route handlers nội bộ |
-| **`ClientStaticEngineResult` (snippet hiển thị)** | Trình duyệt (Zustand Store) | Phiên làm việc (mất khi reload/đổi repo) | Server trả về | Trình duyệt |
+| **`StaticEngineResult` của phiên** (node + đoạn code đã cắt + tên, không có file nguồn) | Supabase Postgres (`session_snapshots`, D-59); bản sao RAM (LRU, 1 instance) chỉ để nhanh (D-27) | Theo phiên học (xóa khi xóa phiên / tài khoản); RAM tối đa `CONFIG.INGESTION_CACHE_TTL_MS` | Server (service-role), lúc tạo phiên | Route handlers nội bộ (Client CẤM đọc) |
+| **`ClientStaticEngineResult` (snippet hiển thị)** | Trình duyệt (Zustand Store) | Phiên làm việc (reload ⇒ server trả lại đúng bản đã lưu) | Server trả về | Trình duyệt |
 | **Tài khoản, phiên, hồ sơ kỹ năng (`skill_states`)** | Supabase Postgres | Vĩnh viễn (tới khi xóa tài khoản) | Server (service-role) | Chủ sở hữu (`auth.uid() = user_id`) |
 | **Tiến độ node (`node_progress`)** | Supabase Postgres | Vĩnh viễn theo phiên học | Server (service-role) | Chủ phiên học |
 | **Lượt học (`node_runs`): câu hỏi, đáp án mẫu, ý bắt buộc** | Supabase Postgres | Vĩnh viễn theo phiên học | Server (service-role) | Chỉ server; client đọc qua API, đáp án chỉ lộ khi câu đã xong (INV-07, D-36) |

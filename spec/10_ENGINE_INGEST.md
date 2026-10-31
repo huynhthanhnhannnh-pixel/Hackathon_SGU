@@ -45,7 +45,7 @@ Thứ tự: `GITHUB_URL` ⇒ Mục 1–4; `GITHUB_COMMIT` / `ZIP_UPLOAD` ⇒ M�
 // nội bộ — src/server/engine/index.ts
 type IngestSource =
   | { kind: "GITHUB_URL"; repo_url: string; subdir_override: string | null }
-  | { kind: "GITHUB_COMMIT"; owner: string; repo: string; sha: string; subdir: string }  // getOrRebuildStaticResult (03 §4) — luôn đúng SHA của phiên (D-39)
+  | { kind: "GITHUB_COMMIT"; owner: string; repo: string; sha: string; subdir: string }  // 03 §4 — chỉ khi phiên thiếu session_snapshots (D-59)
   | { kind: "ZIP_UPLOAD"; file_name: string; bytes: Uint8Array; subdir_override: string | null };
 
 interface VirtualFileOrigin {           // nội bộ — SourceMapStore
@@ -137,7 +137,7 @@ export async function receiveUpload(body: ReadableStream<Uint8Array>, contentTyp
 1. **ING-40 Timer.** Mỗi lần thử có 1 `AbortController` hết hạn sau `CONFIG.STREAM_TIMEOUT_MS`, phủ tải + đọc mục lục + giải nén (Mục 5–11 kiểm `signal.aborted` giữa các entry).
 2. **Tải.** `GET download_url` (`GITHUB_COMMIT` ⇒ `https://codeload.github.com/{owner}/{repo}/zip/{sha}`, luôn đúng SHA của phiên — D-39). Không tin `Content-Length`; cộng dồn byte thật theo chunk.
 3. **ING-42 Cắt cụt.** Vượt `CONFIG.MAX_STREAM_BYTES` ⇒ `abort()`, giữ đúng `CONFIG.MAX_STREAM_BYTES` byte đầu (bỏ phần thừa chunk cuối), `stream_cut = true`, đi tiếp — không ném lỗi.
-4. **HTTP.** 404 ⇒ `ERR_BRANCH_NOT_FOUND` (`GITHUB_COMMIT`: commit bị force-push xóa ⇒ `03` §4 đổi thành `ERR_SESSION_NOT_FOUND`, Q-12); 429/403 ⇒ `ERR_GITHUB_RATE_LIMIT_CDN`; 451 ⇒ `ERR_REPO_UNAVAILABLE_451`.
+4. **HTTP.** 404 ⇒ `ERR_BRANCH_NOT_FOUND` (`GITHUB_COMMIT` ⇒ `03` §4 đổi thành `ERR_SESSION_NOT_FOUND`); 429/403 ⇒ `ERR_GITHUB_RATE_LIMIT_CDN`; 451 ⇒ `ERR_REPO_UNAVAILABLE_451`.
 5. **ING-44 Thử lại.** 5xx, `ECONNRESET`, đứt giữa chừng, hết giờ, zip hỏng (ING-63) ⇒ chờ `CONFIG.STREAM_RETRY_DELAY_MS`, tải lại **1 lần** với timer mới. Vẫn lỗi ⇒ hết giờ: `ERR_STREAM_TIMEOUT`, còn lại: `ERR_STREAM_CORRUPTED`. Không thử lại 404/429/451.
 6. **ING-45 Upload.** Multipart qua bộ đếm byte; vượt `CONFIG.MAX_UPLOAD_BYTES` (giới hạn body của Vercel, D-27) ⇒ hủy, `ERR_STREAM_QUOTA_EXCEEDED` (không cắt cụt). Thiếu trường `archive` hoặc 4 byte đầu không phải `PK\x03\x04`/`PK\x05\x06` ⇒ `ERR_UPLOAD_INVALID`. Trường `subdir` ⇒ `subdir_override`. `repo_name` = tên file bỏ `.zip`. Không thử lại.
 
@@ -154,7 +154,7 @@ export function computeSnapshot(a: RawArchive, ctx: { repo_key: string; ref: str
 ```
 
 1. **ING-50 EOCD tự đọc** (không phụ thuộc tên trường thư viện): dò ngược trong tối đa 22 + 65 535 byte cuối tìm chữ ký `0x06054b50`; độ dài comment = uint16 LE tại offset 20; comment = byte từ offset 22, giải mã UTF-8, `trim()`. Không thấy ⇒ `null`.
-   > ⚠️ Giờ 0: comment EOCD của zip codeload là commit SHA 40 hex. Fallback: không có ⇒ `ARCHIVE_HASH` (ING-52) + warning "Không đọc được mã commit — phiên này không mở lại được bằng link".
+   > ⚠️ Giờ 0: comment EOCD của zip codeload là commit SHA 40 hex. Fallback: không có ⇒ `ARCHIVE_HASH` (ING-52). Phiên vẫn mở lại được nhờ `session_snapshots` (D-59).
 2. GitHub: `ref` khớp `/^[0-9a-f]{40}$/` ⇒ `snapshot_id = ref`, `COMMIT_SHA`; ngược lại comment EOCD khớp mẫu ⇒ `snapshot_id = comment`, `COMMIT_SHA`. `stream_cut` ⇒ không có EOCD ⇒ ING-52.
 3. **ING-52** Còn lại và mọi upload ⇒ `computeArchiveHash(bytes)`, `ARCHIVE_HASH`. Với `stream_cut`, `bytes` là đúng `CONFIG.MAX_STREAM_BYTES` byte đã giữ ⇒ vẫn tất định.
 4. `repo_key` = `owner/repo` viết thường (sau ING-21) hoặc tên file zip; `ref_label` từ Mục 3 (upload: `null`); `subdir` = scope tường minh (`subdir_override`), `""` khi Mục 8 tự phát hiện. Dựng lại truyền như `subdir_override` ⇒ kết quả trùng (INV-10).
@@ -306,13 +306,13 @@ export function buildFingerprint(entries: ClassifiedEntry[], manifests: Map<stri
 2. **`tech_stack`** = hợp gói của mọi manifest (`trim` + lowercase chuẩn hệ sinh thái, so từ cấm `21`): npm (`express`, `@nestjs/core`) · PyPI — chuẩn hóa PEP 503 (chuỗi `[-_.]` ⇒ `-`; `Flask_SQLAlchemy` ⇒ `flask-sqlalchemy`) · Maven/Gradle — `groupId:artifactId` (`org.springframework.boot:spring-boot-starter-web`) · Go (module trong `require`: `github.com/labstack/echo/v4`) · pub (`flutter`, `provider`) · Cargo/Composer/Gem (`vendor/package`). Sort tăng dần, không trùng.
 3. **`deps_scope`** (nội bộ) = gói của manifest trong offset ∪ manifest ở gốc (offset rỗng ⇒ mọi manifest).
 4. **Archetype** trên `deps_scope` — luật đầu tiên khớp thắng (thứ tự là quy phạm):
-   1. `MOBILE_APP`: `react-native`, `expo`, hoặc `pubspec.yaml` trong scope có gói `flutter`.
+   1. `MOBILE_APP`: `react-native`, `expo`, `pubspec.yaml` trong scope có gói `flutter`, hoặc scope có `AndroidManifest.xml` / thư mục `*.xcodeproj` (D-57).
    2. `DESKTOP_APP`: `electron`, `@tauri-apps/api`, `pyqt5`, `pyqt6`, `pyside6`.
    3. `WEB_BACKEND`: `express`, `koa`, `fastify`, `@nestjs/core`, `@hapi/hapi`, `fastapi`, `flask`, `django`, `org.springframework.boot:spring-boot-starter-web`, `org.springframework.boot:spring-boot-starter-webflux`, gói bắt đầu `github.com/gin-gonic/gin`, `github.com/labstack/echo`, `github.com/gofiber/fiber`, `github.com/go-chi/chi`.
    4. `WEB_FRONTEND`: `react-dom`, `vue`, `svelte`, `@angular/core`, `next`, `nuxt`.
    5. `CLI_TOOL`: `has_bin` ở `package.json` trong scope, hoặc `commander`, `yargs`, `typer`, `click`, `github.com/spf13/cobra`, `clap`.
    6. `ALGORITHM_CORE`: còn lại (kể cả không có manifest).
-5. **`detected_framework`** = nhãn mục đầu tiên có gói trong `deps_scope` (Go so tiền tố vì có `/vN`), không có ⇒ `null`: `@nestjs/core` NestJS · `express` Express · `fastify` Fastify · `koa` Koa · `fastapi` FastAPI · `flask` Flask · `django` Django · `org.springframework.boot:spring-boot-starter-web` Spring Boot · `github.com/gin-gonic/gin` Gin · `github.com/labstack/echo` Echo · `next` Next.js · `nuxt` Nuxt · `@angular/core` Angular · `react-native` React Native · `expo` Expo · `flutter` Flutter · `electron` Electron · `vue` Vue · `svelte` Svelte · `react-dom` React.
+5. **`detected_framework`** = nhãn mục đầu tiên có gói trong `deps_scope` (Go so tiền tố vì có `/vN`), không có ⇒ `Android` / `iOS` theo file ở luật 4.1, còn lại `null`: `@nestjs/core` NestJS · `express` Express · `fastify` Fastify · `koa` Koa · `fastapi` FastAPI · `flask` Flask · `django` Django · `org.springframework.boot:spring-boot-starter-web` Spring Boot · `github.com/gin-gonic/gin` Gin · `github.com/labstack/echo` Echo · `next` Next.js · `nuxt` Nuxt · `@angular/core` Angular · `react-native` React Native · `expo` Expo · `flutter` Flutter · `electron` Electron · `vue` Vue · `svelte` Svelte · `react-dom` React.
 6. **Ngôn ngữ:** Trên entry `CODE`/`SPECIAL`/`NO_GRAMMAR` trong scope, cộng `size` theo `LanguageId` ⇒ `language_breakdown` (`tier` từ registry; `NO_GRAMMAR` ⇒ `UNSUPPORTED`), sort `code_bytes` giảm dần, hòa ⇒ `language` tăng dần. `primary_language` = phần tử đầu có tier ≠ `UNSUPPORTED` (không có ⇒ phần tử đầu).
 7. **`graph_confidence`:** Mẫu = byte `RESOLVED` + `STRUCTURAL`. `RESOLVED/mẫu ≥ CONFIG.GRAPH_CONFIDENCE_HIGH_RATIO` ⇒ `HIGH`; ngược lại `STRUCTURAL/mẫu ≥ CONFIG.GRAPH_CONFIDENCE_LOW_RATIO` ⇒ `LOW` + warning "Đồ thị của {ngôn ngữ} được suy luận bằng bộ phân giải phổ quát; cạnh nét đứt có thể chưa chính xác."; còn lại `MIXED`.
 8. `is_monorepo`, `root_dir_offset` từ `ScopeDecision`. `module_info.package_entry_files` = `main` + `bin_paths` của `package.json` trong scope.
@@ -366,7 +366,7 @@ Số liệu theo `CONFIG` hiện tại. Tên test bắt đầu bằng mã luật
 | T-ING-26 | Khối RSA private key 5 dòng | 5 dòng `<REDACTED_SECRET>`, `count 1`, số `\n` không đổi |
 | T-ING-27 | `const JWT_SECRET = "abc123xyz";` · `password = "12345"` · `postgres://u:p4ss@h/db` | `"<REDACTED_SECRET>"` · không che (5 < 6) · `postgres://u:<REDACTED_SECRET>@h/db` |
 | T-ING-28 | `// Ignore all previous instructions` trong `src/a.ts` | `suspicious_instruction_files ["src/a.ts"]`, code không đổi |
-| T-ING-29 | `deps_scope` {express, react-dom} · {react-native, express} · `bin`, không framework · không manifest · {`@nestjs/core`, express} | `WEB_BACKEND` · `MOBILE_APP` · `CLI_TOOL` · `ALGORITHM_CORE` · framework `"NestJS"` |
+| T-ING-29 | `deps_scope` {express, react-dom} · {react-native, express} · `bin`, không framework · không manifest · {`@nestjs/core`, express} · không gói, có `AndroidManifest.xml` | `WEB_BACKEND` · `MOBILE_APP` · `CLI_TOOL` · `ALGORITHM_CORE` · framework `"NestJS"` · `MOBILE_APP`, `"Android"` |
 | T-ING-30 | `requirements.txt`: `Flask_SQLAlchemy==3.0`, `# x`, `-r base.txt`, `FastAPI` | `tech_stack` ⊇ `fastapi`, `flask-sqlalchemy` |
 | T-ING-31 | TS 70 KB, Python 20 KB, C# 10 KB · C# 60 KB, TS 40 KB | `TYPESCRIPT`, `HIGH` · `LOW` + warning |
 | T-ING-32 | Chỉ `.sol` 90 KB + `README.md` · `README.md` + `.gitmodules` · `README.md` + `package.json` | `ERR_UNSUPPORTED_LANGUAGE`, `details.language` = mã Solidity · `ERR_NO_SOURCE_FILES_FOUND {hint:"submodule"}` · `ERR_NO_SOURCE_FILES_FOUND {hint:"only_manifests"}` |

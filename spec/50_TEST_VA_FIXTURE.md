@@ -223,7 +223,7 @@ Biến thể kiểm D-13: giữ nguyên lượt 2 nhưng đổi `quote` của ý
 
 Chung cho mọi kịch bản:
 - Đồng hồ hệ thống cố định.
-- `ingest` repo mẫu bằng **link GitHub** (phiên `COMMIT_SHA`, dựng lại theo SHA — D-39). Upload `.zip` chỉ có ca best-effort D19 (Q-12).
+- `ingest` repo mẫu bằng **link GitHub** (phiên đọc lại từ `session_snapshots` — D-39, D-59). Upload `.zip` có ca D19.
 - Kỹ năng chưa có dòng `skill_states` ⇒ P = 0.25.
 - "PF" = `PASS_FIRST`, "PAH" = `PASS_AFTER_HINT`, "F" = `FAILED`.
 
@@ -270,12 +270,12 @@ Hồ sơ Minh (vừa luyện, Δt ≈ 0, `practice_count` bằng nhau):
 | # | Thao tác | Kỳ vọng |
 | :-: | :-- | :-- |
 | C1 | `ingest` + phân tích xong N1 | N1, N3 `AVAILABLE`; không node nào tự `COMPLETED` (D-34) |
-| C2 | N1 `LEARN` | Mọi kỹ năng ≥ `FAST_TRACK_MIN` ⇒ đúng 1 câu: `DTO_VALIDATION` · ARCHITECT · `CHANGE` (hòa điểm ⇒ thứ tự phân tích; N1 không có điểm dở) (BKT-31). PF: 0.9532 → **0.9873** ⇒ N1 `COMPLETED` ⇒ N2 mở |
+| C2 | N1 `LEARN` | Mọi kỹ năng ≥ `MASTERED_MIN` ⇒ đúng 1 câu: `DTO_VALIDATION` · ARCHITECT · `CHANGE` (hòa điểm ⇒ thứ tự phân tích; N1 không có điểm dở) (BKT-31). PF: 0.9532 → **0.9873** ⇒ N1 `COMPLETED` ⇒ N2 mở |
 | C3 | N2 `LEARN` | 1 câu: `AUTH_SECURITY` · ARCHITECT · `WEAKNESS` (BKT-31). PF ⇒ N2 `COMPLETED` ⇒ N4 mở |
 | C4 | N3 `LEARN` | Q1 `DB_OPTIMIZATION` · ARCHITECT · `WEAKNESS`; Q2 `LAYERED_SEPARATION` · NOVICE · `FLOW`. Q1 PF: 0.8413 → **0.9532**; Q2 PF: 0.25 → **0.5767** ⇒ N3 `COMPLETED` |
 | C5 | N4 `LEARN` | Chỉ hỏi `STATE_MANAGEMENT` · NOVICE · `FLOW` (`DTO_VALIDATION` đã thạo). PF ⇒ 0.5767; N4 `COMPLETED` ⇒ N5 mở |
 | C6 | N5 ★ `LEARN` | Bỏ `DB_OPTIMIZATION` (0.9532) và `HTTP_ROUTING`. Chỉ hỏi `TRANSACTION_INTEGRITY` · PRACTITIONER · `WEAKNESS`. PAH: 0.5767 → **0.7292** ⇒ N5 `COMPLETED` ⇒ N6, N7 mở |
-| C7 | (Biến thể) mọi kỹ năng của N5 ≥ `FAST_TRACK_MIN` | N5 vẫn hỏi **1 câu**: kỹ năng yếu nhất, tier ARCHITECT (BKT-31, `22` P-D) |
+| C7 | (Biến thể) mọi kỹ năng của N5 ≥ `MASTERED_MIN` | N5 vẫn hỏi **1 câu**: kỹ năng yếu nhất, tier ARCHITECT (BKT-31, `22` P-D) |
 
 Minh gọi AI đặt câu hỏi ở cả 5 node đã học (N1–N5); node mà mọi kỹ năng đã thạo chỉ tốn 1 câu (D-34).
 
@@ -301,7 +301,7 @@ Minh gọi AI đặt câu hỏi ở cả 5 node đã học (N1–N5); node mà m
 | D16 | Gọi lại `enrich-node` khi run N3 đang dở | Cùng `run_id`, cùng câu hỏi, `attempts_used` giữ nguyên; không gọi AI |
 | D17 | Tài khoản B gửi `run_id` của người A | `ERR_SESSION_NOT_FOUND` (API-05); không gọi AI, không lộ đáp án |
 | D18 | "Báo sai" Q1 của B4 ngay sau khi trượt | Q1 🚩; `AUTH_SECURITY` trở lại 0.25; N2 tính lại màu: Q2 đạt ⇒ `COMPLETED` |
-| D19 | Best-effort zip (Q-12): upload `.zip` repo mẫu, xóa cache RAM, mở lại phiên | `resume_blocker = "ZIP_SOURCE"`; `ingest { session_id }` ⇒ `ERR_SESSION_NOT_FOUND`; UI "Phiên upload không mở lại được — hãy upload lại file .zip."; kéo thả lại đúng file ⇒ mở lại phiên đó |
+| D19 | Mở lại phiên `.zip` (D-59): upload `.zip` repo mẫu, xóa cache RAM, mở lại phiên | `can_resume = true`, `resume_blocker = null`; `ingest { session_id }` trả đúng bản đồ và `trace_steps[].snippet` như lần đầu; không có request tới codeload |
 | D20 | Tải trước có giới hạn (D-46): mở repo 7 node, đang mở N1 | Client chỉ gọi `POST /api/analyze-node` cho N1 và 1–2 node kế tiếp; không tải toàn bộ; số lời gọi đồng thời ≤ `CONFIG.ANALYZE_CONCURRENCY` |
 
 ### 3.5. Kịch bản E — Huy quay lại sau 30 ngày (mài mòn, chỉ hiển thị)
@@ -337,10 +337,11 @@ Trạng thái ban đầu của Huy: N3 `COMPLETED`.
 | :-- | :-- | :-- |
 | X-01 | Tất định (INV-10) | Chạy engine 2 lần trên cùng zip ⇒ `JSON.stringify(result.nodes, result.edges)` giống hệt |
 | X-02 | Không rò trường (API-03) | Quét mọi response trong kịch bản A–E: không có `misconception`, `quote`, `symbol_whitelist`, `suspicious_instruction_files`, `reference_answer` / `must_have_points` của câu chưa xong |
-| X-03 | Không lưu code (INV-04) | Dump Postgres sau kịch bản A–E: không có chuỗi nào trùng một dòng code dài ≥ 40 ký tự của repo mẫu ngoài `ai_cache` và `node_runs` (chỉ được chứa tên/biểu thức ngắn) |
-| X-04 | Mở lại phiên | Phiên link GitHub: xóa cache RAM ⇒ `ingest { session_id }` ⇒ cùng `graph_skeleton`, tiến độ còn nguyên |
+| X-03 | Không lưu code (INV-04) | Dump Postgres sau kịch bản A–E: mọi dòng code dài ≥ 40 ký tự của repo mẫu xuất hiện trong Postgres phải nằm trong `snippet`/`dto_snippet` của 1 node trong `session_snapshots`; dòng code ngoài các đoạn đã cắt không xuất hiện ở bất kỳ bảng nào (`ai_cache` và `node_runs` chỉ chứa tên) |
+| X-04 | Mở lại phiên | Xóa cache RAM ⇒ `ingest { session_id }` ⇒ cùng `graph_skeleton`, cùng `snippet` từng bước (so `JSON.stringify`), không tải lại zip, tiến độ còn nguyên |
 | X-05 | RLS | Dùng anon key của người A đọc `skill_states` của B ⇒ 0 dòng; đọc `ai_cache` ⇒ 0 dòng; mọi lệnh ghi từ client ⇒ bị từ chối |
 | X-06 | Offline | `Ctrl+Shift+D` ⇒ chạy hết kịch bản demo không có mạng; không có request tới `/api/*` học tập |
+| X-07 | Bản đồ (D-55, D-56) | Mọi node có `prerequisites = []` cùng `position.y` nhỏ nhất; node `algo-*` mà một lát cắt gọi tới có cạnh nối với lát cắt đó (`11` T-ENG-37, T-ENG-38) |
 
 ---
 

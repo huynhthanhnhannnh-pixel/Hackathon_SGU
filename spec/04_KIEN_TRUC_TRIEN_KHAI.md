@@ -7,8 +7,8 @@
 
 ## 1. Đọc nhanh
 
-- **Host = Vercel (gói free), region `sin1`:** Next.js chạy trên Vercel Functions, cùng vùng với Supabase Postgres AWS Singapore (`ap-southeast-1`) (API-08, D-27). Cache RAM chỉ sống trong 1 instance: giúp nhanh hơn, **không được dựa vào** — trượt cache ⇒ tải lại zip theo commit SHA và chạy lại engine (`03` Mục 4, D-39).
-- **Ranh giới Zero-Disk:** Mã nguồn repo và file zip chỉ tồn tại trong RAM máy chủ khi chạy Tầng 0–2; tuyệt đối không ghi xuống đĩa hoặc database (INV-03, INV-04, API-01). Upload zip ≤ `CONFIG.MAX_UPLOAD_BYTES` (giới hạn body của Vercel); link GitHub không bị giới hạn này.
+- **Host = Vercel (gói free), region `sin1`:** Next.js chạy trên Vercel Functions, cùng vùng với Supabase Postgres AWS Singapore (`ap-southeast-1`) (API-08, D-27). Cache RAM chỉ sống trong 1 instance: giúp nhanh hơn, **không được dựa vào** — trượt cache ⇒ đọc kết quả engine đã lưu của phiên (`session_snapshots`, D-59, `03` Mục 4).
+- **Ranh giới lưu code:** File nguồn repo, buffer zip và AST không ghi xuống đĩa hay database; chỉ lưu đoạn code đã cắt của các node trong `session_snapshots` (D-59, INV-03, INV-04, API-01). Upload zip ≤ `CONFIG.MAX_UPLOAD_BYTES` (giới hạn body của Vercel); link GitHub không bị giới hạn này.
 - **Đồng thời trong bộ nhớ:** semaphore `CONFIG.MAX_CONCURRENT_INGESTIONS`, cache đồ thị LRU `CONFIG.INGESTION_CACHE_MAX_ENTRIES` và in-flight promise map — đều trong 1 instance, không dùng queue ngoài (D-31).
 - **Log có cấu trúc:** `pino` xuất JSON 1 dòng ra `stdout`, Vercel thu log; cấm ghi mã nguồn, token và khóa bí mật (D-28).
 - **Giám sát:** log + Observability có sẵn của Vercel + dashboard Supabase (D-29).
@@ -149,13 +149,13 @@ sequenceDiagram
         BE->>GH: GET zip (Stream nén ≤ CONFIG.MAX_STREAM_BYTES)
         GH-->>BE: Binary Zip Stream vào RAM
         Note over BE: Giải nén RAM (fflate) -> Tree-sitter WASM<br/>Dựng lát cắt -> Xếp hạng -> Dagre layout<br/>(Toàn bộ code nguồn nằm trong RAM, 0 token)
-        BE->>DB: Upsert learning_sessions (commit SHA, graph_skeleton, 0 code)
+        BE->>DB: Upsert learning_sessions + session_snapshots (đoạn code đã cắt, D-59)
         BE-->>FE: IngestResponse (ClientStaticEngineResult + SessionProgress)
         Note over BE: Giải phóng Buffer zip thô và RAMCodeStore
     end
 ```
 
-Upload `.zip`: body ≤ `CONFIG.MAX_UPLOAD_BYTES`, vượt ⇒ `ERR_STREAM_QUOTA_EXCEEDED` (`10` ING-45). Request sau rơi vào instance khác (trượt cache) ⇒ dựng lại theo đúng commit SHA của phiên (`03` Mục 4, D-39).
+Upload `.zip`: body ≤ `CONFIG.MAX_UPLOAD_BYTES`, vượt ⇒ `ERR_STREAM_QUOTA_EXCEEDED` (`10` ING-45). Request sau rơi vào instance khác (trượt cache) ⇒ đọc `session_snapshots` (D-59), không tải lại zip.
 
 ### 6.2. Mở node → Phân tích & Tạo câu hỏi
 
@@ -269,7 +269,7 @@ Sử dụng thư viện `pino` xuất log định dạng JSON 1 dòng (NDJSON) r
 
 Số trong ví dụ chỉ minh họa định dạng, không phải số đo. Dòng log cổng gác chặn dùng `GuardLogEntry` (`02` Mục 5), theo `21` GUARD-22.
 
-### 9.2. Danh sách CẤM ghi log tuyệt đối (Zero-Disk & Security)
+### 9.2. Danh sách CẤM ghi log tuyệt đối (Bảo mật mã nguồn)
 
 Để bảo đảm an toàn dữ liệu và tuân thủ nguyên tắc bảo mật:
 1. **Mã nguồn:** Không ghi nội dung file code, đoạn snippet, AST, lát cắt gửi AI.
@@ -351,7 +351,7 @@ jobs:
 
 ## 13. Bảo mật vận hành & Quyền riêng tư
 
-1. **Bảo vệ Mã nguồn & Zero-Disk:** Không bao giờ ghi file code xuống đĩa của Function hay database. Mọi buffer zip được giải phóng ngay sau khi dựng xong cây cú pháp trong RAM.
+1. **Bảo vệ mã nguồn:** không ghi file code hay buffer zip xuống đĩa hay database; chỉ lưu đoạn code đã cắt của phiên ở `session_snapshots` (D-59). Buffer zip giải phóng ngay sau khi dựng xong cây cú pháp trong RAM.
 2. **Kiểm soát Truy cập Hàng (RLS):** Bật RLS trên toàn bộ bảng Postgres. Client chỉ đọc dữ liệu của chính mình qua anon token, và không được đọc trực tiếp `node_runs`, `question_attempts`, `ai_cache` (`03` Mục 3); mọi thao tác ghi bắt buộc đi qua route handler dùng `SUPABASE_SERVICE_ROLE_KEY` (API-02).
 3. **Bảo mật Bí mật:** `GEMINI_API_KEY` và `SUPABASE_SERVICE_ROLE_KEY` chỉ nằm ở biến môi trường server trên Vercel, tuyệt đối không lộ qua client bundle (không đặt tiền tố `NEXT_PUBLIC_`).
 4. **Điều khoản Quyền riêng tư AI (Gemini Privacy):**
@@ -368,7 +368,7 @@ Bản thi phục vụ mục tiêu thử thách 21 giờ. Bảng dưới đây ch
 | :-- | :-- | :-- | :-- |
 | **1. RAM / thời gian chạy Function khi Ingest** | Semaphore `CONFIG.MAX_CONCURRENT_INGESTIONS` trong 1 instance; giới hạn RAM / thời gian của Vercel Functions gói free | HTTP 503 `ERR_SERVER_BUSY` tăng; Function hết giờ hoặc hết RAM trong Vercel Observability | **Bậc 3:** Tách Ingest Engine thành cụm Worker riêng, điều phối bằng hàng đợi tác vụ (`pgmq` hoặc BullMQ/Redis) |
 | **2. Quota API Gemini** | Hạn mức gói Free của Gemini; `CONFIG.SESSION_TOKEN_QUOTA` mỗi phiên | HTTP 429 `ERR_AI_UNAVAILABLE` hoặc `ERR_TOKEN_QUOTA_EXCEEDED` | **Bậc 4:** Gắn Cloud Billing, chuyển `analyze-node`, `analyze-overview` qua hàng đợi rate-limited |
-| **3. Cache RAM theo instance** | LRU `CONFIG.INGESTION_CACHE_MAX_ENTRIES`, TTL `CONFIG.INGESTION_CACHE_TTL_MS`; mất khi instance bị thay hoặc redeploy | Nhiều lần dựng lại theo SHA; thời gian `/api/ingest` và `enrich-node` tăng | **Bậc 2:** Bộ nhớ đệm dùng chung (vd Upstash Redis) |
+| **3. Cache RAM theo instance** | LRU `CONFIG.INGESTION_CACHE_MAX_ENTRIES`, TTL `CONFIG.INGESTION_CACHE_TTL_MS`; mất khi instance bị thay hoặc redeploy | Nhiều lần đọc `session_snapshots` (trượt cache RAM); thời gian `/api/ingest` và `enrich-node` tăng | **Bậc 2:** Bộ nhớ đệm dùng chung (vd Upstash Redis) |
 | **4. Kết nối Postgres** | Giới hạn kết nối của gói Supabase đang dùng | Lỗi `ERR_PERSISTENCE_UNAVAILABLE` do cạn pool | Dùng Supavisor Transaction Pooler hoặc nâng gói Compute của Supabase |
 
 ---

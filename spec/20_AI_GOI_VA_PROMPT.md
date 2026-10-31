@@ -278,7 +278,7 @@ repo: {repo_name} · loai_du_an: {archetype} · framework: {detected_framework |
 tech_stack: {tech_stack nối ", "}
 che_do_suy_bien: {degraded_mode | không}
 duong_chinh: {mainPath(graph) nối " → "}
-node_goc: {id node không có prerequisites}
+node_goc: {mọi id không có prerequisites, nối ", "}
 canh: {source→target, …}
 NODE {id} · "{title}"[ · capstone]
   tang: {layer khác nhau theo thứ tự bước}
@@ -304,7 +304,7 @@ VIỆC CẦN LÀM
 1. architecture_style: 1 mã trong <pattern_catalogue> mô tả đúng nhất cả repo.
 2. summary: tối đa 3 câu: repo làm gì, chia tầng ra sao, điểm hay chung.
 3. layers: mỗi tầng xuất hiện ở dòng "tang" là 1 mục: layer = mã tầng; role = 1 câu: tầng đó làm gì trong repo này; nodes = id các node có tầng đó.
-4. main_flow: 1–2 câu kể luồng chính theo thứ tự "duong_chinh".
+4. main_flow: 1–2 câu kể luồng chính theo thứ tự "duong_chinh"; node_goc có nhiều id ⇒ nói repo có nhiều điểm bắt đầu.
 5. notes: CHỈ dùng cho điểm dở chung hoặc đáng chú ý nhất; mỗi mục chỉ dựa trên dòng "diem_do" có sẵn của các node ghi trong nodes; KHÔNG nêu điểm dở mới, KHÔNG nêu cách sửa. Không có điểm dở ⇒ mảng rỗng.
 6. che_do_suy_bien khác "không": không nói về route, service, repository; tả các nhóm thuật toán hoặc hàm.
 ```

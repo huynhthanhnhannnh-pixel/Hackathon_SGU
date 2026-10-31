@@ -1,6 +1,6 @@
 # 02 — HỢP ĐỒNG DỮ LIỆU & BẢNG HẰNG SỐ (NGUỒN CHÂN LÝ DUY NHẤT)
 
-> Quy định mọi kiểu dữ liệu và mọi hằng số; file khác chỉ nhắc tên (`HybridArchitecturalNode`, `CONFIG.FAST_TRACK_MIN`), không chép lại định nghĩa hay con số (INV-12). Người đọc: cả nhóm.
+> Quy định mọi kiểu dữ liệu và mọi hằng số; file khác chỉ nhắc tên (`HybridArchitecturalNode`, `CONFIG.MASTERED_MIN`), không chép lại định nghĩa hay con số (INV-12). Người đọc: cả nhóm.
 > **Trong repo thi:** Mục 1 ⇒ `src/contracts/config.ts`; Mục 2–10 ⇒ `src/contracts/*.ts` (tách theo mục). Gõ / sinh trong giờ thi, commit từng phần (xem `doc-de-hieu/07`).
 > **Quy ước:** JSON qua mạng dùng `snake_case`; thời điểm là số mili-giây Unix (`number`); xác suất ∈ [0, 1]; số dòng code tính từ 1. Không dùng `any`.
 
@@ -30,7 +30,7 @@
 ```typescript
 export const CONFIG = {
   // ---------- Phiên bản (đổi ⇒ khóa cache mới) ----------
-  ENGINE_VERSION: "1.2.0",            // Đổi khi đổi bất kỳ luật Tầng 0–2 làm đổi đồ thị / node_id (D-10, D-53, D-54)
+  ENGINE_VERSION: "1.3.0",            // Đổi khi đổi bất kỳ luật Tầng 0–2 làm đổi đồ thị / node_id (D-10, D-53 … D-58)
   PROMPT_VERSION: "1.0.0",            // Đổi khi đổi prompt hoặc responseSchema của 4 lời gọi AI
 
   // ---------- Tầng 0: tải & lọc (10_ENGINE_INGEST) ----------
@@ -151,7 +151,7 @@ export const CONFIG = {
   DECAY_FLOOR: 0.25,                  // = BKT_P_L0
   TIER_PRACTITIONER_MIN: 0.45,
   TIER_ARCHITECT_MIN: 0.75,
-  FAST_TRACK_MIN: 0.92,               // Ngưỡng "đã thạo" khi lập kế hoạch câu hỏi (22, D-34)
+  MASTERED_MIN: 0.92,                 // Ngưỡng "đã thạo" khi lập kế hoạch câu hỏi (22, D-34, D-60)
   NOVICE_SECOND_QUESTION: false,      // bật sau khi đo token
   GAP_TARGETING: false,
 
@@ -331,7 +331,7 @@ export interface RepoSnapshotKey {
   ref_label: string | null;            // Nhánh mặc định đã phân giải — chỉ hiển thị
 }
 
-// Bản đầy đủ — CHỈ SERVER (cache RAM, không bao giờ ghi đĩa / DB)
+// Bản đầy đủ — CHỈ SERVER: cache RAM + session_snapshots (D-59), không có file nguồn
 export interface StaticEngineResult {
   engine_version: string;              // = CONFIG.ENGINE_VERSION
   repo_name: string;
@@ -616,7 +616,7 @@ export interface LearningSessionSummary {
   failed_count: number;
   total_nodes: number;
   can_resume: boolean;
-  resume_blocker: "ZIP_SOURCE" | "ENGINE_UPDATED" | null; // Cách tính: 03 Mục 2
+  resume_blocker: "ENGINE_UPDATED" | null; // 03 Mục 2 (D-59)
 }
 
 export interface RunStepRef {             // node_runs.steps — chỉ tên, KHÔNG có code (D-36)
@@ -774,7 +774,7 @@ export type AiErrorCode =
 
 export type PersistenceErrorCode =
   | "ERR_UNAUTHENTICATED"
-  | "ERR_SESSION_NOT_FOUND"         // Phiên / run không thuộc người gọi; phiên không dựng lại được (Q-12)
+  | "ERR_SESSION_NOT_FOUND"         // Phiên / run không thuộc người gọi hoặc không còn
   | "ERR_SESSION_ENGINE_OUTDATED"   // Phiên tạo bằng engine_version khác ⇒ chỉ xem lịch sử
   | "ERR_PERSISTENCE_UNAVAILABLE"   // Postgres lỗi khi đọc hoặc ghi ⇒ nút "Thử lại" (D-40)
   | "ERR_DEMO_MODE_DISABLED";

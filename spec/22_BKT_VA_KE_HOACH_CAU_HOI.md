@@ -8,7 +8,7 @@
 - Lõi adaptive learning: BKT cập nhật `p_mastery` sau mỗi câu hỏi; decay theo thời gian không luyện.
 - Hàm thuần: BKT và planner không I/O, không `Date.now()`, tính bằng `number`, chỉ làm tròn khi hiển thị (4 chữ số).
 - 1 chế độ `LEARN`: hỏi kỹ năng chưa thạo; không có ôn tập (D-35).
-- Không Fast-Track (D-34): mọi kỹ năng của node đã thạo (≥ `CONFIG.FAST_TRACK_MIN`) ⇒ vẫn hỏi 1 câu cho kỹ năng có điểm thấp nhất.
+- Không miễn thi (D-34): mọi kỹ năng của node đã thạo (≥ `CONFIG.MASTERED_MIN`) ⇒ vẫn hỏi 1 câu cho kỹ năng có điểm thấp nhất.
 - Mài mòn (D-35, chỉ hiển thị): bậc của điểm đã decay thấp hơn bậc của điểm gốc ⇒ nhãn "đang mài mòn"; thanh kỹ năng nhạt dần liên tục; không có nút ôn.
 
 Luồng thích ứng BKT:
@@ -112,7 +112,7 @@ Mẫu số luôn > 0 vì $S, G^{*} \in (0, 1)$.
 
 - **`getDecayedMastery(state, now)` (BKT-20):** thiếu state ⇒ `CONFIG.BKT_P_L0`. Ngược lại, với $F$ = `CONFIG.DECAY_FLOOR`, $h$ = `CONFIG.DECAY_HALF_LIFE_DAYS`, $\Delta t = \max(0,\ now - 	exttt{last\_practiced\_at}) / 	exttt{MS\_PER\_DAY}$: $$\tilde p = \begin{cases} p & p \le F \\ F + (p - F)\cdot 2^{-\Delta t / h} & p > F \end{cases}$$ Điểm ≤ sàn giữ nguyên. Không dùng dạng `max(F, p·2^(−Δt/h))`.
 - **Decay chỉ tính khi đọc:** không bao giờ ghi đè `p_mastery`. `p_mastery` chỉ đổi qua `updateSkill` hoặc `revertSkillChange`.
-- **`tierOf(p)` (BKT-22):** xác định cho mọi `p`: `p < CONFIG.TIER_PRACTITIONER_MIN` ⇒ `NOVICE`; `p < CONFIG.TIER_ARCHITECT_MIN` ⇒ `PRACTITIONER`; còn lại (kể cả `p ≥ CONFIG.FAST_TRACK_MIN`) ⇒ `ARCHITECT`. Luôn gọi với điểm đã decay.
+- **`tierOf(p)` (BKT-22):** xác định cho mọi `p`: `p < CONFIG.TIER_PRACTITIONER_MIN` ⇒ `NOVICE`; `p < CONFIG.TIER_ARCHITECT_MIN` ⇒ `PRACTITIONER`; còn lại (kể cả `p ≥ CONFIG.MASTERED_MIN`) ⇒ `ARCHITECT`. Luôn gọi với điểm đã decay.
 - **`overallTier(skills, now)` (BKT-23):** (D-20, chỉ hiển thị) = `tierOf` của **trung bình** điểm đã decay trên các kỹ năng có `practice_count > 0`; không có kỹ năng nào ⇒ `NOVICE`. Server tính khi trả `MeResponse`.
 - **Mài mòn (BKT-24, D-35 — chỉ hiển thị):** `isDecaying(state, now)` = có state **và** `tierOf(getDecayedMastery(state, now)) < tierOf(state.p_mastery)` (thứ tự `NOVICE < PRACTITIONER < ARCHITECT`; ngưỡng `CONFIG.TIER_*`, không thêm hằng số). Ở kỹ năng của node đang mở (`30`), mỗi kỹ năng có state: thanh kỹ năng vẽ theo điểm đã decay và nhạt dần **liên tục** theo tỉ lệ điểm đã decay / `p_mastery`; `isDecaying` ⇒ nhãn "đang mài mòn". Đã decay nhưng chưa rớt bậc ⇒ chỉ thanh nhạt, không nhãn. Không đổi trạng thái / màu node, không tạo run, không có nút ôn.
 - **Hệ quả (BKT-25):** vừa cập nhật thì $\Delta t = 0$ ⇒ điểm decay = điểm gốc ⇒ cùng bậc ⇒ hết nhãn mài mòn. Điểm gốc ≤ `CONFIG.DECAY_FLOOR` không bao giờ mài mòn (BKT-20).
@@ -120,8 +120,8 @@ Mẫu số luôn > 0 vì $S, G^{*} \in (0, 1)$.
 
 ## 5. Kế hoạch không rỗng (D-34) & Capstone
 
-- **Không Fast-Track (D-34):** không node nào được miễn thi; node chỉ `COMPLETED` / `FAILED` khi run `LEARN` xong (Mục 8). Mở node không cập nhật BKT.
-- **Mọi kỹ năng đã thạo (BKT-31):** mọi kỹ năng của node có điểm đã decay ≥ `CONFIG.FAST_TRACK_MIN` ⇒ đúng 1 câu cho kỹ năng có điểm đã decay thấp nhất của node (hòa ⇒ `practice_count` nhỏ trước, rồi thứ tự phân tích), tier `ARCHITECT` (Mục 6, BKT-41). Áp như nhau cho node thường và Capstone (`is_capstone`, D-12).
+- **Không miễn thi (D-34):** không node nào được miễn thi; node chỉ `COMPLETED` / `FAILED` khi run `LEARN` xong (Mục 8). Mở node không cập nhật BKT.
+- **Mọi kỹ năng đã thạo (BKT-31):** mọi kỹ năng của node có điểm đã decay ≥ `CONFIG.MASTERED_MIN` ⇒ đúng 1 câu cho kỹ năng có điểm đã decay thấp nhất của node (hòa ⇒ `practice_count` nhỏ trước, rồi thứ tự phân tích), tier `ARCHITECT` (Mục 6, BKT-41). Áp như nhau cho node thường và Capstone (`is_capstone`, D-12).
 - **Nhất quán (BKT-32):** `analysis.skills` khác rỗng ⇒ `planNodeQuestions` trả n ≥ 1 ⇒ `enrich-node` luôn tạo run (`03` Mục 5.3, 6.1).
 
 ---
@@ -132,7 +132,7 @@ Chạy ở server khi tạo run (D-02); cố định suốt run (D-16). Đầu v
 
 ```mermaid
 flowchart TD
-  L["Kỹ năng của node có điểm đã decay dưới FAST_TRACK_MIN<br/>tier theo điểm (BKT-41)"] --> E{"Còn kỹ năng?"}
+  L["Kỹ năng của node có điểm đã decay dưới MASTERED_MIN<br/>tier theo điểm (BKT-41)"] --> E{"Còn kỹ năng?"}
   E -- "không" --> CP["1 câu cho kỹ năng điểm thấp nhất, tier ARCHITECT (BKT-31, D-34)"]
   E -- "có" --> O["Xếp thứ tự câu (BKT-42)"]
   O --> F["Chọn góc focus (BKT-44, BKT-46)"]
@@ -146,7 +146,7 @@ flowchart TD
 
 Ký hiệu: $\tilde p(k)$ = `getDecayedMastery(skills[k], now)`; `weak(k)` = có phần tử `analysis.weak_points` với `skill = k` (≤ 1, D-03); `ev(k)` = `step` của `k` trong `analysis.skills`; `archOk` = `analysis.strengths.length > 0` ∨ có mẫu trong `analysis.architecture.patterns` khác `OTHER`.
 
-- **Chọn kỹ năng (BKT-41):** kỹ năng có $\tilde p < $ `CONFIG.FAST_TRACK_MIN`, tier = `tierOf(`$\tilde p$`)`. Hết kỹ năng ⇒ 1 câu cho kỹ năng nhỏ nhất theo ($\tilde p$ tăng, `practice_count` tăng, thứ tự phân tích), tier `ARCHITECT` (BKT-31, D-34). Không bao giờ trả `[]`.
+- **Chọn kỹ năng (BKT-41):** kỹ năng có $\tilde p < $ `CONFIG.MASTERED_MIN`, tier = `tierOf(`$\tilde p$`)`. Hết kỹ năng ⇒ 1 câu cho kỹ năng nhỏ nhất theo ($\tilde p$ tăng, `practice_count` tăng, thứ tự phân tích), tier `ARCHITECT` (BKT-31, D-34). Không bao giờ trả `[]`.
 - **Thứ tự câu (BKT-42):** (1) có điểm dở trước; (2) $\tilde p$ nhỏ trước; (3) `practice_count` nhỏ trước (thiếu = 0); (4) thứ tự trong `analysis.skills`. `question_index` = 1..n theo thứ tự này (câu 2 của BKT-49 nối sau cùng).
 - Tier ghi vào kế hoạch là tier lúc lập; câu sau trong cùng run không đổi tier dù câu trước đổi điểm.
 
@@ -212,7 +212,7 @@ export function planNodeQuestions(analysis, skills, now, stepCount): QuestionPla
   const byPlan = (a, b) => (Number(!weak(a)) - Number(!weak(b))) || byWeakest(a, b);    // BKT-42
 
   let picks: Array<{ skill: SWESkill; tier: LearnerTier }>;                              // BKT-41
-  const open = order.filter(k => p(k) < CONFIG.FAST_TRACK_MIN);
+  const open = order.filter(k => p(k) < CONFIG.MASTERED_MIN);
   if (open.length > 0) picks = open.sort(byPlan).map(k => ({ skill: k, tier: tierOf(p(k)) }));
   else picks = [{ skill: [...order].sort(byWeakest)[0], tier: "ARCHITECT" }];            // BKT-31, D-34
 
