@@ -71,6 +71,16 @@ Không tự nhận đã phát minh Compound AI, BKT, PageRank, hay repo-map bằ
 
 *Gộp từ Q&A kịch bản pitch cũ, KyVong45 Phần IV và §7 báo cáo thẩm định; mọi câu trả lời đã cập nhật theo thiết kế trong `spec/`. "Đ" là gợi ý trả lời, nói bằng lời của mình.*
 
+**Ai trả lời nhóm câu nào**
+
+| Nhóm câu | Người trả lời chính | Người đỡ |
+| :-- | :-- | :-- |
+| A. Ý tưởng, E. Dữ liệu và vận hành | Vai A | Vai C |
+| B. Engine và bản đồ | Vai B | Vai A |
+| C. AI và cổng gác, D. BKT | Vai C | Vai A |
+
+Mỗi câu chỉ một người trả lời, người đỡ chỉ thêm khi được mời. Không biết thì nói "phần này nhóm chưa đo" hoặc "em chưa chắc", không đoán. Vai D, E chưa phân thì thuộc nhóm nào do cả đội chốt.
+
 ### A. Ý tưởng & định vị
 
 **A1. "Khác gì DeepWiki, hay dán code vào ChatGPT rồi hỏi?"**
@@ -144,15 +154,13 @@ AI khi đó hỏi kiểu thuật toán: chạy tay với input nhỏ, Big-O, tì
 2. **Chốt từ cấm:** danh sách công nghệ phổ biến, trừ những gói có trong manifest; so theo tên gói, nguyên từ.
 3. **Chốt kỹ năng:** kỹ năng phải thuộc danh mục 16, và bằng chứng phải nằm đúng trong code của bước được chỉ.
 
-Vi phạm thì gọi AI lại 1 lần; vẫn sai thì bỏ phần đó (bỏ câu hỏi, hoặc Tab 1 chỉ còn khung). Cổng gác **không** kiểm được AI hiểu đúng hay sai; phần đó bù bằng duyệt tay, hiện bằng chứng và nút "Báo sai".
+Vi phạm thì gọi AI lại 1 lần, kèm lý do do code dựng; vẫn sai thì bỏ phần đó (bỏ câu hỏi, hoặc Tab 1 chỉ còn khung). Cổng gác **không** kiểm được AI hiểu đúng hay sai; phần đó bù bằng duyệt tay, hiện bằng chứng và nút "Báo sai".
 
 **C2. "Tab 1 đã nói điểm dở rồi, sang Tab 2 chỉ việc chép lại à? Mà chép câu hỏi sang ChatGPT thì sao?"**
-Đ: Tab 1 chỉ nói *cái gì* và *ở đâu*. Câu hỏi hỏi những thứ Tab 1 không nói:
-- tình huống cụ thể và vì sao nó xảy ra, ví dụ trang 200 sản phẩm chậm do đâu;
-- cách sửa và tình huống biên;
-- đổi một chỗ thì phải sửa những file nào.
+Đ: Dạ, Tab 1 có nêu điểm dở và hậu quả, nên người học dựa vào đó được, và nhóm không giấu. Câu hỏi là để học hiểu, không phải bài kiểm tra kín. Người học vẫn phải tự viết lại và nối vào tình huống trong câu hỏi. Thứ Tab 1 chưa có là con số, cách sửa, tình huống biên, và đổi một chỗ thì phải sửa những file nào; các phần đó chỉ mở khi xong câu hoặc được hỏi ở góc khác.
 
-Muốn đạt thì phải có đủ 2–3 ý bắt buộc, và AI phải trích ra đúng câu có thật trong bài làm. Repo là public nên chép sang ChatGPT vẫn làm được; nhóm không nói là chặn được. Thiết kế này làm khó việc học vẹt, chứ không chống gian lận tuyệt đối. Cờ nghi dán và câu hỏi nối tiếp nằm ở roadmap.
+
+Muốn đạt thì phải có đủ 2–3 ý bắt buộc, và AI phải trích ra đúng câu có thật trong bài làm. Chép Tab 1 hay ChatGPT vẫn làm được; nhóm không nói là chặn được. Thiết kế này làm khó việc học vẹt, chứ không chống gian lận tuyệt đối. Cờ nghi dán và câu hỏi nối tiếp nằm ở roadmap.
 
 **C3. "Sao biết AI chấm 70 điểm là đúng?"**
 Đ: Thật lòng là bộ chấm chưa được hiệu chuẩn với giảng viên; ngưỡng `PASS_CORE_ACCURACY` do nhóm đặt. Để bớt phụ thuộc vào AI, **server tự quyết đạt** khi đủ ba điều: điểm ≥ ngưỡng; là câu trả lời thật, không phải "chịu"; mọi ý bắt buộc được đánh dấu kèm đoạn trích mà code kiểm là có thật trong bài. Nhóm chấm tay một bộ câu trả lời mẫu rồi so với AI: *[chỉ nói "khớp X/20" khi đã đo]*. Hiệu chuẩn với giảng viên là việc đầu tiên của roadmap GĐ2.
@@ -168,6 +176,23 @@ Muốn đạt thì phải có đủ 2–3 ý bắt buộc, và AI phải trích 
 
 **C7. "AI lỗi giữa chừng thì sao?"**
 Đ: Chấm lỗi thì không tính lượt, có nút "Thử lại". Câu hỏi hỏng thì gọi lại 1 lần rồi bỏ câu đó. Phân tích node lỗi thì node giữ vàng, có "Thử lại phân tích", node con vẫn mở kèm tam giác. Hết quota thì khóa lời gọi AI mới và báo rõ.
+
+**C8. "Hỏi vầy thì khác gì câu hỏi thường? Sao gọi là Feynman?"**
+Đ: Dạ, nếu chỉ nhìn một câu hỏi thì nó giống câu hỏi thường. Phần áp dụng Feynman nằm ở cả vòng học:
+1. Người học tự viết bằng lời của mình.
+2. Bài được chấm theo từng ý, mỗi ý phải có trích dẫn thật trong bài.
+3. Thiếu ý thì nhận gợi ý quay về code, rồi giải thích lại.
+
+Đây là cách áp dụng dựa trên kỹ thuật Feynman, không phải nguyên bản. Điểm `simplicity` không ảnh hưởng tới việc đạt. Hệ thống không bảo đảm người đạt đã hiểu 100%.
+
+**C9. "AI sai rồi thì có sai lại không? Hệ thống có tự học từ lỗi không?"**
+Đ: Dạ, nhóm có cách giảm lỗi lặp lại, nhưng không hứa hết sai và chưa đo được mức giảm. Trong bản thi:
+1. Khi cổng gác chặn, lần gọi lại kèm lý do do code dựng, nên AI biết sai ở đâu. Vẫn tối đa 1 lần gọi lại, không thêm lời gọi AI mới.
+2. Mỗi lần chặn được ghi mã lỗi vào log, không lưu code hay bài làm.
+
+Định hướng tương lai: lỗi nào gặp nhiều thì người review viết ca test cho lỗi đó, rồi mới nâng system prompt. Đổi prompt phải chạy lại mọi ca test, kết quả tụt thì không nhận. Hệ thống không tự sửa prompt, và phần này nhóm chưa demo.
+
+*Chỉ nói phần định hướng khi BGK hỏi.*
 
 ### D. BKT & người học
 
@@ -267,6 +292,8 @@ Nhóm kiểm soát bằng:
 | Mã nguồn mở, người dùng tự mang API key | Khẳng định | D-33 |
 | Đạt = điểm ≥ 70 **và** đủ ý bắt buộc có trích dẫn thật | Kèm "ngưỡng do nhóm đặt" | `PASS_CORE_ACCURACY`, D-13 |
 | "AI nêu N mục, đúng X/N", "chấm khớp người X/20" | Chỉ nói khi đã đo, nói đúng số | Duyệt tay |
+| Bị chặn thì gọi lại 1 lần kèm lý do, ghi mã lỗi vào log | Khẳng định, nói rõ chưa đo mức giảm | D-51 |
+| Người review viết ca test cho lỗi gặp nhiều rồi nâng system prompt | Chỉ nói khi BGK hỏi, gọi là định hướng tương lai | D-51 |
 
 **Không được nói — và nói thay bằng**
 
@@ -286,6 +313,7 @@ Nhóm kiểm soát bằng:
 | "Giảm 60% thời gian soạn đề", "AUC 0,82", "1.000 MAU" như kết quả | "Mục tiêu của roadmap, cần đo baseline" |
 | "Zero-Trust" | "Không clone, không chạy code của bạn, chỉ đọc tĩnh" |
 | "Bản sao nhận thức chính xác", "AI chấm khách quan" | "16 xác suất ước lượng sơ bộ"; "chấm bằng AI chưa hiệu chuẩn với giảng viên" |
+| "AI tự học", "hết sai", "lỗi không lặp lại" | "Gọi lại kèm lý do để giảm lỗi lặp, chưa đo mức giảm; nâng prompt từ ca test là định hướng tương lai" |
 | Bất kỳ số khảo sát nào chưa làm | — |
 
 ---

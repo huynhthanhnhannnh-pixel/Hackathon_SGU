@@ -21,7 +21,7 @@
 | Người | Vai trên sân khấu |
 | :-- | :-- |
 | **Vai A (Lead)** | Người nói chính: mở đầu, bản đồ, Tab 1, Tổng quan, phần kết. Bấm giờ bằng đồng hồ đeo tay. |
-| **Vai B (Engine)** | Cầm máy: làm **mọi** thao tác và gõ câu trả lời. Giữ sẵn phím `Ctrl+Shift+D` và tab video dự phòng. Không nói, trừ khi phải đọc to số trên đồng hồ đo. |
+| **Vai B (Engine)** | Cầm máy: làm **mọi** thao tác và gõ câu trả lời. Giữ sẵn phím `Ctrl+Shift+D` và tab video dự phòng. Không nói, trừ khi phải đọc to số trên đồng hồ đo. Phần phản biện thì trả lời nhóm câu B. |
 | **Vai C (AI/BKT)** | Nói phần câu hỏi, chấm, BKT và persona. Là người trả lời chính các câu phản biện về AI. |
 
 ---
@@ -76,7 +76,7 @@
 
 > "Bấm vào một ô, Tab 1 giải thích luồng chạy từng bước. Bấm bước nào thì khung giữa mở đúng file, đúng dòng code thật.
 > Tab này nêu cả **điểm hay**: route không tự truy vấn database. Và nêu cả **điểm dở**: vòng `for` gọi database cho từng sản phẩm. Điểm dở gắn nhãn 'Nhận định của AI', vì AI có thể nhận định sai. Còn tên hàm và vị trí thì code kiểm lại, AI không bịa được.
-> Tab 1 chỉ nói *cái gì* và *ở đâu*. Nó không nói con số hay cách sửa, vì đó là thứ sắp được hỏi."
+> Tab 1 chỉ nêu điểm dở và vị trí, chưa có con số hay cách sửa. Hai thứ đó chỉ mở khi em trả lời xong."
 
 ### ⏱ 2:05 – 3:20 · Tab 2 Feynman: sai → gợi ý → đúng → BKT → xanh — Vai C nói, Vai B gõ
 
@@ -88,7 +88,7 @@
 - Gợi ý nấc 1 (`CONCEPT`), hỏi lại về chỗ hiểu sai và chưa chỉ vị trí.
 - Node vẫn vàng; điểm kỹ năng chưa đổi.
 
-  > AI không đưa đáp án. Nó hỏi ngược đúng vào chỗ em chưa nghĩ tới: *sau khi có danh sách, trang còn lấy thêm gì cho từng sản phẩm?*"
+> "AI không đưa đáp án. Nó hỏi ngược đúng vào chỗ em chưa nghĩ tới: *sau khi có danh sách, trang còn lấy thêm gì cho từng sản phẩm?*"
 
 **Thao tác 2:** gõ câu **B** → "Nộp".
 **Màn hình:**
@@ -117,7 +117,7 @@
 - Bản phân tích mẫu của ô Danh sách sản phẩm (`spec/50` Mục 2.1), trong đó AI viết thêm kỹ năng `AUTH_SECURITY` với lý do "Kiểm tra quyền trước khi tìm loại hàng", trỏ tới hàm `verifyToken`.
 - Test xanh: `verifyToken` không có trong code của bước đó ⇒ câu đó bị chặn, kỹ năng bị gạch; `findOne` (có thật trong code) vẫn được giữ.
 
-> "Đây là dữ liệu mẫu nhóm **cố ý cài lỗi**: AI nói ô này kiểm tra quyền bằng hàm `verifyToken`, nhưng trong code không có hàm nào tên như vậy. Trước khi bất kỳ chữ nào của AI tới tay người học, code đối chiếu mọi tên hàm với code thật của đúng bước đó. Tên không có ⇒ câu bị chặn, không hiện ra.
+> "Đây là dữ liệu mẫu nhóm **cố ý cài lỗi**: AI nói ô này kiểm tra quyền bằng hàm `verifyToken`, nhưng trong code không có hàm nào tên như vậy. Trước khi hiện ra, code đối chiếu mọi tên hàm với code thật của đúng bước đó. Tên không có thì câu bị chặn, AI được gọi lại kèm lý do.
 > Cổng gác này chặn được **tên bịa** và **công nghệ không có trong repo**. Nó không chặn được AI hiểu sai ý, nên điểm dở vẫn mang nhãn 'Nhận định của AI'."
 
 *Nếu lúc duyệt tay ở H+17 cổng gác đã chặn thật một câu AI bịa tên trên repo demo thì chiếu bản ghi đó (`review/run-*.json`) thay cho test, và nói rõ "đây là lần chặn thật lúc [giờ] sáng nay". Không có thì dùng test và nói rõ là dữ liệu mẫu.*
@@ -216,6 +216,7 @@ Lúc đó ô vừa mở và 1–2 ô kế tiếp sẽ hiện "đang phân tích�
 - [ ] Rút mạng thật, chạy trọn kịch bản bằng Offline.
 - [ ] Quay video dự phòng của cả chế độ thật lẫn Offline; lưu trên laptop thứ hai và USB.
 - [ ] Tập đủ 3 lần có bấm giờ, có tập cả lúc chuyển Offline giữa chừng.
+- [ ] Tập 1 lần bị ngắt lời: một bạn ngồi nghe, hỏi ngang ở 3 chỗ bất kỳ. Người nói trả lời bản 30 giây ở Mục 7 rồi quay lại đúng đoạn đang dừng.
 - [ ] Các mục Definition of Done ở [`../spec/50_TEST_VA_FIXTURE.md`](../spec/50_TEST_VA_FIXTURE.md) Mục 5 đều đạt.
 - [ ] Nộp slide **trước 09g30**.
 
@@ -240,3 +241,65 @@ Lúc đó ô vừa mở và 1–2 ô kế tiếp sẽ hiện "đang phân tích�
 | **3 phút** | Vấn đề (25 giây) · bản đồ + đồng hồ (30 giây) · Tab 1 (30 giây) · Câu 1: sai → gợi ý → đúng → BKT (50 giây) · Cổng gác chặn tên bịa (20 giây) · kết (25 giây) | Bỏ câu 2, nói "câu 2 tương tự"; N3 chưa xanh, phần mở khóa chỉ nói bằng lời. Mài mòn chỉ nhắc bằng lời. Bỏ tab Tổng quan. |
 | **5 phút** | Như Mục 2 | — |
 | **7 phút** | Như Mục 2, thêm: mở `review/` cho thấy số "AI nêu N mục, đúng X/N" của lần duyệt tay (40 giây); `F5` + danh sách "Tiếp tục học" (20 giây); mở DevTools cho thấy response không có đáp án của câu chưa xong (30 giây) | — |
+| **BGK cho nói thêm** | Như Mục 2, rồi dùng bản 2 phút ở Mục 7 theo đúng điểm BGK quan tâm | Không tự nói hết cả 3 điểm khi BGK không hỏi |
+
+---
+
+## 7. Ba điểm mạnh và cách nói theo tầng
+
+Lần sơ loại, nhóm có nhiều thứ nhưng không nói được bao nhiêu. Nói hết thì không kịp, nên 5 phút chính chỉ gieo 3 câu mồi. BGK thấy hay sẽ hỏi tiếp, lúc đó mới mở phần sâu.
+
+Luật dùng:
+- BGK hỏi lần đầu: nói bản 30 giây, rồi hỏi lại "Thầy muốn em nói sâu phần này hay đi tiếp demo?".
+- BGK muốn nghe sâu: mở slide phụ, nói bản 2 phút.
+- BGK không hỏi: đi tiếp, không tự mở phần sâu.
+- Bị ngắt giữa demo: trả lời xong quay lại đúng đoạn đang dừng.
+- Chỉ người phụ trách trả lời, người khác không chen (bảng phân người ở `PHAN_BIEN_BGK.md` Mục 5).
+
+### 7.1 Bản đồ do code dựng, không tốn token
+
+- **Người nói:** Vai B
+- **Câu mồi:** Phút 0:35: "Bước này máy đọc code bằng thuật toán, không gọi AI, nên không tốn token."
+- **Bản 30 giây:** "Dạ, bản đồ được dựng bằng thuật toán trên máy chủ, không tốn token. Tree-sitter đọc cú pháp và lập danh bạ tên hàm để nối lời gọi tới định nghĩa thật. Nhóm dùng hàm entry làm gốc mỗi bài học, Tarjan để khử chu trình, và PageRank chỉ xếp hạng bài học. Thuật toán tất định nên không cần lưu code. Giới hạn là gọi động có thể sót cạnh, và mới kiểm chứng trên TS/JS và Python."
+- **Bản 2 phút:**
+  - Tree-sitter bóc tách cú pháp tĩnh, lập danh bạ tên hàm và nối từng lời gọi tới định nghĩa thật.
+  - Gốc mỗi bài học là một hàm entry (route, controller, command, screen); PageRank chỉ dùng xếp hạng giữa các lát cắt.
+  - Thuật toán Tarjan gộp các nhóm gọi vòng nhau để bảo đảm đồ thị không có chu trình.
+  - Tính tất định: cùng mã commit luôn cho cùng bản đồ, hệ thống không cần lưu lại code mà vẫn mở lại đúng phiên.
+  - Giới hạn kỹ thuật: gọi động hoặc reflection có thể làm sót cạnh; hiện chỉ mới kiểm chứng trên TS/JS và Python.
+- **Slide phụ:** Slide phụ S1: chuỗi từ link repo tới 6–8 ô. Lấy từ sơ đồ ở `doc-de-hieu/02_engine.md` mục "Sơ đồ 13 giai đoạn chuyển hóa", rút còn 5–6 khối.
+
+Mã câu liên quan ở `PHAN_BIEN_BGK.md`: B2, B3, B4, B5, B9.
+
+### 7.2 Vòng tự giải thích và mô hình người học
+
+- **Người nói:** Vai C
+- **Câu mồi:** Phút 2:05–3:20: "Việc đạt hay không do **server quyết theo luật**, không lấy nguyên con số AI chấm."
+- **Bản 30 giây:** "Dạ, câu hỏi nêu tình huống để người học tự giải thích bằng lời của mình. Server tự quyết đạt theo từng ý bắt buộc có trích dẫn thật. Thiếu ý thì nhận gợi ý về khái niệm hoặc chỉ vị trí code để giải thích lại. Điểm BKT cập nhật theo công thức: đạt ngay lên 0,58, sau gợi ý lên 0,42; lâu không luyện hiện 'đang mài mòn', không bắt ôn. Giới hạn là tham số đặt tay và bộ chấm chưa hiệu chuẩn với giảng viên."
+- **Bản 2 phút:**
+  - Câu hỏi nêu 1 tình huống rồi hỏi vì sao, từ đâu hoặc chuyện gì xảy ra; người học tự viết bằng lời của mình.
+  - Bài được chấm theo từng ý bắt buộc, mỗi ý cần trích dẫn có thật trong bài; server tự quyết đạt.
+  - Thiếu ý thì có gợi ý: lượt đầu hỏi về khái niệm, lượt sau chỉ vào chỗ code; người học giải thích lại.
+  - BKT cập nhật 16 kỹ năng: đạt ngay 0,25 lên 0,58, đạt sau gợi ý lên 0,42 (đây là số tính theo công thức, không phải số đo trên người học).
+  - Kỹ năng lâu không luyện hiện "đang mài mòn", không bắt ôn.
+  - Giới hạn phải nói: bộ chấm chưa hiệu chuẩn với giảng viên, tham số BKT đặt tay.
+- **Slide phụ:** Slide phụ S2: vòng câu hỏi, tự giải thích, chấm từng ý, gợi ý, giải thích lại, điểm đổi. Lấy ý từ `doc-de-hieu/03_ai_va_cong_gac.md` mục "Cơ chế gợi ý nấc theo lượt" và `doc-de-hieu/04_bkt_va_cau_hoi.md` mục "Luồng 3 bước cập nhật điểm BKT".
+
+Mã câu liên quan ở `PHAN_BIEN_BGK.md`: C2, C3, C4, C8, D1, D2.
+
+### 7.3 AI không được tin mù
+
+- **Người nói:** Vai C
+- **Câu mồi:** Phút 3:20: "Tên không có thì câu bị chặn, AI được gọi lại kèm lý do."
+- **Bản 30 giây:** "Dạ, văn bản AI đều qua cổng gác bằng code trước khi hiện, không tốn token. Cổng gác kiểm tra tên hàm, từ cấm và bằng chứng kỹ năng. Bị chặn thì AI được gọi lại một lần kèm lý do do code dựng, không thêm lời gọi mới; vẫn sai thì bỏ phần đó. Mỗi lần chặn ghi mã lỗi vào log, không lưu code hay bài làm. Giới hạn là cổng gác không kiểm được nghĩa và nhóm chưa đo mức giảm lỗi."
+- **Bản 2 phút:**
+  - Cổng gác bằng code, không tốn token, kiểm tên, từ cấm và bằng chứng trước khi hiện.
+  - Bị chặn thì gọi lại đúng 1 lần, kèm lý do do code dựng, không thêm lời gọi AI mới; vẫn sai thì bỏ phần đó.
+  - Mỗi lần chặn ghi mã lỗi vào log, không lưu code, văn bản AI hay bài làm.
+  - Giới hạn phải nói: không kiểm được nghĩa, chưa đo mức giảm lỗi.
+  - Chỉ nói nếu BGK hỏi tiếp: định hướng tương lai ở câu C9.
+- **Slide phụ:** Slide phụ S3: AI viết, cổng gác kiểm, đạt thì hiện; không đạt thì gọi lại kèm lý do; vẫn sai thì bỏ. Lấy ý từ `doc-de-hieu/03_ai_va_cong_gac.md` mục "Gọi lại kèm lý do".
+
+Mã câu liên quan ở `PHAN_BIEN_BGK.md`: C1, C9, Mục 4.
+
+Slide S1, S2, S3 chưa có, nhóm làm cùng slide chính và nộp trước 09g30. Chỉ nói "đã đo" khi có số thật.
