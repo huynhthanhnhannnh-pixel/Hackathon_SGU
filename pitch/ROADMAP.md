@@ -80,6 +80,9 @@ Theo lịch D-47, vòng 3 chỉ cách vòng 2 khoảng 1 ngày (08/11 → 09/11/
 - **Bảng mới:** `llm_calls` (token vào/ra, token trúng cache, độ trễ, `LLM_MODEL`, `PROMPT_VERSION`, cổng gác chặn gì) — dữ liệu cho câu hỏi nghiên cứu về AI ảo giác.
 - **Log nộp bài:** mở rộng `question_attempts` vốn chỉ thêm, không sửa. Thêm `latency_ms`, số lần dán, thời gian gõ, tier, `focus`, `PROMPT_VERSION`, model. Đây là dữ liệu để fit ở GĐ2, nên phải thiết kế ngay.
 - **Rate-limit theo user/IP** cho `/api/*`. Bản thi mới có quota token theo phiên (`SESSION_TOKEN_QUOTA`), đếm ở server.
+- **Vận hành & Giám sát:** Phân công người trực (on-call rotation), bảng theo dõi sự cố (incident post-mortem log), chính sách sao lưu định kỳ, quy trình dọn dữ liệu cũ (xóa `session_snapshots` và `learning_sessions` của phiên không hoạt động lâu ngày, khớp D-59).
+- **An toàn & Bảo mật nâng cao:** Đặt trần AI theo người và theo ngày; dùng `zod` xác thực mọi route API; thiết lập CSP (Content Security Policy) chặt chẽ; bật bộ lọc an toàn Gemini (safety settings); kiểm tra từ xấu ở cả đầu ra AI.
+- **Đảm bảo chất lượng AI:** Quy trình đổi model (chạy qua bộ test trước khi đổi); kiểm thử thiên lệch (bias testing); định kỳ lập báo cáo đánh giá (evaluation report).
 - **Tuân thủ:** màn hình xin đồng ý theo Nghị định 13/2023; ẩn danh khi xuất dữ liệu nghiên cứu; dùng API trả phí cho pilot.
 
 **Thuật toán, thành phần mới**

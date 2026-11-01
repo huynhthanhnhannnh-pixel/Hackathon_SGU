@@ -24,10 +24,10 @@ flowchart LR
 ## 1. Năm vai song song & điểm nối
 
 Nhóm chia 5 vai:
-- **Vai A — Trưởng tích hợp:** Thiết lập dự án, DB migration (gồm bảng `session_snapshots`, D-59), auth, API routes, ghép nối, review & merge PR, deploy Vercel.
+- **Vai A — Trưởng tích hợp:** Thiết lập dự án, DB migration (gồm bảng `session_snapshots`, D-59, đánh index nhanh `node_runs`, `dispute_reports`), auth, API routes (tối ưu `/api/sessions` tránh N+1, không tải skeleton), ghép nối, review & merge PR, deploy Vercel; cấu hình driver `postgres` 3.x qua Supavisor Transaction Pooler (`prepare: false`), thiết lập CI/CD an ninh (`security.yml`, headers trong `next.config.ts`), và bật các tính năng an ninh GitHub (Dependabot alerts/updates, Secret scanning push protection, CodeQL default setup) (D-65).
 - **Vai B — Engine:** Tầng 0 (tải repo, lọc rác), Tầng 1 (parser, AST, đồ thị gọi hàm), Tầng 2 (lát cắt, layout Dagre, hàng điểm bắt đầu D-55, nối node thuật toán D-56), mẫu entry mobile và `main` (D-57, D-58).
-- **Vai C — AI + BKT:** Lời gọi Gemini (`gemini-3.5-flash-lite`), prompt & responseSchema, cổng gác `guard/*`, gọi lại kèm lý do, ghi mã lỗi, chấm bài, `bkt-engine`.
-- **Vai D — Giao diện:** Cột 1 Bản đồ (ReactFlow), Cột 2 Code (Monaco), Cột 3 Cockpit (X-Ray, Feynman, Tổng quan), chế độ offline.
+- **Vai C — AI + BKT:** Lời gọi Gemini (`gemini-3.5-flash-lite`), prompt & responseSchema, cổng gác `guard/*`, gọi lại kèm lý do, ghi mã lỗi, chấm bài, `bkt-engine`, bộ lọc an toàn (`src/lib/moderation.ts` che secret, PII email/SĐT/CCCD, chặn từ xấu 0 token trả `ERR_ANSWER_INAPPROPRIATE`) (D-65).
+- **Vai D — Giao diện:** Cột 1 Bản đồ (ReactFlow), Cột 2 Code (Monaco, cấu hình tự host nếu mặc định dùng CDN; tải chậm Monaco và ReactFlow bằng `next/dynamic` cho demo không cần mạng ngoài), Cột 3 Cockpit (X-Ray, Feynman, Tổng quan), chế độ offline (D-65).
 - **Vai E — Kiểm thử, demo, slide:** Fixture, chạy bộ test `50`, chạy thử repo demo, duyệt tay output AI, ghi lỗi thành ca test trong review/loi_da_gap.md, video demo dự phòng, slide thuyết trình.
 
 **Điểm nối để không ai phải chờ:**
