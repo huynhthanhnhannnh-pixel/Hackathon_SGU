@@ -342,6 +342,7 @@ Trạng thái ban đầu của Huy: N3 `COMPLETED`.
 | X-05 | RLS | Dùng anon key của người A đọc `skill_states` của B ⇒ 0 dòng; đọc `ai_cache` ⇒ 0 dòng; mọi lệnh ghi từ client ⇒ bị từ chối |
 | X-06 | Offline | `Ctrl+Shift+D` ⇒ chạy hết kịch bản demo không có mạng; không có request tới `/api/*` học tập |
 | X-07 | Bản đồ (D-55, D-56) | Mọi node có `prerequisites = []` cùng `position.y` nhỏ nhất; node `algo-*` mà một lát cắt gọi tới có cạnh nối với lát cắt đó (`11` T-ENG-37, T-ENG-38) |
+| X-08 | Repo lớn (D-63) | Zip > `MAX_STREAM_BYTES`, code chính nằm sau phần cắt ⇒ `report.selective_fetch = true`, `COMMIT_SHA`, `root_dir_offset` là thư mục chính, chạy 2 lần cùng `node_id`. API trả 403 ⇒ `selective_fetch = false`, có warning ING-49 |
 
 ---
 
@@ -352,6 +353,7 @@ Trạng thái ban đầu của Huy: N3 `COMPLETED`.
 - [ ] Mọi điểm bắt đầu nằm cùng hàng trên cùng; node thuật toán được lát cắt gọi tới có cạnh nối (X-07, D-55, D-56).
 - [ ] Test entry màn hình mobile và entry chương trình xanh (`11` T-ENG-39, T-ENG-40; D-57, D-58).
 - [ ] Repo private / sai link / repo rỗng / quá lớn ⇒ đúng mã lỗi và thông điệp của `30`.
+- [ ] Dán link `tiangolo/fastapi` ⇒ bản đồ dựng từ thư mục `fastapi/`, có cảnh báo repo lớn (X-08, D-63).
 - [ ] Mở từng node của repo demo ⇒ node nào cũng có bản phân tích (D-46); Tab 1 có điểm hay + điểm dở "Nhận định của AI"; không có tên bịa (kiểm tay 3 node).
 - [ ] Persona `NEWBIE`: chạy đúng kịch bản A của `50` (A3 → A7): sai ⇒ gợi ý `CONCEPT` ⇒ đúng ⇒ `PASS_AFTER_HINT`, điểm kỹ năng khớp bảng; node xanh, node con mở.
 - [ ] "Bỏ qua câu này" ⇒ câu ❌, hiện đáp án; node đỏ khi run xong, node con mở kèm tam giác.

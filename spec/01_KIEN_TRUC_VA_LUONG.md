@@ -22,7 +22,7 @@ Mô hình **BKT** ghi nhận năng lực của 16 kỹ năng lâu dài trong Pos
 | :-- | :-- |
 | **INV-01** | **1 node = 1 lát cắt xuyên file** mở đầu bằng 1 hàm entry đã đăng ký (D-06); không bao giờ là 1 file đơn lẻ. Node thuật toán (`ALGORITHMIC_CORE`) là 1 hàm phức tạp tách riêng. |
 | **INV-02** | **Code thuần trước, AI sau.** Bản đồ (Tầng 0–2) không gọi AI, mục tiêu < 1.5 s. AI chỉ chạy ở **4 lời gọi**: `analyze-node`, `analyze-overview`, `enrich-node` (đặt câu hỏi), `evaluate-feynman` (chấm). Không có Intent Router, không có Actor-Critic nhiều lượt. |
-| **INV-03** | **Zero-Trust:** không `git clone`, không chạy code người dùng; chỉ phân tích tĩnh. Tải từ `codeload.github.com` sau HEAD probe; file zip upload chỉ nằm trong RAM. |
+| **INV-03** | **Zero-Trust:** không `git clone`, không chạy code người dùng; chỉ phân tích tĩnh. Tải từ `codeload.github.com` sau HEAD probe; zip bị cắt ⇒ GitHub API + `raw.githubusercontent.com` (D-63); file zip upload chỉ nằm trong RAM. |
 | **INV-04** | **Không lưu file mã nguồn:** file code, buffer zip, AST không bao giờ ghi đĩa hay DB. Thứ duy nhất có code được lưu là **đoạn code đã cắt của các node** trong `StaticEngineResult` của phiên (bảng `session_snapshots`, D-59), để mọi lần vào phiên hiện cùng đoạn code; client không đọc trực tiếp bảng này. Ngoài ra Postgres chỉ chứa dữ liệu học tập + văn bản AI đã qua kiểm (API-01). |
 | **INV-05** | **Server là nơi ghi duy nhất** của tiến độ học: lập kế hoạch câu hỏi, BKT, đếm lượt, mở khóa, quyết định mở đáp án. Client giữ bản sao chỉ đọc. `localStorage` chỉ giữ tiện ích giao diện, không giữ hồ sơ người học. |
 | **INV-06** | **Tab 1 (X-Ray)** hiện luồng, kiến trúc, điểm hay **và điểm dở** do AI tìm, gắn nhãn "Nhận định của AI". Tab 1 **không** nêu con số theo tình huống, cách sửa, tình huống biên — đó là thứ câu hỏi hỏi. |
@@ -50,7 +50,7 @@ flowchart LR
         BKT["bkt-engine + planNodeQuestions<br/>(22)"]
         CACHE["LRU StaticEngineResult<br/>(RAM 1 instance, INGESTION_CACHE_TTL_MS,<br/>chỉ để nhanh; bản gốc ở session_snapshots)"]
     end
-    GH[("codeload.github.com")]
+    GH[("GitHub: codeload, API, raw")]
     GEM[("Gemini API")]
     DB[("Supabase Postgres + Auth")]
     UI -- "Bearer token" --> API

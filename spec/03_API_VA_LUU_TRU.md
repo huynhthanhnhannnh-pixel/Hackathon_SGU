@@ -241,7 +241,7 @@ Câu hỏi không cache: mỗi run sinh mới và lưu trong `node_runs`; chấm
 ## 4. Định danh phiên & cache RAM
 
 - **Khóa phiên:** `(user_id, source, snapshot_id, subdir, engine_version)`; trùng khóa ⇒ mở phiên có `last_active_at` mới nhất.
-  - GitHub: `snapshot_id` = commit SHA 40 hex đọc từ comment EOCD của zip codeload (`10` Mục snapshot). Comment không khớp `/^[0-9a-f]{40}$/` ⇒ `ARCHIVE_HASH` = SHA-256 của **toàn bộ** buffer zip; phiên vẫn mở lại được từ `session_snapshots` (D-59).
+  - GitHub: `snapshot_id` = commit SHA 40 hex đọc từ comment EOCD của zip codeload (`10` Mục snapshot), hoặc từ GitHub API khi tải chọn lọc (`10` ING-46). Comment không khớp `/^[0-9a-f]{40}$/` ⇒ `ARCHIVE_HASH` = SHA-256 của **toàn bộ** buffer zip; phiên vẫn mở lại được từ `session_snapshots` (D-59).
   - Upload `.zip`: `ARCHIVE_HASH` = SHA-256 của buffer.
 - **Phiên gắn snapshot (D-39, D-59):** phiên luôn dùng `StaticEngineResult` đã lưu lúc tạo; không chạy lại engine, không tải lại zip. Repo có commit mới ⇒ dán link ra SHA mới ⇒ bản đồ và phiên mới.
 - **Cache RAM `StaticEngineResult`** (API-08): LRU `CONFIG.INGESTION_CACHE_MAX_ENTRIES`, TTL `CONFIG.INGESTION_CACHE_TTL_MS`, hai tầng:
@@ -444,6 +444,7 @@ Run xong khi mọi câu `finished`. Câu `DROPPED` và câu `disputed` không t�
 | Biến | Dùng cho | Ghi chú |
 | :-- | :-- | :-- |
 | `GEMINI_API_KEY` | 4 lời gọi AI | Không bao giờ gửi xuống client |
+| `GITHUB_TOKEN` | Tải chọn lọc repo lớn (`10` Mục 4A) | Chỉ server; token chỉ đọc repo công khai; thiếu ⇒ ING-49 |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client đăng nhập GitHub | Công khai được; `NEXT_PUBLIC_SUPABASE_ANON_KEY` nhận publishable key `sb_publishable_…` |
 | `SUPABASE_SERVICE_ROLE_KEY` | Mọi lệnh ghi ở server | Chỉ server; nhận secret key `sb_secret_…` |
 | `DEMO_MODE` | Bật `/api/demo/persona` | `"true"` chỉ ở máy demo |

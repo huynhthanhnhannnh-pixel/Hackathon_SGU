@@ -31,7 +31,7 @@
 ```typescript
 export const CONFIG = {
   // ---------- Phiên bản (đổi ⇒ khóa cache mới) ----------
-  ENGINE_VERSION: "1.4.0",            // Đổi khi đổi bất kỳ luật Tầng 0–2 làm đổi đồ thị / node_id (D-10, D-53 … D-58, D-61)
+  ENGINE_VERSION: "1.5.0",            // Đổi khi đổi bất kỳ luật Tầng 0–2 làm đổi đồ thị / node_id (D-10, D-53 … D-58, D-61, D-63)
   PROMPT_VERSION: "1.0.0",            // Đổi khi đổi prompt hoặc responseSchema của 4 lời gọi AI
 
   // ---------- Tầng 0: tải & lọc (10_ENGINE_INGEST) ----------
@@ -49,6 +49,9 @@ export const CONFIG = {
   BINARY_SNIFF_BYTES: 512,            // Số byte đầu dùng dò null byte
   STREAM_TIMEOUT_MS: 5000,            // Phủ toàn bộ kết nối + tải + giải nén
   STREAM_RETRY_DELAY_MS: 500,         // Thử lại stream 1 lần
+  SELECTIVE_TIMEOUT_MS: 15000,        // Hạn `10` Mục 4A; đo lại ở H+1 (D-63)
+  SELECTIVE_FETCH_CONCURRENCY: 16,
+  AUTO_SCOPE_CHILD_RATIO: 0.5,        // `10` ING-47
   PREFLIGHT_TIMEOUT_MS: 300,
   PREFLIGHT_RETRY_DELAY_MS: 1000,     // Thử lại probe 1 lần
   DEFAULT_BRANCH_FALLBACKS: ["main", "master", "dev"],
@@ -179,6 +182,7 @@ export const CONFIG = {
 | Tầng 0 (probe + tải + lọc) | 0.8 – 1.2 s; probe ≤ 0.3 s | Timeout cứng = `STREAM_TIMEOUT_MS` |
 | Tầng 1 + 2 (grammar đã warm) | < 0.25 s | `ENGINE_BUDGET_MS` chỉ để cảnh báo |
 | **Cold-start bản đồ (0 token)** | **< 1.5 s** | Repo ≤ 15 MB nén, mạng ổn định |
+| Repo lớn, tải chọn lọc (D-63) | ~6–8 s | Đo 01/11 trên 3 repo từ máy dev: zip cắt 2,2–2,6 s + danh sách và 100 file 3,9–5,5 s; chưa đo trên Vercel |
 | `analyze-node` / `enrich-node` | 6,5–8 s, đo 31/10 bằng đề ngắn; prompt thật chưa đo | Phân tích node đang mở và 1–2 node kế tiếp (D-46), `ANALYZE_CONCURRENCY` song song |
 | `analyze-overview` | chưa đo, dự kiến cùng bậc | Sau khi mọi node phân tích xong |
 | `evaluate-feynman` | chưa đo, dự kiến cùng bậc | |
@@ -313,6 +317,7 @@ export type IngestionErrorCode =
 
 export interface IngestionReport {
   truncated: boolean;
+  selective_fetch: boolean;                   // `10` Mục 4A thành công (D-63)
   code_file_count: number;
   manifest_count: number;
   omitted_node_count: number;                 // Node bị bỏ vì vượt DISPLAY_MAX_NODES (D-53)

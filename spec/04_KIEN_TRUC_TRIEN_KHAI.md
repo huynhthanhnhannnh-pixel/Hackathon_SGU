@@ -136,7 +136,7 @@ sequenceDiagram
     actor U as Người học
     participant FE as Trình duyệt
     participant BE as Server (Vercel)
-    participant GH as codeload.github.com
+    participant GH as GitHub (codeload, API, raw)
     participant DB as Postgres (Supabase)
 
     U->>FE: Dán link gốc repo GitHub (hoặc kéo thả file .zip)
@@ -148,6 +148,10 @@ sequenceDiagram
         GH-->>BE: 200 OK / 302 Redirect
         BE->>GH: GET zip (Stream nén ≤ CONFIG.MAX_STREAM_BYTES)
         GH-->>BE: Binary Zip Stream vào RAM
+        opt Zip bị cắt (D-63)
+            BE->>GH: GET danh sách file, rồi GET từng file đã chọn
+            GH-->>BE: Nội dung file vào RAM
+        end
         Note over BE: Giải nén RAM (fflate) -> Tree-sitter WASM<br/>Dựng lát cắt -> Xếp hạng -> Dagre layout<br/>(Toàn bộ code nguồn nằm trong RAM, 0 token)
         BE->>DB: Upsert learning_sessions + session_snapshots (đoạn code đã cắt, D-59)
         BE-->>FE: IngestResponse (ClientStaticEngineResult + SessionProgress)
@@ -273,7 +277,7 @@ Số trong ví dụ chỉ minh họa định dạng, không phải số đo. Dò
 
 Để bảo đảm an toàn dữ liệu và tuân thủ nguyên tắc bảo mật:
 1. **Mã nguồn:** Không ghi nội dung file code, đoạn snippet, AST, lát cắt gửi AI.
-2. **Khóa bí mật:** Không ghi `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY`.
+2. **Khóa bí mật:** Không ghi `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY`, `GITHUB_TOKEN`.
 3. **Thông tin định danh & Token:** Không ghi header `Authorization`, bearer token, refresh token.
 4. **Dữ liệu bài làm của người học:** Không ghi nội dung câu trả lời `student_answer`.
 5. Dòng `guard_blocked` chỉ có các trường của `GuardLogEntry`; `node_id` giữ như Mục 9.1; không ghi thêm tên hàm, văn bản AI hoặc tên trong `GuardIssue`.
@@ -353,7 +357,7 @@ jobs:
 
 1. **Bảo vệ mã nguồn:** không ghi file code hay buffer zip xuống đĩa hay database; chỉ lưu đoạn code đã cắt của phiên ở `session_snapshots` (D-59). Buffer zip giải phóng ngay sau khi dựng xong cây cú pháp trong RAM.
 2. **Kiểm soát Truy cập Hàng (RLS):** Bật RLS trên toàn bộ bảng Postgres. Client chỉ đọc dữ liệu của chính mình qua anon token, và không được đọc trực tiếp `node_runs`, `question_attempts`, `ai_cache` (`03` Mục 3); mọi thao tác ghi bắt buộc đi qua route handler dùng `SUPABASE_SERVICE_ROLE_KEY` (API-02).
-3. **Bảo mật Bí mật:** `GEMINI_API_KEY` và `SUPABASE_SERVICE_ROLE_KEY` chỉ nằm ở biến môi trường server trên Vercel, tuyệt đối không lộ qua client bundle (không đặt tiền tố `NEXT_PUBLIC_`).
+3. **Bảo mật Bí mật:** `GEMINI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY` và `GITHUB_TOKEN` chỉ nằm ở biến môi trường server trên Vercel, tuyệt đối không lộ qua client bundle (không đặt tiền tố `NEXT_PUBLIC_`).
 4. **Điều khoản Quyền riêng tư AI (Gemini Privacy):**
    - Gói Free của Gemini API cho phép Google sử dụng dữ liệu nhập/xuất để huấn luyện mô hình.
    - Hệ thống chủ động giảm thiểu rủi ro bằng cách: (a) Che toàn bộ secret và khóa API trong code trước khi gửi; (b) Chỉ gửi các lát cắt hàm ngắn, không gửi toàn bộ repo; (c) Người tự cài đặt có thể dùng key gói Paid Tier (Cloud Billing) để được cam kết không sử dụng dữ liệu huấn luyện theo điều khoản của Google.
