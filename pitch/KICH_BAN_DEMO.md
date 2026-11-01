@@ -12,7 +12,7 @@
 | **Thời lượng** | **5 phút (giả định)** pitch + demo liền mạch, phản biện tính riêng. Thể lệ ghi khung 10g00–11g30 chung cho mọi đội; chọn bản cắt ở Mục 6 nếu thời lượng thực tế khác. |
 | **Repo demo** | Mặc định là `shop-api` (Q-03): repo mẫu nhóm tự viết theo `50` Mục 1, đẩy lên GitHub cá nhân trước giờ thi. Đây là **dữ liệu demo**, không phải code sản phẩm. Nếu chọn repo thật khác thì giữ khung kịch bản và thay tên node. Repo đó cần có 1 node gốc vừa có điểm dở vừa có 2 kỹ năng, và có 1 Capstone. |
 | **Bản đồ của `shop-api`** | N1 Đăng ký → N2 Xem hồ sơ → N4 Giỏ hàng → N5 Thanh toán ★ → N6 Gửi email, N7 Báo cáo doanh thu. N3 Danh sách sản phẩm → N5. ★ là Capstone. Node gốc là N1 và N3. Khi chạy engine thật, đồ thị engine sinh ra là chuẩn. |
-| **Tài khoản** | Dùng 1 tài khoản GitHub demo đăng nhập sẵn, reset bằng "Xóa tài khoản". Server demo bật `DEMO_MODE=true`. Không dùng tài khoản thật của thành viên (`03` Mục 6.8). |
+| **Tài khoản** | Dùng 1 tài khoản GitHub demo đăng nhập sẵn, reset bằng "Xóa tài khoản". Server demo bật `DEMO_MODE=true`. Không dùng tài khoản thật của thành viên (`03` Mục 6.7). |
 | **Mạng** | Dùng mạng di động riêng của nhóm (thể lệ khuyến khích). Wi-Fi hội trường chỉ để dự phòng. |
 | **Tên nút** | Theo [`../spec/30_UI.md`](../spec/30_UI.md): "Quét repo", "đang phân tích…", "Bắt đầu trả lời (n câu) →", "Bỏ qua câu này", "Tiếp tục học", tab X-Ray / Feynman / Tổng quan; `Ctrl+Enter` để nộp. |
 

@@ -785,7 +785,7 @@ Nếu trả lời đúng ngay lần đầu, `NEWBIE` lên 0.5767, `MID_LEVEL` l�
 3. **Bước 3: Mở một ô bài học mới:**
    - Kế hoạch câu hỏi đọc điểm suy giảm 0.4085 dù điểm gốc là 0.9500, nên câu hỏi ở bậc `NOVICE`.
 
-Tra chi tiết: spec/22_BKT_VA_KE_HOACH_CAU_HOI.md Mục 9; spec/03_API_VA_LUU_TRU.md Mục 5.4, 6.8.
+Tra chi tiết: spec/22_BKT_VA_KE_HOACH_CAU_HOI.md Mục 9; spec/03_API_VA_LUU_TRU.md Mục 5.4, 6.7.
 
 
 ---

@@ -180,7 +180,7 @@ Khóa phiên = (user_id, source, snapshot_id, subdir, engine_version)
 - `user_id`: Mã tài khoản của người học.
 - `source`: Nguồn nạp repo (`GITHUB` hoặc `ZIP`).
 - `snapshot_id`: Mã nhận diện trạng thái mã nguồn.
-  - Đối với GitHub: Đây là commit SHA dài 40 ký tự hex, được đọc trực tiếp từ phần bình luận EOCD (End of Central Directory) của gói zip tải về từ máy chủ GitHub codeload. Nếu vì lý do nào đó mà phần bình luận này không chứa SHA hợp lệ, hệ thống sẽ tính mã băm SHA-256 trên toàn bộ dữ liệu file zip nén và gắn nhãn là `ARCHIVE_HASH`, kèm cảnh báo "phiên không mở lại được" nếu thiếu dòng snapshot (`10`).
+  - Đối với GitHub: Đây là commit SHA dài 40 ký tự hex, được đọc trực tiếp từ phần bình luận EOCD (End of Central Directory) của gói zip tải về từ máy chủ GitHub codeload. Nếu vì lý do nào đó mà phần bình luận này không chứa SHA hợp lệ, hệ thống sẽ tính mã băm SHA-256 trên toàn bộ dữ liệu file zip nén và gắn nhãn là `ARCHIVE_HASH`; phiên vẫn mở lại được vì kết quả engine đã lưu trong `session_snapshots` (D-59).
   - Đối với file `.zip` do người dùng tự tải lên: `snapshot_id` là mã băm `ARCHIVE_HASH` (mã SHA-256 của toàn bộ dữ liệu file nén). Nhờ bảng `session_snapshots`, phiên `.zip` vẫn mở lại bình thường (D-59).
 - `subdir`: Đường dẫn thư mục con nếu người học chọn phân tích một dự án nằm bên trong monorepo (mặc định là chuỗi rỗng nếu học toàn bộ repo).
 - `engine_version`: Phiên bản của engine phân tích tĩnh (ví dụ `1.0.0`). Khi nhóm phát triển thay đổi luật phân tích đồ thị dẫn đến việc thay đổi cấu trúc node, phiên bản này sẽ được nâng lên.
