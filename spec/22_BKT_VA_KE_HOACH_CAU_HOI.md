@@ -1,6 +1,6 @@
 # 22 — BKT, KẾ HOẠCH CÂU HỎI & HÀM THUẦN DÙNG CHUNG
 
-> Kiểu: `02_CONTRACTS.md` (5.3, 6). Hằng số: `CONFIG.*`. Nơi gọi: `03_API_VA_LUU_TRU.md` (5, 6.1–6.6). Luồng: `01_KIEN_TRUC_VA_LUONG.md` (5.3, 6, 7).
+> Kiểu: `02_CONTRACTS.md` (5.3, 6). Hằng số: `CONFIG.*`. Nơi gọi: `03_API_VA_LUU_TRU.md` (5, 6.1–6.5). Luồng: `01_KIEN_TRUC_VA_LUONG.md` (5.3, 6, 7).
 > Code: `src/lib/bkt-engine.ts` (BKT, decay, tier, mài mòn, kết quả) và `src/lib/plan.ts` (kế hoạch, màu node) — hàm thuần, dùng chung server và client (hiển thị + Offline, D-02). `src/server/progress.ts` gọi trong transaction. Test: `src/lib/*.test.ts` theo "Test bắt buộc".
 
 ## Đọc nhanh
@@ -48,7 +48,7 @@ flowchart LR
 | `planNodeQuestions` | `enrich-node` (`03` 6.1) | Offline |
 | `outcomeOf`, `computeSkillChange` (qua `applyBkt`) | `evaluate-feynman`, `reveal` (`03` 6.2, 6.3) | Offline |
 | `revertSkillChange` | `report-wrong` (`03` 6.4) | — |
-| `nodeStatusFromRuns` | `finalizeRunIfDone`, `report-wrong` (`03` 6.4, 6.6) | Offline |
+| `nodeStatusFromRuns` | `finalizeRunIfDone`, `report-wrong` (`03` 6.4, 6.5) | Offline |
 | `getDecayedMastery`, `tierOf`, `overallTier`, `isDecaying` | `GET /api/me` | Điểm, nhãn tier, mài mòn (`03` 5.2) |
 
 ---
@@ -104,7 +104,7 @@ Mẫu số luôn > 0 vì $S, G^{*} \in (0, 1)$.
 
 - **Tiên nghiệm = điểm đã decay (BKT-13):** $p$ = `getDecayedMastery(state, now)`. Bằng chứng mới được tính trên trí nhớ thực tế tại `now`, kết quả ghi vào `p_mastery` gốc.
 - **Trường kết quả:** `p_mastery` = $p'$; `last_practiced_at` = `max(state.last_practiced_at, now)` (thiếu state ⇒ `now`); `practice_count` + 1; `correct_count` + 1 nếu outcome là `PASS_*`.
-- **1 câu xong = đúng 1 lần cập nhật cho đúng 1 kỹ năng (kỹ năng của câu):** Không cập nhật khi: lượt nộp chưa xong câu; `DROPPED`; phân tích node; đổi persona (`03` Mục 6.8). `practice_count` / `correct_count` đếm **số câu đã xong có cập nhật BKT**, không đếm lượt.
+- **1 câu xong = đúng 1 lần cập nhật cho đúng 1 kỹ năng (kỹ năng của câu):** Không cập nhật khi: lượt nộp chưa xong câu; `DROPPED`; phân tích node; đổi persona (`03` Mục 6.7). `practice_count` / `correct_count` đếm **số câu đã xong có cập nhật BKT**, không đếm lượt.
 
 ---
 
@@ -242,7 +242,7 @@ export function planNodeQuestions(analysis, skills, now, stepCount): QuestionPla
 - **`outcomeOf(isPassed, attemptsUsed)` (BKT-60):** gọi khi câu xong bằng nộp bài (`ended_by = "ANSWER"`); `attemptsUsed` = số lượt tính (kể cả regex chặn, `GIVE_UP`). `!isPassed` ⇒ `FAILED`; `attemptsUsed = 1` ⇒ `PASS_FIRST`; còn lại ⇒ `PASS_AFTER_HINT`. Bỏ qua (`ended_by = "SKIP"`) ⇒ `FAILED`.
 - **`computeSkillChange(skill, state, outcome, now)` (BKT-61):** `next = updateSkill(skill, state, outcome, now)`, `change = { skill, p_before: getDecayedMastery(state, now), p_after: next.p_mastery, outcome }`. `p_before` là **tiên nghiệm đã decay** (BKT-13).
 - **`applyBkt(tx, userId, skill, outcome, now)` (BKT-62):** (`src/server/progress.ts`, trong transaction `03` Mục 6.2 / 6.3): (1) `insert … on conflict do nothing` mặc định (BKT-03, `last_practiced_at = now`) rồi `select … for update` dòng `(user_id, skill)`; (2) `computeSkillChange`; (3) upsert `next`; (4) trả `change`. Ghi `p_before` / `p_after` vào `RunQuestion` (`03` Mục 3.1).
-- **`revertSkillChange(state, change)` (BKT-63):** Báo sai (D-22, `03` Mục 6.4): `Math.abs(state.p_mastery − change.p_after) > 1e-9` ⇒ `null`. Ngược lại `next` = state với `p_mastery = change.p_before`, `practice_count = max(0, practice_count − 1)`; giữ `last_practiced_at` và `correct_count`. Trả `{ next, change: { skill, p_before: change.p_after, p_after: change.p_before, outcome: change.outcome } }`.
+- **`revertSkillChange(state, change)` (BKT-63):** Báo sai (D-22, `03` Mục 6.4): `Math.abs(state.p_mastery − change.p_after) > CONFIG.BKT_REVERT_EPSILON` ⇒ `null`. Ngược lại `next` = state với `p_mastery = change.p_before`, `practice_count = max(0, practice_count − 1)`; giữ `last_practiced_at` và `correct_count`. Trả `{ next, change: { skill, p_before: change.p_after, p_after: change.p_before, outcome: change.outcome } }`.
 - **Offline (D-02):** chạy trên RAM, không ghi Postgres; `now = Date.now() + server_clock_offset_ms`.
 
 **Bảng sự kiện** (lượt tối đa: `CONFIG.MAX_ATTEMPTS_PER_QUESTION`):
@@ -260,7 +260,7 @@ export function planNodeQuestions(analysis, skills, now, stepCount): QuestionPla
 
 ## 8. Màu node từ kết quả câu
 
-Thời điểm ghi: `03` Mục 6.6. Hàm thuần `nodeStatusFromRuns(runs)` (chỉ xét run `LEARN` có `finished_at`):
+Thời điểm ghi: `03` Mục 6.5. Hàm thuần `nodeStatusFromRuns(runs)` (chỉ xét run `LEARN` có `finished_at`):
 
 - **Chưa có run `LEARN` xong (BKT-70):** `null` — suy ra theo `03` 5.1.
 - **Có run `LEARN` xong ∧ ≥ 1 câu `outcome = "FAILED"`, `disputed = false` (BKT-71):** `FAILED`.
@@ -270,7 +270,7 @@ Cùng hàm cho: chốt run `LEARN` và Báo sai (câu 🚩 bỏ qua ⇒ có th�
 
 ---
 
-## 9. Persona demo (`PERSONAS`, `02` Mục 6; ghi bằng `03` Mục 6.8)
+## 9. Persona demo (`PERSONAS`, `02` Mục 6; ghi bằng `03` Mục 6.7)
 
 Persona ghi 16 dòng `skill_states` với `practice_count = correct_count = 1`, phá hòa ở BKT-42 về thứ tự phân tích. Giá trị số: T-PER.
 
@@ -298,7 +298,7 @@ export function getDecayedMastery(state: CognitiveSkillState | undefined, now: n
 export function tierOf(p: number): LearnerTier;                                                                 // BKT-22
 export function overallTier(skills: SkillMap, now: number): LearnerTier;                                        // BKT-23
 export function updateSkill(skill: SWESkill, state: CognitiveSkillState | undefined,
-                            outcome: NodeOutcome, now: number): CognitiveSkillState;                            // BKT-10..14
+                            outcome: NodeOutcome, now: number): CognitiveSkillState;                            // BKT-10, BKT-13
 export function isDecaying(state: CognitiveSkillState | undefined, now: number): boolean;                       // BKT-24
 export function outcomeOf(isPassed: boolean, attemptsUsed: number): NodeOutcome;                                // BKT-60
 export function computeSkillChange(skill: SWESkill, state: CognitiveSkillState | undefined, outcome: NodeOutcome,

@@ -1,6 +1,6 @@
 # 11 — ENGINE TẦNG 1–2: CÚ PHÁP, ĐỒ THỊ GỌI HÀM, LÁT CẮT, NODE
 
-> Bản đồ `DISPLAY_MIN_NODES`–`DISPLAY_MAX_NODES` node tất định, 0 token: symbol, callgraph, lát cắt entry (D-06), cạnh (D-07), budget, tên, tọa độ.
+> Bản đồ `CONFIG.DISPLAY_MIN_NODES`–`CONFIG.DISPLAY_MAX_NODES` node tất định, 0 token: symbol, callgraph, lát cắt entry (D-06), cạnh (D-07), budget, tên, tọa độ.
 > Input: `IngestOutput` (`10` Mục 0). Output: `StaticEngineResult`; `toClientResult()` ⇒ `ClientStaticEngineResult`.
 > Code: `src/server/engine/index.ts` (`runEngine`, `buildGraph`, `toClientResult`) · `src/server/engine/graph/{registry,parser,symbols,callgraph,tarjan,pagerank,complexity,slicing,unclebob,nodes,naming,layout,whitelist,degraded}.ts` · `graph/resolvers/{ts_js,python,java,go,dart,universal}.ts` · `queries/<lang>.scm` · `public/grammars/*.wasm`.
 > Kiểu: `02_CONTRACTS.md` · Hằng số: `CONFIG.*` · Luật `ENG-xx` · Bảng mẫu entry theo framework / ngôn ngữ: `12_ENGINE_MAU_ENTRY.md`.
@@ -9,7 +9,7 @@
 
 ## Đọc nhanh
 
-- Nhận `IngestOutput`, dựng `DISPLAY_MIN_NODES`–`DISPLAY_MAX_NODES` node kiến trúc tất định, 0 token AI.
+- Nhận `IngestOutput`, dựng `CONFIG.DISPLAY_MIN_NODES`–`CONFIG.DISPLAY_MAX_NODES` node kiến trúc tất định, 0 token AI.
 - Parse AST qua Tree-sitter (TS/JS, Python đã kiểm chứng) trích xuất symbol và callgraph.
 - Tìm entry point (bảng mẫu ở `12`), cắt lát gọi hàm (Forward Slicing) và xếp hạng bằng PageRank/Cognitive Complexity.
 - Ghép node theo Display Budget (tối đa `CONFIG.DISPLAY_MAX_NODES` node), đặt tên tất định, bố cục DAG (D-07, D-08).
@@ -145,7 +145,7 @@ Mục đích: hàm entry đã đăng ký (D-06); chạy trước Mục 5. Output
 
 ## 5. Chọn chế độ — `degraded.ts`
 
-1. Sau Mục 4. `n` = số file đã parse trong scope; `|E_x|` = số cạnh đồ thị file.
+1. Sau Mục 4. `n` = số file đã parse trong scope.
 2. **ENG-51 Bảng quyết định** (dòng đầu khớp; `degraded_mode` áp cả repo):
    1. Có entry `REGISTERED`/`GENERIC` ⇒ NORMAL (`null`).
    2. `n ≤ CONFIG.PROCEDURAL_MAX_FILES` ⇒ `PROCEDURAL` (Mục 10).
@@ -180,7 +180,7 @@ Mục đích: hàm entry đã đăng ký (D-06); chạy trước Mục 5. Output
 
 3. **Mức lồng** tăng khi vào thân `if`/`else if`/`else`, `switch`, vòng lặp, `catch`, ba ngôi, hàm/lambda lồng; `try`/`finally` không tăng. Theo loại node AST, không đếm ngoặc.
 4. **VIP** = `complexity > CONFIG.VIP_COMPLEXITY_MIN`.
-5. **ENG-74 Dự phòng** (ENG-90): không VIP ⇒ tối đa `CONFIG.VIP_FALLBACK_TOP_K` hàm có `complexity ≥ CONFIG.VIP_FALLBACK_MIN_SCORE`; thiếu ⇒ `CONFIG.VIP_FALLBACK_LAST_RESORT_TOP` hàm cao nhất + warning "Repository có độ phức tạp thấp". Thứ tự: `complexity` giảm, `rank_score` file giảm, khóa tăng.
+5. **ENG-74 Dự phòng** (ENG-90): không VIP ⇒ tối đa `CONFIG.VIP_FALLBACK_TOP_K` hàm có `complexity ≥ CONFIG.VIP_FALLBACK_MIN_SCORE`; không hàm nào đủ ngưỡng ⇒ không sinh node thuật toán (D-54, D-61). Thứ tự: `complexity` giảm, `rank_score` file giảm, khóa tăng.
 
 ---
 
@@ -217,12 +217,11 @@ export function buildSlice(entry: EntryPoint, ctx: EngineContext): Candidate;
 
 ---
 
-## 10. Chế độ suy biến — `degraded.ts`
+## 10. Chế độ suy biến `PROCEDURAL` — `degraded.ts`
 
-**10.1 `PROCEDURAL`**
 1. **P1.** Entry giả = mọi hàm (cả `<module>`) có ≥ 1 câu lệnh trong file scope ⇒ Mục 8 (không binding) ⇒ gộp ENG-110 ⇒ cạnh ENG-112.
 2. **P2.** Chạy khi P1 có `< CONFIG.FUNCTION_GRAPH_MIN_NODES` candidate, 0 cạnh, hoặc hàm dài nhất `> CONFIG.LONG_FUNCTION_LINES` dòng. `M` = hàm nhiều dòng nhất (hòa ⇒ khóa nhỏ). Câu lệnh cấp 1 của `M` nhận nhãn: `DATA` (`DATA_SINK`) · `VALIDATE` (guard clause, `assert`, `.parse(`/`.validate(`) · `INPUT` (đọc `req.body|params|query`, `request.json|args`, `input(`, `sys.argv`, `process.argv`, `parse_args(`, `Scanner`) · còn lại `COMPUTE_OUTPUT`. Mỗi nhãn có lệnh ⇒ 1 node ảo; < 2 nhãn ⇒ bỏ P2. Kết quả = node ảo của `M` + candidate P1 không chứa `M`.
-3. **ENG-102 Node ảo.** `id = vnode-<hash6(file_path + "#" + NHÃN)>`; 1 bước, layer `INPUT`⇒`ENTRY_POINT`, `VALIDATE`⇒`MIDDLEWARE`, `COMPUTE_OUTPUT`⇒`BUSINESS_LOGIC`, `DATA`⇒`DATA_ACCESS`; snippet = chữ ký + lệnh nhãn (ENG-86, ENG-87 mốc = câu đầu nhãn); `entry_symbol = null`; `functions = []`; `ARCHITECTURAL_DATA_FLOW`; `cognitive_complexity` = tổng điểm ENG-71; `rank_score` = của file. Cạnh: chuỗi theo dòng đầu mỗi nhãn, `RESOLVED` (ngoại lệ D-07 vì cùng `M`). Node ảo là chặng code thật của `M`, không phải node gom nhóm.
+3. **ENG-102 Node ảo.** `id = vnode-<hash6(file_path + "#" + NHÃN)>`; 1 bước, layer `INPUT`⇒`ENTRY_POINT`, `VALIDATE`⇒`MIDDLEWARE`, `COMPUTE_OUTPUT`⇒`BUSINESS_LOGIC`, `DATA`⇒`DATA_ACCESS`; snippet = chữ ký + lệnh nhãn (ENG-86, ENG-87 mốc = câu đầu nhãn); `entry_symbol = null`; `functions = []`; `ARCHITECTURAL_DATA_FLOW`; `is_vip_algorithm = false`; `cognitive_complexity` = tổng điểm ENG-71; `rank_score` = của file. Cạnh: chuỗi theo dòng đầu mỗi nhãn, `RESOLVED` (ngoại lệ D-07 vì cùng `M`). Node ảo là chặng code thật của `M`, không phải node gom nhóm.
 
 ---
 
@@ -323,3 +322,5 @@ export function mainPath(graph: StaticEngineResult): string[];   // → RepoOver
 | T-ENG-36 | 25 candidate | Giữ 20 (= CONFIG.DISPLAY_MAX_NODES), omitted_node_count = 5, warning "5 luồng khác không hiển thị trên bản đồ" |
 | T-ENG-37 | Gốc A (A→B→C→D), gốc E (E→D), gốc F lẻ | A, E, F cùng `position.y` nhỏ nhất; không có `__start__` |
 | T-ENG-38 | Lát cắt gọi VIP `calcShipping` ở hop > `SLICE_MAX_HOPS` · VIP chỉ là callback `sort(cmp)` · không ai gọi | Có cạnh theo D-07 · đứng riêng · đứng riêng |
+| T-ENG-39 | Repo Expo Router có `app/(tabs)/index.tsx` có `export default`, không có route server | File màn hình được nhận là entry `REGISTERED` (SCREEN), có node bắt đầu từ màn hình đó, archetype `MOBILE_APP` |
+| T-ENG-40 | Repo Python > `CONFIG.PROCEDURAL_MAX_FILES` file, không framework, chỉ `cli.py` có `if __name__ == "__main__":` gọi hàm ở file khác | Entry `PROGRAM` (D-58, `12` Mục 2), chế độ NORMAL, có node bắt đầu từ khối `__main__` |

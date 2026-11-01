@@ -118,7 +118,7 @@ flowchart TD
 | **API Routers** | Nhận HTTP request, kiểm token Bearer, bắt lỗi map về `ApiError` | `IngestRequest`, `AnalyzeNodeRequest`, `EnrichNodeRequest`, `EvaluateFeynmanRequest`... | `IngestResponse`, `AnalyzeNodeResponse`, `EnrichNodeResponse`, `EvaluateFeynmanResponse`... | Không lưu | `spec/03` §2 |
 | **Ingest Engine** | Tải zip, lọc file rác, phân tích cú pháp Tree-sitter, dựng lát cắt nghiệp vụ | URL repo hoặc Buffer zip trong RAM | `StaticEngineResult` | RAM server (`CONFIG.INGESTION_CACHE_TTL_MS`, không được dựa vào) | `spec/10`, `spec/11` |
 | **AI Client** | Gọi Gemini API theo schema cấu trúc cố định, xử lý thử lại khi lỗi 429/503 | Prompt text + Context lát cắt code | `NodeAnalysisRaw`, `RepoOverviewRaw`, `GeneratedQuestionRaw`, `GradingRaw` | Không lưu | `spec/20` |
-| **Cổng gác AI** | Kiểm tra bằng chứng, chốt tên symbol, quét từ cấm, regex câu lệnh | Dữ liệu raw từ AI / Người học | `NodeAnalysis`, `RepoOverviewView`, `QuestionPlanItem` | Không lưu | `spec/21` |
+| **Cổng gác AI** | Kiểm tra bằng chứng, chốt tên symbol, quét từ cấm, regex câu lệnh | Dữ liệu raw từ AI / Người học | `NodeAnalysis`, `RepoOverviewRaw`, `GeneratedQuestionRaw` | Không lưu | `spec/21` |
 | **BKT & Planning** | Tính xác suất thạo kỹ năng, suy hao trí nhớ, lập kế hoạch câu hỏi | `LearnerCognitiveProfile`, `NodeAnalysis` | `QuestionPlanItem[]`, `SkillChange` | Postgres (`skill_states`) | `spec/22` |
 | **Storage** | Quản lý phiên, lưu câu hỏi + đáp án mẫu + ý bắt buộc của run, transaction chấm điểm (D-36, D-40) | `EvaluateFeynmanRequest`, `RevealRequest` | `SessionProgress`, `NodeStateView` | Postgres (`learning_sessions`, `node_runs`, `node_progress`) | `spec/03` §3, §6 |
 
@@ -311,9 +311,9 @@ Phân cấp ghi log tương ứng với mã lỗi định nghĩa tại [`02_CONT
 
 ### 12.1. Phân định Môi trường
 
-- **Môi trường Phát triển (Local Dev):** Chạy `next dev`, kết nối với project Supabase staging/dev, file cấu hình `.env.local`. Bật cờ `DEMO_MODE="true"` để kiểm thử persona.
+- **Môi trường Phát triển (Local Dev):** Chạy `next dev`, kết nối với project Supabase staging/dev, file cấu hình `.env.local`. Bật cờ `DEMO_MODE="true"` (và `NEXT_PUBLIC_DEMO_MODE` cùng giá trị, `03` Mục 8) để kiểm thử persona.
 - **Kiểm tra PR:** CI và chạy local. Không dựa vào bản preview của Vercel (D-30).
-- **Production (Vercel, `main`):** Biến môi trường khai trong Vercel Project Settings theo [`03_API_VA_LUU_TRU.md`](03_API_VA_LUU_TRU.md) §8. Cờ `DEMO_MODE="false"` (chỉ bật `"true"` trên môi trường thi demo).
+- **Production (Vercel, `main`):** Biến môi trường khai trong Vercel Project Settings theo [`03_API_VA_LUU_TRU.md`](03_API_VA_LUU_TRU.md) §8. Cờ `DEMO_MODE="false"` (và `NEXT_PUBLIC_DEMO_MODE` cùng giá trị, `03` Mục 8) (chỉ bật `"true"` trên môi trường thi demo).
 
 ### 12.2. Quy trình CI qua GitHub Actions
 
@@ -393,7 +393,7 @@ Bản thi phục vụ mục tiêu thử thách 21 giờ. Bảng dưới đây ch
     │   ├── auth/callback/route.ts                     # Supabase OAuth callback (D-44)
     │   └── api/
     │       ├── me/route.ts                      # GET, DELETE
-    │       ├── sessions/route.ts · sessions/[id]/history/route.ts · sessions/[id]/progress/route.ts
+    │       ├── sessions/route.ts · sessions/[id]/history/route.ts · sessions/[id]/progress/route.ts  # [id] = session_id
     │       ├── ingest/route.ts · analyze-node/route.ts · analyze-overview/route.ts
     │       ├── enrich-node/route.ts · evaluate-feynman/route.ts · reveal/route.ts
     │       ├── report-wrong/route.ts · demo/persona/route.ts
@@ -435,4 +435,7 @@ Chốt **phiên bản chính xác ở giờ H+0** bằng lệnh cài đặt, ghi
 | `vitest` | 2.x hoặc 3.x | Test hàm thuần (`50`) |
 
 **Nguồn grammar `.wasm`** (`public/grammars/`, tên file theo `LanguageAdapter.wasm_grammar`): ưu tiên `.wasm` phát hành sẵn của grammar chính thức (`tree-sitter-typescript`, `tree-sitter-python`, …) hoặc gói npm `tree-sitter-wasms`; không có ⇒ tự build bằng `npx tree-sitter build --wasm` (cần Emscripten hoặc Docker). Mọi grammar phải cùng ABI với bản `web-tree-sitter` đã pin.
-> ⚠️ **Phải kiểm chứng ở H+1:** nạp được grammar TS/JS + Python bằng `initParsers()` (`11` ENG-11). **Fallback (D-32):** lệch ABI ⇒ đổi bản `web-tree-sitter` trong `package.json` cho khớp với grammar `.wasm` đã có sẵn, không tự build lại grammar.
+
+**Nạp grammar trên Vercel (D-61):** engine chỉ chạy trong `POST /api/ingest` (mở lại phiên đọc `session_snapshots`, không parse lại). File trong `public/` không tự đóng gói vào hàm server ⇒ `next.config.ts` khai báo `outputFileTracingIncludes: { "/api/ingest": ["./public/grammars/*.wasm", "./node_modules/web-tree-sitter/*.wasm"] }`; route `ingest` đặt `export const runtime = "nodejs"`; `Parser.init({ locateFile })` trỏ tới `tree-sitter.wasm` trong `node_modules/web-tree-sitter/`; grammar nạp bằng `Language.load(await fs.readFile(path.join(process.cwd(), "public/grammars", adapter.wasm_grammar)))`.
+
+> ⚠️ **Phải kiểm chứng ở H+1:** nạp được grammar TS/JS + Python bằng `initParsers()` (`11` ENG-11). Kiểm cả trên bản preview Vercel: ingest repo demo thành công (chạy được ở máy local chưa đủ). **Fallback (D-32):** lệch ABI ⇒ đổi bản `web-tree-sitter` trong `package.json` cho khớp với grammar `.wasm` đã có sẵn, không tự build lại grammar.

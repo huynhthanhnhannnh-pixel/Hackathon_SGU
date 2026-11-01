@@ -33,9 +33,9 @@ flowchart LR
 | 6.2 | `evaluate-feynman`: kiểm ⇒ chấm ⇒ khóa ⇒ ghi | `src/server/evaluate.ts` (`evaluateFeynman`) |
 | 6.3 | `reveal`: bỏ qua câu | `src/server/reveal.ts` |
 | 6.4 | `report-wrong`: báo sai | `src/server/report.ts` |
-| 6.6 | `finalizeRunIfDone`: đổi màu node khi run xong | `src/server/progress.ts` |
-| 6.7 | `analyze-node`, `analyze-overview`, `ingest` | `src/app/api/**/route.ts` |
-| 6.8 | `demo/persona` | `src/server/persona.ts` |
+| 6.5 | `finalizeRunIfDone`: đổi màu node khi run xong | `src/server/progress.ts` |
+| 6.6 | `analyze-node`, `analyze-overview`, `ingest` | `src/app/api/**/route.ts` |
+| 6.7 | `demo/persona` | `src/server/persona.ts` |
 | 7 | Sự cố và tình huống biên | — |
 | 8 | Biến môi trường server | — |
 
@@ -61,8 +61,8 @@ flowchart LR
 | 1 | `GET /api/me` | — → `MeResponse` | Tạo `profiles` nếu chưa có | — | — |
 | 2 | `DELETE /api/me` | — → 204 | Xóa `auth.users` ⇒ cascade mọi bảng | — | — |
 | 3 | `GET /api/sessions` | — → `SessionsResponse` | — | — | — |
-| 4 | `GET /api/sessions/{id}/history` | — → `HistoryResponse` | — | — | — |
-| 5 | `POST /api/ingest` | `IngestRequest` → `IngestResponse` | Tạo / mở `learning_sessions` (Mục 6.7) | — | Mọi `IngestionErrorCode`, `ERR_SESSION_ENGINE_OUTDATED` |
+| 4 | `GET /api/sessions/{session_id}/history` | — → `HistoryResponse` | — | — | — |
+| 5 | `POST /api/ingest` | `IngestRequest` → `IngestResponse` | Tạo / mở `learning_sessions` (Mục 6.6) | — | Mọi `IngestionErrorCode`, `ERR_SESSION_ENGINE_OUTDATED` |
 | 6 | `POST /api/analyze-node` | `AnalyzeNodeRequest` → `AnalyzeNodeResponse` | `ai_cache`, `node_progress.analysis_failed`, `tokens_used` | ✅ | `ERR_TOKEN_QUOTA_EXCEEDED` |
 | 7 | `POST /api/analyze-overview` | `AnalyzeOverviewRequest` → `AnalyzeOverviewResponse` | `ai_cache`, `tokens_used` | ✅ | `ERR_OVERVIEW_NOT_READY`, `ERR_TOKEN_QUOTA_EXCEEDED` |
 | 8 | `POST /api/enrich-node` | `EnrichNodeRequest` → `EnrichNodeResponse` | `node_runs` (tạo run), `tokens_used`, `last_active_at` | ✅ | `ERR_NODE_NOT_AVAILABLE`, `ERR_ANALYSIS_NOT_READY`, `ERR_AI_REJECTED`, `ERR_AI_UNAVAILABLE`, `ERR_TOKEN_QUOTA_EXCEEDED` |
@@ -70,7 +70,7 @@ flowchart LR
 | 10 | `POST /api/reveal` | `RevealRequest` → `RevealResponse` | Transaction Mục 6.3 | — | `ERR_QUESTION_FINISHED` |
 | 11 | `POST /api/report-wrong` | `ReportWrongRequest` → `ReportWrongResponse` | Mục 6.4 | — | `ERR_REPORT_NOT_ALLOWED` |
 | 12 | `POST /api/demo/persona` | `PersonaRequest` → `PersonaResponse` | Ghi đè 16 dòng `skill_states` của **tài khoản hiện tại** | — | `ERR_DEMO_MODE_DISABLED` |
-| 13 | `GET /api/sessions/{id}/progress` | — → `ProgressResponse` | — (chỉ đọc DB, không engine, không AI) | — | — |
+| 13 | `GET /api/sessions/{session_id}/progress` | — → `ProgressResponse` | — (chỉ đọc DB, không engine, không AI) | — | — |
 
 ### Lỗi chung
 
@@ -219,18 +219,7 @@ create table dispute_reports (                         -- Nút "Báo sai" (D-22)
 
 ### 3.1. `node_runs.questions` (jsonb) — kiểu `RunQuestion`
 
-```typescript
-interface RunQuestion extends QuestionPlanItem, Omit<GeneratedQuestionRaw, "skill"> {  // 02 Mục 5.3 — câu hỏi + reference_answer + must_have_points + fix (D-36)
-  attempts_used: number;
-  finished: boolean;
-  outcome: NodeOutcome | null;
-  ended_by: "ANSWER" | "SKIP" | "DROPPED" | null;
-  disputed: boolean;
-  p_before: number | null;           // Điểm kỹ năng trước / sau lần cập nhật BKT của câu này (cho D-22)
-  p_after: number | null;
-  last_answer: string | null;        // Kiểm trùng ở server
-}
-```
+Kiểu `RunQuestion`: `02` Mục 7 (D-61). Cột chứa câu hỏi + đáp án nên client không đọc (Mục 3.2).
 
 ### 3.2. Bảo mật hàng (RLS)
 
@@ -252,7 +241,7 @@ Câu hỏi không cache: mỗi run sinh mới và lưu trong `node_runs`; chấm
 ## 4. Định danh phiên & cache RAM
 
 - **Khóa phiên:** `(user_id, source, snapshot_id, subdir, engine_version)`; trùng khóa ⇒ mở phiên có `last_active_at` mới nhất.
-  - GitHub: `snapshot_id` = commit SHA 40 hex đọc từ comment EOCD của zip codeload (`10` Mục snapshot). Comment không khớp `/^[0-9a-f]{40}$/` ⇒ `ARCHIVE_HASH` = SHA-256 của **toàn bộ** buffer zip, kèm cảnh báo "phiên không mở lại được" (`10`).
+  - GitHub: `snapshot_id` = commit SHA 40 hex đọc từ comment EOCD của zip codeload (`10` Mục snapshot). Comment không khớp `/^[0-9a-f]{40}$/` ⇒ `ARCHIVE_HASH` = SHA-256 của **toàn bộ** buffer zip; phiên vẫn mở lại được từ `session_snapshots` (D-59).
   - Upload `.zip`: `ARCHIVE_HASH` = SHA-256 của buffer.
 - **Phiên gắn snapshot (D-39, D-59):** phiên luôn dùng `StaticEngineResult` đã lưu lúc tạo; không chạy lại engine, không tải lại zip. Repo có commit mới ⇒ dán link ra SHA mới ⇒ bản đồ và phiên mới.
 - **Cache RAM `StaticEngineResult`** (API-08): LRU `CONFIG.INGESTION_CACHE_MAX_ENTRIES`, TTL `CONFIG.INGESTION_CACHE_TTL_MS`, hai tầng:
@@ -271,7 +260,7 @@ Câu hỏi không cache: mỗi run sinh mới và lưu trong `node_runs`; chấm
 
 ## 5. Suy ra trạng thái (hàm thuần, dùng chung client và server)
 
-### 5.1. `deriveNodeStates(skeleton, progressRows): Record<node_id, NodeStateView-lite>`
+### 5.1. `deriveNodeStates(skeleton, progressRows): Record<node_id, Pick<NodeStateView, "node_id" | "status" | "has_warning" | "analysis_failed">>`
 
 Duyệt các node theo thứ tự tô-pô (hòa ⇒ `node_id` tăng dần):
 1. Dòng `node_progress` có `status` ≠ null ⇒ dùng `status` đó.
@@ -287,11 +276,11 @@ Không đổi trạng thái node, không có nút ôn. Client tính từ `profil
 
 ### 5.3. Kế hoạch câu hỏi không bao giờ rỗng (D-34)
 
-Không có node miễn thi. Mọi kỹ năng của node đã thạo ⇒ `planNodeQuestions` vẫn trả 1 câu cho kỹ năng có điểm thấp nhất của node (`22`). Node chỉ `COMPLETED` / `FAILED` khi run `LEARN` xong (Mục 6.6).
+Không có node miễn thi. Mọi kỹ năng của node đã thạo ⇒ `planNodeQuestions` vẫn trả 1 câu cho kỹ năng có điểm thấp nhất của node (`22`). Node chỉ `COMPLETED` / `FAILED` khi run `LEARN` xong (Mục 6.5).
 
 ### 5.4. Đổi persona
 
-Chỉ ghi `skill_states` (Mục 6.8); UI gọi lại `GET /api/me`. Trạng thái node không đổi.
+Chỉ ghi `skill_states` (Mục 6.7); UI gọi lại `GET /api/me`. Trạng thái node không đổi.
 
 ---
 
@@ -381,7 +370,7 @@ async function evaluateFeynman(req: EvaluateFeynmanRequest, userId: string): Pro
       q2.p_before = skillChange.p_before; q2.p_after = skillChange.p_after;
     }
     await tx.saveRunQuestions(run2);                                     // 4.4
-    const unlocked = await finalizeRunIfDone(tx, run2, now);             // 4.5: Mục 6.6
+    const unlocked = await finalizeRunIfDone(tx, run2, now);             // 4.5: Mục 6.5
     return toEvaluateResponse(req, grading, isPassed, followUp, q2, skillChange, unlocked, await tx.loadNodeState(run2));
   }));
 }
@@ -403,16 +392,16 @@ Quy tắc mở đáp án: `question.reveal` chỉ có khi câu `finished` (đạ
 
 1. Khóa run. Câu phải có `outcome = FAILED`, `ended_by = ANSWER`, `disputed = false`; ngược lại `ERR_REPORT_NOT_ALLOWED`.
 2. Đặt `disputed = true`.
-3. Nếu `skill_states.p_mastery` của kỹ năng đúng bằng `p_after` (sai số 1e-9): đặt lại `p_mastery = p_before` (`p_before` là điểm **đã decay** dùng làm tiên nghiệm lúc cập nhật), `practice_count -= 1`, giữ nguyên `last_practiced_at` và `correct_count` (`revertSkillChange`, `22`).
+3. Nếu `skill_states.p_mastery` của kỹ năng đúng bằng `p_after` (sai số `CONFIG.BKT_REVERT_EPSILON`): đặt lại `p_mastery = p_before` (`p_before` là điểm **đã decay** dùng làm tiên nghiệm lúc cập nhật), `practice_count -= 1`, giữ nguyên `last_practiced_at` và `correct_count` (`revertSkillChange`, `22`).
 4. Insert `dispute_reports`.
-5. Tính lại màu node (Mục 6.6, câu `disputed` bị bỏ qua).
+5. Tính lại màu node (Mục 6.5, câu `disputed` bị bỏ qua).
 6. Trả `ReportWrongResponse`.
 
-### 6.6. `finalizeRunIfDone(tx, run, now)`
+### 6.5. `finalizeRunIfDone(tx, run, now)`
 
 Run xong khi mọi câu `finished`. Câu `DROPPED` và câu `disputed` không tính khi xét màu: có câu `FAILED` ⇒ node `FAILED`; ngược lại `COMPLETED`. Sau đó đặt `finished_at`, upsert `node_progress`, trả `unlocked_node_ids` (node vừa từ `LOCKED` sang `AVAILABLE`).
 
-### 6.7. `analyze-node` / `analyze-overview` / `ingest`
+### 6.6. `analyze-node` / `analyze-overview` / `ingest`
 
 - **`analyze-node`:** phiên hợp lệ ⇒ dựng khung ⇒ trúng `ai_cache` ⇒ trả ngay. Trượt ⇒ kiểm quota ⇒ gọi AI qua in-flight map ⇒ kiểm theo `21`.
   - Kỹ năng còn lại sau kiểm = 0 sau thử lại ⇒ `analysis_failed = true`, không cache.
@@ -428,7 +417,7 @@ Run xong khi mọi câu `finished`. Câu `DROPPED` và câu `disputed` không t�
   - `{ session_id, restart: true }` — "Học lại từ đầu" (D-42): tạo phiên mới cùng snapshot + `graph_skeleton` + chép `session_snapshots.result`; `node_progress` trống; `skill_states` giữ nguyên; câu hỏi sinh mới khi `enrich-node`.
   - Trả `analyses` có sẵn trong cache.
 
-### 6.8. `demo/persona`
+### 6.7. `demo/persona`
 
 - `process.env[CONFIG.DEMO_MODE_ENV] !== "true"` ⇒ `ERR_DEMO_MODE_DISABLED`.
 - Ngược lại upsert đủ 16 dòng `skill_states`: `p_mastery = PERSONAS[mode].initial_p_mastery`, `last_practiced_at = now − days_idle · CONFIG.MS_PER_DAY`, `practice_count = 1`, `correct_count = 1`.

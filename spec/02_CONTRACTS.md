@@ -9,6 +9,7 @@
 - Bảng tra: `CONFIG` (Mục 1) cho con số; kiểu (Mục 2–7, 10) cho hàm / component; request / response (Mục 8) và mã lỗi (Mục 9) cho route.
 - Đổi con số ⇒ sửa `CONFIG`, không sửa ở nơi dùng. Số ở Mục 1.1 là mục tiêu / ước lượng, chưa đo.
 - Nhãn 5.1–5.4 là chú thích trong khối code của Mục 5, không phải tiêu đề.
+- Kiểu ghi `// nội bộ` chỉ dùng trong 1 file spec được để tại file đó; kiểu đi qua API, ghi DB hoặc dùng ở ≥ 2 file spec nằm ở đây (D-61).
 
 | Mục | Nhóm kiểu / nội dung | File spec dùng nhiều nhất |
 | :-: | :-- | :-- |
@@ -18,7 +19,7 @@
 | 4 | Kiểu nội bộ Engine: `LanguageAdapter`, `SymbolDefinition` | `10`, `11` |
 | 5 | AI: `NodeAnalysis` (5.1), `RepoOverviewRaw` (5.2), `QuestionPlanItem` (5.3), `GradingRaw` (5.4) | `20`, `22`, `21` |
 | 6 | Người học, BKT, tiến độ: `QuestionState`, `NodeStateView`, `PERSONAS` | `22`, `30`, `03` |
-| 7 | Lưu trữ: `GraphSkeletonNode`, `RunStepRef` | `03`, `30` |
+| 7 | Lưu trữ: `GraphSkeletonNode`, `RunStepRef`, `RunQuestion`, `SessionRow` | `03`, `30` |
 | 8 | API: request / response từng endpoint | `03`, `30` |
 | 9 | Lỗi: `ErrorCode`, `ApiError`, bảng mã HTTP | `03`, `30`, `20` |
 | 10 | Trình duyệt và Offline: `ClientWorkbenchState`, `OfflineMockBundle` | `30`, `21` |
@@ -72,7 +73,7 @@ export const CONFIG = {
   BARREL_MAX_DEPTH: 5,
   GIANT_SCC_RATIO: 0.40,
   GIANT_SCC_MAX_WEAK_EDGE_REMOVALS: 3,
-  PROCEDURAL_MAX_FILES: 2,            // |E| = 0 và n ≤ 2 file ⇒ PROCEDURAL
+  PROCEDURAL_MAX_FILES: 2,            // Không có entry REGISTERED/GENERIC và n ≤ 2 file ⇒ PROCEDURAL (D-54)
   FUNCTION_GRAPH_MIN_NODES: 3,
   LONG_FUNCTION_LINES: 300,
   PAGERANK_DAMPING: 0.85,
@@ -82,7 +83,6 @@ export const CONFIG = {
   VIP_COMPLEXITY_MIN: 15,             // Độ phức tạp > ngưỡng ⇒ VIP
   VIP_FALLBACK_TOP_K: 6,
   VIP_FALLBACK_MIN_SCORE: 5,
-  VIP_FALLBACK_LAST_RESORT_TOP: 3,
   SLICE_MAX_HOPS: 4,                  // Số bước nhảy hàm tối đa từ entry (D-06)
   STEP_MAX_LINES: 30,
   NODE_MAX_LINES: 100,
@@ -147,6 +147,7 @@ export const CONFIG = {
   BKT_P_S: 0.12,
   BKT_P_MIN: 0.01,
   BKT_P_MAX: 0.99,
+  BKT_REVERT_EPSILON: 1e-9,          // Sai số so p_mastery với p_after khi Báo sai (D-22)
   DECAY_HALF_LIFE_DAYS: 14,
   DECAY_FLOOR: 0.25,                  // = BKT_P_L0
   TIER_PRACTITIONER_MIN: 0.45,
@@ -292,7 +293,7 @@ export interface HybridArchitecturalNode {
   is_capstone: boolean;                // Đúng 1 node / đồ thị (D-12)
   uncle_bob: UncleBobMetrics;
   trace_steps: ExecutionTraceStep[];   // Tổng dòng snippet ≤ CONFIG.NODE_MAX_LINES
-  dto_snippet: string;                 // Khai báo kiểu dữ liệu mà các step dùng (≤ 30 dòng), "" nếu không có
+  dto_snippet: string;                 // Khai báo kiểu dữ liệu mà các step dùng (≤ CONFIG.STEP_MAX_LINES dòng), "" nếu không có
 }
 
 export interface GraphEdge {
@@ -360,11 +361,11 @@ export type ClientStaticEngineResult =
 export interface LanguageAdapter {
   id: LanguageId;
   extensions: string[];               // ".ts", ".py"...
-  wasm_grammar: string;               // Đường dẫn file .wasm trong bundle
+  wasm_grammar: string;               // Tên file .wasm trong public/grammars/, đóng gói vào route ingest (`04` Mục 16)
   query_file: string;                 // Đường dẫn .scm (định nghĩa, lời gọi, import)
   manifest_files: string[];           // "package.json", "requirements.txt"...
   import_resolver?: "TS_JS" | "PYTHON" | "JAVA" | "GO" | "DART"; // Có ⇒ tier RESOLVED
-  ingress_patterns?: string[];        // Tên mẫu ingress trên AST (11 Mục Ingress)
+  ingress_patterns?: string[];        // Tên mẫu ingress trên AST (11 Mục 4, bảng ở 12 Mục 1)
   abstraction_kinds?: string[];       // Loại node AST tính là trừu tượng (Uncle Bob)
   comment_prefix: string;             // "//" hoặc "#" — dùng cho marker lược dòng
 }
@@ -476,7 +477,7 @@ export interface QuestionPromptPayload {  // Gói gửi AI — CHỈ SERVER
   micro_trace: { scoped_code_snippet: string; dto_interfaces: string };
   node_analysis: Pick<NodeAnalysis, "steps" | "strengths" | "architecture" | "weak_points">;
   invariants: {
-    questions_plan: Array<Pick<QuestionPlanItem, "skill" | "tier" | "focus">>;
+    questions_plan: Array<Pick<QuestionPlanItem, "skill" | "tier" | "focus" | "step_indices">>;
     forbidden_external_keywords: string[];
   };
 }
@@ -580,12 +581,13 @@ export interface NodeStateView {         // 1 node trong 1 phiên
 export interface SessionProgress {
   session_id: string;
   nodes: Record<string, NodeStateView>;
-  token_used: number;                   // So với CONFIG.SESSION_TOKEN_QUOTA
+  tokens_used: number;                  // So với CONFIG.SESSION_TOKEN_QUOTA
 }
 
 export interface SkillChange { skill: SWESkill; p_before: number; p_after: number; outcome: NodeOutcome }
 
 export type PersonaMode = "NEWBIE" | "MID_LEVEL" | "SENIOR_RUSTY";
+// Dữ liệu mẫu demo (fixture), không phải tham số — không đưa vào CONFIG
 export const PERSONAS: Record<PersonaMode, { initial_p_mastery: number; days_idle: number; label: string }> = {
   NEWBIE:        { initial_p_mastery: 0.25, days_idle: 0,  label: "Sinh viên năm 2" },
   MID_LEVEL:     { initial_p_mastery: 0.65, days_idle: 0,  label: "Mid-level dev" },
@@ -620,7 +622,7 @@ export interface LearningSessionSummary {
 }
 
 export interface RunStepRef {             // node_runs.steps — chỉ tên, KHÔNG có code (D-36)
-  step_index: number;
+  step_index: number;                     // = ExecutionTraceStep.step_number
   layer: ArchitecturalLayer;
   file_path: string;
   function_name: string;
@@ -639,6 +641,26 @@ export interface AttemptHistoryItem {
   student_answer: string;
   created_at: number;
 }
+
+export interface RunQuestion extends QuestionPlanItem, Omit<GeneratedQuestionRaw, "skill"> {  // node_runs.questions (`03` Mục 3.1); câu hỏi + reference_answer + must_have_points + fix (D-36); CHỈ SERVER
+  attempts_used: number;
+  finished: boolean;
+  outcome: NodeOutcome | null;
+  ended_by: "ANSWER" | "SKIP" | "DROPPED" | null;
+  disputed: boolean;
+  p_before: number | null;           // Điểm kỹ năng trước / sau lần cập nhật BKT của câu này (cho D-22)
+  p_after: number | null;
+  last_answer: string | null;        // Kiểm trùng ở server
+}
+
+export interface SessionRow {            // 1 dòng learning_sessions (`03` Mục 3); CHỈ SERVER
+  id: string;
+  user_id: string;
+  engine_version: string;
+  tokens_used: number;
+}
+
+export type DbTx = unknown;              // CHỈ SERVER; handle transaction của tầng lưu trữ, thao tác ở `03` Mục 4, 6
 ```
 
 ---
@@ -682,12 +704,12 @@ export interface AnalyzeNodeResponse {
   analysis: NodeAnalysisView | null;     // null ⇒ phân tích lỗi (analysis_failed = true)
   node_state: NodeStateView;
   unlocked_node_ids: string[];           // Node con mở nhờ analysis_failed (D-03)
-  token_used: number;
+  tokens_used: number;
 }
 
 // POST /api/analyze-overview
 export interface AnalyzeOverviewRequest { session_id: string }
-export interface AnalyzeOverviewResponse { overview: RepoOverviewView; token_used: number }
+export interface AnalyzeOverviewResponse { overview: RepoOverviewView; tokens_used: number }
 
 // POST /api/enrich-node
 export interface EnrichNodeRequest { session_id: string; node_id: string; mode: RunMode }
@@ -705,7 +727,7 @@ export interface EnrichNodeResponse {
   mode: RunMode;
   questions: QuestionView[];             // Run đang dở ⇒ trả lại đúng run đó
   node_state: NodeStateView;
-  token_used: number;
+  tokens_used: number;
 }
 
 // POST /api/evaluate-feynman — server đọc câu hỏi + đáp án từ DB theo (run_id, question_index) (D-36)
@@ -732,7 +754,7 @@ export interface EvaluateFeynmanResponse {
   skill_change: SkillChange | null;      // Có khi câu vừa xong và BKT được cập nhật
   node_state: NodeStateView;
   unlocked_node_ids: string[];
-  token_used: number;
+  tokens_used: number;
 }
 
 // POST /api/reveal — nút "Bỏ qua câu này"

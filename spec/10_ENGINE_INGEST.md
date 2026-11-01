@@ -36,7 +36,6 @@ flowchart TB
 
 ---
 
-
 ## 0. Luồng, kiểu nội bộ, luật chung
 
 Thứ tự: `GITHUB_URL` ⇒ Mục 1–4; `GITHUB_COMMIT` / `ZIP_UPLOAD` ⇒ Mục 4; sau đó 5 → 13.
@@ -70,7 +69,7 @@ export async function runIngest(src: IngestSource, signal: AbortSignal): Promise
 
 - **Zero-Disk (ING-01):** Buffer zip, file, manifest chỉ ở RAM, không ghi file tạm. `finally`: hủy timer, stream, bỏ tham chiếu buffer.
 - **Tất định (ING-02):** Duyệt path đã sort (`Array.prototype.sort`); Map chèn path tăng dần; không dùng thời gian thực/ngẫu nhiên. Cùng buffer + `IngestSource` ⇒ cùng `IngestOutput`.
-- **`ingest_ms` (ING-03):** = `performance.now()` cuối Mục 13 − lúc `runIngest` bắt đầu (sau `CONFIG.MAX_CONCURRENT_INGESTIONS`, `03` §6.7), làm tròn ms. Chỉ hiển thị.
+- **`ingest_ms` (ING-03):** = `performance.now()` cuối Mục 13 − lúc `runIngest` bắt đầu (sau `CONFIG.MAX_CONCURRENT_INGESTIONS`, `03` §6.6), làm tròn ms. Chỉ hiển thị.
 - **Cache (ING-04):** `GITHUB_URL`: tra alias `owner/repo` + `subdir_override` của link đã chuẩn hóa (`03` §4); trúng ⇒ trả cache, bỏ Mục 2–13. Cache RAM chỉ để nhanh, không được dựa vào (D-27).
 
 ---
@@ -137,7 +136,7 @@ export async function receiveUpload(body: ReadableStream<Uint8Array>, contentTyp
 1. **ING-40 Timer.** Mỗi lần thử có 1 `AbortController` hết hạn sau `CONFIG.STREAM_TIMEOUT_MS`, phủ tải + đọc mục lục + giải nén (Mục 5–11 kiểm `signal.aborted` giữa các entry).
 2. **Tải.** `GET download_url` (`GITHUB_COMMIT` ⇒ `https://codeload.github.com/{owner}/{repo}/zip/{sha}`, luôn đúng SHA của phiên — D-39). Không tin `Content-Length`; cộng dồn byte thật theo chunk.
 3. **ING-42 Cắt cụt.** Vượt `CONFIG.MAX_STREAM_BYTES` ⇒ `abort()`, giữ đúng `CONFIG.MAX_STREAM_BYTES` byte đầu (bỏ phần thừa chunk cuối), `stream_cut = true`, đi tiếp — không ném lỗi.
-4. **HTTP.** 404 ⇒ `ERR_BRANCH_NOT_FOUND` (`GITHUB_COMMIT` ⇒ `03` §4 đổi thành `ERR_SESSION_NOT_FOUND`); 429/403 ⇒ `ERR_GITHUB_RATE_LIMIT_CDN`; 451 ⇒ `ERR_REPO_UNAVAILABLE_451`.
+4. **ING-43 HTTP.** 404 ⇒ `ERR_BRANCH_NOT_FOUND` (`GITHUB_COMMIT` ⇒ `03` §4 đổi thành `ERR_SESSION_NOT_FOUND`); 429/403 ⇒ `ERR_GITHUB_RATE_LIMIT_CDN`; 451 ⇒ `ERR_REPO_UNAVAILABLE_451`.
 5. **ING-44 Thử lại.** 5xx, `ECONNRESET`, đứt giữa chừng, hết giờ, zip hỏng (ING-63) ⇒ chờ `CONFIG.STREAM_RETRY_DELAY_MS`, tải lại **1 lần** với timer mới. Vẫn lỗi ⇒ hết giờ: `ERR_STREAM_TIMEOUT`, còn lại: `ERR_STREAM_CORRUPTED`. Không thử lại 404/429/451.
 6. **ING-45 Upload.** Multipart qua bộ đếm byte; vượt `CONFIG.MAX_UPLOAD_BYTES` (giới hạn body của Vercel, D-27) ⇒ hủy, `ERR_STREAM_QUOTA_EXCEEDED` (không cắt cụt). Thiếu trường `archive` hoặc 4 byte đầu không phải `PK\x03\x04`/`PK\x05\x06` ⇒ `ERR_UPLOAD_INVALID`. Trường `subdir` ⇒ `subdir_override`. `repo_name` = tên file bỏ `.zip`. Không thử lại.
 
@@ -198,8 +197,8 @@ Luật đầu tiên khớp thắng. Segment so **nguyên segment**, không phân
 | :-- | :-- | :-- |
 | **ING-70** | `is_dir`, `is_symlink` (`skipped.garbage`); `is_encrypted`, `method` ∉ {0, 8} (`skipped.binary`) | `GARBAGE` |
 | **ING-71** | Có segment thư mục ∈ `node_modules .git .github dist build out .next .nuxt .turbo coverage vendor venv .venv env __pycache__ .pytest_cache .mypy_cache target obj .gradle .idea .vscode Pods .dart_tool` | `GARBAGE` |
-| Có segment `bin` và đuôi không thuộc Language Registry (`bin/cli.js` được giữ; `.dll`, `.class`, `.pdb` bị bỏ) | `GARBAGE` |
-| Tên khớp `/(\.min\.(js\|css)\|\.d\.ts\|\.map\|\.lock\|-lock\.json\|\.pb\.go\|_pb2\.py\|\.generated\.\w+\|\.g\.dart\|\.freezed\.dart)$/i`, hoặc đuôi `png jpg jpeg gif webp ico svg mp4 mov mp3 wav pdf zip gz jar exe dll so woff woff2 ttf psd class pyc` | `GARBAGE` |
+| **ING-72** | Có segment `bin` và đuôi không thuộc Language Registry (`bin/cli.js` được giữ; `.dll`, `.class`, `.pdb` bị bỏ) | `GARBAGE` |
+| **ING-73** | Tên khớp `/(\.min\.(js\|css)\|\.d\.ts\|\.map\|\.lock\|-lock\.json\|\.pb\.go\|_pb2\.py\|\.generated\.\w+\|\.g\.dart\|\.freezed\.dart)$/i`, hoặc đuôi `png jpg jpeg gif webp ico svg mp4 mov mp3 wav pdf zip gz jar exe dll so woff woff2 ttf psd class pyc` | `GARBAGE` |
 | **ING-74** | Basename ∈ hợp `manifest_files` của mọi adapter ∪ {`package.json`, `tsconfig.json`, `jsconfig.json`, `requirements.txt`, `pyproject.toml`, `setup.py`, `Pipfile`, `pom.xml`, `build.gradle`, `build.gradle.kts`, `go.mod`, `pubspec.yaml`, `Cargo.toml`, `composer.json`, `Gemfile`} và độ sâu thư mục ≤ `CONFIG.MAX_MANIFEST_DEPTH` (gốc = 0) | `MANIFEST` |
 | **ING-75** | Đuôi `.ipynb` (⇒ `PYTHON`), `.vue`, `.svelte` (ngôn ngữ quyết ở ING-101) | `SPECIAL` |
 | **ING-76** | Đuôi ∈ `extensionMap` của registry | `CODE` + `LanguageId` |
@@ -233,7 +232,7 @@ export function selectFiles(entries: ClassifiedEntry[], scope: ScopeDecision): {
 $$\text{FPS}(f) = \texttt{FPS\_IN\_SCOPE}\cdot\mathbf 1_{\text{scope}} + \texttt{FPS\_ROLE\_NAME}\cdot\mathbf 1_{\text{vai trò}} + \frac{1}{\text{depth}(f)+1} + \texttt{FPS\_TEST\_PENALTY}\cdot\mathbf 1_{\text{test}} + \texttt{FPS\_TINY\_PENALTY}\cdot\mathbf 1_{\text{size} < \texttt{FPS\_TINY\_BYTES}}$$
 
 6. `depth(f)` = số segment thư mục (gốc: 0 ⇒ hạng tử = 1). `1_scope` = path bắt đầu bằng offset.
-7. **Tên vai trò.** `ROLE_NAMES = controller(s) route(s) router(s) handler(s) service(s) usecase(s) repository repositories repo(s) model(s) entity entities schema(s) middleware(s) api main app server index`. Khớp khi segment thư mục ∈ tập, hoặc stem basename tách `.` `_` `-` và camelCase có token cuối hoặc cả stem ∈ tập (`order.controller.ts`, `OrderController.java`, `user_service.py`, `main.go` khớp; `distance.ts`, `apiClient.ts` không).
+7. **Tên vai trò.** `ROLE_NAMES = controller(s) route(s) router(s) handler(s) service(s) usecase(s) repository repositories repo(s) model(s) entity entities schema(s) middleware(s) api main app server index screen(s) page(s) view(s) activity activities fragment(s) command(s)`. Khớp khi segment thư mục ∈ tập, hoặc stem basename tách `.` `_` `-` và camelCase có token cuối hoặc cả stem ∈ tập (`order.controller.ts`, `main.go` khớp; `distance.ts`, `apiClient.ts` không).
 8. **Cờ test (ING-87):** Segment ∈ {test, tests, \_\_tests\_\_, spec, specs, example, examples, demo, demos, e2e, fixtures, \_\_mocks\_\_, migrations, seeds}, hoặc stem kết thúc `.test`/`.spec`/`_test`, hoặc bắt đầu `test_`.
 9. **Xếp (ING-88):** Bỏ trước giải nén (`skipped.oversized++`): `size > CONFIG.MAX_SINGLE_FILE_BYTES` (`.ipynb`: `CONFIG.MAX_NOTEBOOK_BYTES`), hoặc `compressed_size > 0` và `size/compressed_size > CONFIG.MAX_COMPRESSION_RATIO`. Còn lại sắp FPS giảm dần, hòa ⇒ path tăng dần. Manifest theo path tăng dần.
 
@@ -329,7 +328,7 @@ export function assertNotEmpty(out: IngestOutput, flags: { stream_cut: boolean; 
 2. **ING-131** `code_file_count = 0`, xét theo thứ tự: (1) `stream_cut ∨ inflated_cap_hit` ⇒ `ERR_STREAM_QUOTA_EXCEEDED`; (2) `unsupported_ratio` = byte `NO_GRAMMAR` / byte (`CODE` + `SPECIAL` + `NO_GRAMMAR`) trong scope `> CONFIG.UNSUPPORTED_LANGUAGE_RATIO` ⇒ `ERR_UNSUPPORTED_LANGUAGE`, `ApiError.error.details.language` = ngôn ngữ `UNSUPPORTED` nhiều byte nhất (C#, PHP, Rust có grammar nên là `STRUCTURAL`, không vào nhánh này); (3) còn lại ⇒ `ERR_NO_SOURCE_FILES_FOUND` với `details.hint`: `has_submodules` ⇒ `"submodule"`; có byte `NO_GRAMMAR` ⇒ `"only_unsupported"`; `manifest_count > 0` ⇒ `"only_manifests"`; còn lại ⇒ `"no_code"`. Scope tường minh rỗng (ING-80) ⇒ `details = { subdir, hint: "empty_subdir" }`.
 3. Thông điệp (`30_UI`). Cấm khuyên dán `/tree/<thư mục>`: codeload luôn nén cả repo. Khi quá lớn: tải `.zip` chỉ chứa thư mục mã nguồn.
 
-Nơi phát mã lỗi (`retryable` theo `02` Mục 9): `ERR_INVALID_GITHUB_URL` ING-12/13 · `ERR_PREFLIGHT_404_OR_PRIVATE` ING-21 · `ERR_NETWORK_TIMEOUT` ING-21/30 · `ERR_REPO_UNAVAILABLE_451` ING-21/30/43 · `ERR_GITHUB_RATE_LIMIT_CDN` ING-21/30/43 · `ERR_BRANCH_NOT_FOUND` ING-43 · `ERR_EMPTY_REPOSITORY` ING-33 · `ERR_STREAM_TIMEOUT`, `ERR_STREAM_CORRUPTED` ING-44 · `ERR_STREAM_QUOTA_EXCEEDED` ING-45/131 · `ERR_UPLOAD_INVALID` ING-45/63 · `ERR_UNSUPPORTED_LANGUAGE` ING-131 · `ERR_NO_SOURCE_FILES_FOUND` ING-80/131 · `ERR_SERVER_BUSY` `03` §6.7.
+Nơi phát mã lỗi (`retryable` theo `02` Mục 9): `ERR_INVALID_GITHUB_URL` ING-12/13 · `ERR_PREFLIGHT_404_OR_PRIVATE` ING-21 · `ERR_NETWORK_TIMEOUT` ING-21/30 · `ERR_REPO_UNAVAILABLE_451` ING-21/30/43 · `ERR_GITHUB_RATE_LIMIT_CDN` ING-21/30/43 · `ERR_BRANCH_NOT_FOUND` ING-43 · `ERR_EMPTY_REPOSITORY` ING-33 · `ERR_STREAM_TIMEOUT`, `ERR_STREAM_CORRUPTED` ING-44 · `ERR_STREAM_QUOTA_EXCEEDED` ING-45/131 · `ERR_UPLOAD_INVALID` ING-45/63 · `ERR_UNSUPPORTED_LANGUAGE` ING-131 · `ERR_NO_SOURCE_FILES_FOUND` ING-80/131 · `ERR_SERVER_BUSY` `03` §6.6.
 
 ---
 

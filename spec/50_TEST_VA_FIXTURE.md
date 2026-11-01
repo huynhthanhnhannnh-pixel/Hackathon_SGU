@@ -5,7 +5,7 @@
 
 ## Đọc nhanh
 
-- **Có gì:** repo mẫu `shop-api`, fixture phản hồi AI, kịch bản A–E, 6 kiểm thử xuyên module (bắt buộc trước H+17).
+- **Có gì:** repo mẫu `shop-api`, fixture phản hồi AI, kịch bản A–E, 7 kiểm thử xuyên module (bắt buộc trước H+17).
 - **Dùng để:** dựng UI và test cổng gác trước khi engine / AI thật chạy; chạy kịch bản A–E rồi đối chiếu cột "Kỳ vọng".
 - **Quy tắc:** số BKT / decay không làm tròn giữa chừng, chỉ làm tròn 4 chữ số khi hiển thị (đã kiểm bằng script).
 
@@ -14,7 +14,7 @@
 | 1 | Repo mẫu `shop-api`: bản đồ N1–N7 (1.1), code các bước (1.2) | `__fixtures__/shop-api.json` |
 | 2 | Fixture AI: `NodeAnalysisRaw` (2.1), `RepoOverviewRaw` (2.2), câu hỏi N3 (2.3), `GradingRaw` (2.4) | `checkAnalysis`, `checkOverview` (`21`) |
 | 3 | Kịch bản A–E (3.1–3.5), persona (3.6) | `__tests__/*.test.ts` |
-| 4 | Kiểm thử xuyên module X-01 … X-06 | `__tests__/*.test.ts` |
+| 4 | Kiểm thử xuyên module X-01 … X-07 | `__tests__/*.test.ts` |
 | 5 | Definition of Done toàn sản phẩm | `npx vitest run` |
 
 ---
@@ -175,12 +175,12 @@ Kỳ vọng sau `checkOverview`:
 { "questions": [
   { "skill": "DB_OPTIMIZATION",
     "feynman_question": "Trang danh sách có 200 sản phẩm. Vì sao càng nhiều sản phẩm thì trang càng chậm?",
-    "reference_answer": "Sau khi `productRepo.findAll` lấy danh sách 1 lần (dòng 15), vòng lặp gọi `categoryRepo.findById` cho từng sản phẩm (dòng 16–18). Mỗi sản phẩm tốn thêm 1 truy vấn, nên 200 sản phẩm thành 201 truy vấn.",
+    "reference_answer": "Sau khi `productRepo.findAll` lấy danh sách 1 lần, vòng lặp gọi `categoryRepo.findById` cho từng sản phẩm. Mỗi sản phẩm tốn thêm 1 truy vấn, nên 200 sản phẩm thành 201 truy vấn.",
     "must_have_points": ["Mỗi sản phẩm tốn thêm 1 truy vấn để lấy loại hàng", "Số truy vấn tăng theo số sản phẩm, không cố định"],
     "fix": "Cho findAll lấy kèm loại hàng (relations: ['category']) ⇒ còn 1 truy vấn; hoặc gom các categoryId rồi tìm 1 lần bằng IN (...) ⇒ còn 2 truy vấn." },
   { "skill": "LAYERED_SEPARATION",
     "feynman_question": "Sản phẩm trả về có thêm thông tin loại hàng. Loại hàng đó từ đâu mà có?",
-    "reference_answer": "Route ở `product.controller.ts` gọi `productService.listProducts`; trong `listProducts`, vòng `for` gọi `categoryRepo.findById(p.categoryId)`; `findById` ở `category.repo.ts` dùng `this.repo.findOne`; kết quả gán vào `p.category` (dòng 17) rồi trả về route.",
+    "reference_answer": "Route ở `product.controller.ts` gọi `productService.listProducts`; trong `listProducts`, vòng `for` gọi `categoryRepo.findById(p.categoryId)`; `findById` ở `category.repo.ts` dùng `this.repo.findOne`; kết quả gán vào `p.category` rồi trả về route.",
     "must_have_points": ["Nêu đúng đường đi: route gọi service, service nhờ repo tìm loại hàng", "Loại hàng tìm theo `categoryId` của từng sản phẩm rồi gắn vào sản phẩm trước khi trả về"],
     "fix": "Không có lỗi cần sửa ở góc này." }
 ] }
@@ -349,6 +349,8 @@ Trạng thái ban đầu của Huy: N3 `COMPLETED`.
 
 - [ ] Dán link repo demo ⇒ bản đồ 6–20 node; đồng hồ đo hiện `ingest_ms + engine_ms` thật.
 - [ ] Cùng link chạy 2 lần ⇒ cùng `node_id`, cùng tọa độ (INV-10).
+- [ ] Mọi điểm bắt đầu nằm cùng hàng trên cùng; node thuật toán được lát cắt gọi tới có cạnh nối (X-07, D-55, D-56).
+- [ ] Test entry màn hình mobile và entry chương trình xanh (`11` T-ENG-39, T-ENG-40; D-57, D-58).
 - [ ] Repo private / sai link / repo rỗng / quá lớn ⇒ đúng mã lỗi và thông điệp của `30`.
 - [ ] Mở từng node của repo demo ⇒ node nào cũng có bản phân tích (D-46); Tab 1 có điểm hay + điểm dở "Nhận định của AI"; không có tên bịa (kiểm tay 3 node).
 - [ ] Persona `NEWBIE`: chạy đúng kịch bản A của `50` (A3 → A7): sai ⇒ gợi ý `CONCEPT` ⇒ đúng ⇒ `PASS_AFTER_HINT`, điểm kỹ năng khớp bảng; node xanh, node con mở.

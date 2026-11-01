@@ -32,7 +32,7 @@ flowchart TD
 - **AI-02:** Request dùng `responseMimeType: "application/json"` + `responseSchema` của `schemas.ts` (D-23). Đổi prompt/schema ⇒ tăng `CONFIG.PROMPT_VERSION`.
 - **AI-03:** Dữ liệu không tin cậy (code, DTO, tên/route repo, văn bản AI cũ, câu trả lời) nằm trong thẻ XML bằng `wrapData` (AI-13). Prompt hệ thống chỉ ghép từ khối cố định.
 - **AI-04:** Không gửi: dữ liệu người học cho analyze/overview; `user_id`, tên, email; code cho overview; `fix` cho chấm. Code gửi đi là `snippet` che secret.
-- Server lấy `file_path`, `line_start`, `line_end` từ `trace_steps` theo số bước; không dùng dòng AI hiển thị. Dòng trong văn bản AI chỉ giữ khi qua `21` GUARD-08.
+- **AI-05:** Server lấy `file_path`, `line_start`, `line_end` từ `trace_steps` theo số bước; không dùng dòng AI hiển thị. Dòng trong văn bản AI chỉ giữ khi qua `21` GUARD-08.
 - **AI-06:** Quota: trước lời gọi trượt cache: `tokens_used ≥ CONFIG.SESSION_TOKEN_QUOTA` ⇒ `ERR_TOKEN_QUOTA_EXCEEDED`. Trúng cache: 0 token.
 - **AI-07:** Đếm token sau request có `usageMetadata` (kể cả bị chặn): `tokens_used += promptTokenCount + candidatesTokenCount + (thoughtsTokenCount ?? 0)` bằng 1 câu `update` ngoài transaction (API-06, API-07). In-flight map chỉ tính phiên khởi tạo.
 - **AI-08:** Cache: chỉ `analyze-node`, `analyze-overview`, khóa `03` Mục 3.3; đặt câu hỏi và chấm không cache (D-37); chỉ ghi bản đã qua kiểm (D-15); `tokens_in/out` = tổng request; trùng khóa dùng chung 1 promise.
@@ -161,7 +161,7 @@ A1 kỹ năng sai · A3 điểm dở sai · A5 steps phải đúng 1 mục mỗi
 
 ### Luồng phân tích (AI-15)
 
-Gọi từ `POST /api/analyze-node` khi trượt cache `NODE_ANALYSIS` (`03` Mục 6.7), qua in-flight map.
+Gọi từ `POST /api/analyze-node` khi trượt cache `NODE_ANALYSIS` (`03` Mục 6.6), qua in-flight map.
 
 ```typescript
 export async function analyzeNode(session: SessionRow, graph: StaticEngineResult, node: HybridArchitecturalNode): Promise<NodeAnalysis | null> {
@@ -269,7 +269,7 @@ export const ANALYZE_SCHEMA = obj({                                // = NodeAnal
 
 ### Luồng & đầu vào (AI-19)
 
-Gọi khi trượt cache `REPO_OVERVIEW` và mọi node không `analysis_failed` đã phân tích (`03` Mục 6.7). Không gửi code. `analyzeOverview(session, graph, analyses: Record<string, NodeAnalysis>, failedIds: Set<string>): Promise<RepoOverviewRaw | null>` — `checkOverview` (`21` GUARD-11) = `null` ⇒ `GUARD` ⇒ gọi lại kèm lý do (AI-37), ghi log (`21` GUARD-22); hết lượt ⇒ `null`, không cache.
+Gọi khi trượt cache `REPO_OVERVIEW` và mọi node không `analysis_failed` đã phân tích (`03` Mục 6.6). Không gửi code. `analyzeOverview(session, graph, analyses: Record<string, NodeAnalysis>, failedIds: Set<string>): Promise<RepoOverviewRaw | null>` — `checkOverview` (`21` GUARD-11) = `null` ⇒ `GUARD` ⇒ gọi lại kèm lý do (AI-37), ghi log (`21` GUARD-22); hết lượt ⇒ `null`, không cache.
 
 Thân `<repo_summary>` (thứ tự tô-pô, hòa ⇒ `id`; node trong `failedIds` chỉ có dòng `NODE` và `tang`):
 
@@ -344,7 +344,7 @@ export async function generateQuestions(session: SessionRow, graph: StaticEngine
 
 ### Prompt đặt câu hỏi (AI-25)
 
-`QuestionPromptPayload` dựng từ `graph`, `node`, `analysis`, `plan`. Hệ thống = `QUESTIONS_SYSTEM` + `FOCUS_GUIDE_A | FOCUS_GUIDE_B` (`FOCUS_GUIDE_A`, `FOCUS_GUIDE_B`) + (`LOW_CONFIDENCE`). `{{FLOW_MIN}}` = `CONFIG.FLOW_ANSWER_MIN_STEPS`; `{{PMIN}}`, `{{PMAX}}` = `CONFIG.MUST_HAVE_POINTS_MIN`, `CONFIG.MUST_HAVE_POINTS_MAX` (`MUST_HAVE_POINTS_MAX`). Cần nhắc ít nhất `CONFIG.FLOW_ANSWER_MIN_STEPS` bước.
+`QuestionPromptPayload` dựng từ `graph`, `node`, `analysis`, `plan`. Hệ thống = `QUESTIONS_SYSTEM` + `FOCUS_GUIDE_A | FOCUS_GUIDE_B` + (`LOW_CONFIDENCE`). `{{FLOW_MIN}}` = `CONFIG.FLOW_ANSWER_MIN_STEPS`; `{{PMIN}}`, `{{PMAX}}` = `CONFIG.MUST_HAVE_POINTS_MIN`, `CONFIG.MUST_HAVE_POINTS_MAX`. Cần nhắc ít nhất `CONFIG.FLOW_ANSWER_MIN_STEPS` bước.
 
 ```text
 [QUESTIONS_SYSTEM]
@@ -493,7 +493,7 @@ Tin nhắn người dùng:
 <focus>{t.focus} · {t.tier}</focus>
 <reference_answer>{t.reference_answer}</reference_answer>
 <must_have_points>{i}. {ý thứ i} (mỗi ý 1 dòng)</must_have_points>
-<steps>{step_index} · {layer} · {file_path} · {function_name} (mỗi bước của t.steps 1 dòng)</steps>
+<steps>{step_index} · {layer} · {file_path} · {function_name} (mỗi bước của t.steps có step_index ∈ t.step_indices 1 dòng)</steps>
 <attempt>{attempt}/{maxAttempts}</attempt>
 <hint_rule>{HINT_RULE[…]}</hint_rule>
 <student_answer>{answer}</student_answer>
@@ -570,9 +570,9 @@ export function decideFollowUp(g: GradingRaw, attempt: number, maxAttempts: numb
 `staticHint("CONCEPT", t)` — không lộ vị trí, theo `t.focus`: `WEAKNESS` hỏi về vấn đề tiềm ẩn; `FLOW` hỏi luồng dữ liệu; `ARCHITECTURE` hỏi cấu trúc tách tầng; `CHANGE` hỏi phạm vi ảnh hưởng khi sửa.
 `staticHint("CODE_POINTER", t, aiStep)` — chọn bước:
 - `s = aiStep` nếu `aiStep ∈ t.step_indices`; không có ⇒ `s` = bước giữa `t.step_indices[⌊(t.step_indices.length − 1) / 2⌋]`.
-- Tìm `{ step_index: step_number, layer, file_path, function_name }` (`{file_path}`, `{function_name}`, `{symbol}`) trong `t.steps` có `step_index === s`.
+- Lấy `file_path`, `function_name` của bước trong `t.steps` có `step_index === s`.
 - Trả `{ type: "CODE_POINTER", question, step_index: s }`.
-`staticFeedback(isPassed, attempt, maxAttempts)` (`staticFeedback`): khen khi `isPassed`; nhắc gợi ý khi `attempt < maxAttempts`; hướng dẫn xem đáp án khi `attempt >= maxAttempts`.
+`staticFeedback(isPassed, attempt, maxAttempts)`: khen khi `isPassed`; nhắc gợi ý khi `attempt < maxAttempts`; hướng dẫn xem đáp án khi `attempt >= maxAttempts`.
 
 ### injectionGrading (AI-33)
 
@@ -593,8 +593,8 @@ export const injectionGrading = (t: Pick<RunQuestion, "must_have_points">): Grad
 `toEvaluateResponse`: `core_accuracy`, `simplicity`, `intent`, `feedback`, `detected_jargons` lấy từ kết quả chấm sau chuẩn hóa và kiểm cổng gác (`21`).
 - `is_passed = decidePass`: boolean đạt.
 - `points_covered = coveredFlags`: mảng boolean từng ý bắt buộc.
-- `follow_up = decideFollowUp`: nếu chưa đạt và còn lượt ⇒ `{ type, question, step_index }`; đạt hoặc hết lượt ⇒ `null`.
-- `question.reveal`: chỉ lộ khi câu kết thúc (`is_passed = true` hoặc `attempt >= maxAttempts`). Bước thuộc `1..t.steps.length`.
+- `follow_up = decideFollowUp`: nếu chưa đạt và còn lượt ⇒ `{ type, question, step_index }`; đạt hoặc hết lượt ⇒ `null`. `step_index` ∈ `t.step_indices`.
+- `question.reveal`: chỉ lộ khi câu kết thúc (`is_passed = true` hoặc `attempt >= maxAttempts`).
 
 ---
 
@@ -614,7 +614,7 @@ export const injectionGrading = (t: Pick<RunQuestion, "must_have_points">): Grad
 | grade | Gợi ý/feedback trượt gác · regex tấn công | Mẫu tĩnh AI-32 · `injectionGrading`, tính 1 lượt |
 | server | Thiếu `GEMINI_API_KEY` | Không khởi động |
 
-Token, độ trễ, chi phí: mục tiêu ở `02` Mục 1.1 (chưa đo). UI hiện `token_used` thật từ `usageMetadata`.
+Token, độ trễ, chi phí: mục tiêu ở `02` Mục 1.1 (chưa đo). UI hiện `tokens_used` thật từ `usageMetadata`.
 
 ---
 

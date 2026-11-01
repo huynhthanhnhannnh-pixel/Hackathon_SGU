@@ -229,8 +229,6 @@ export function checkAnalysis(raw: NodeAnalysisRaw, node: HybridArchitecturalNod
   const textOk = stepsOk && a6.length === 0;
   if (!textOk) issues.push({ code: "A7" });
 
-
-
   return textOk
     ? { node_id: node.id, skills, architecture: { patterns, summary: raw.architecture.summary },
         steps: [...raw.steps].sort((a, b) => a.step - b.step), strengths, weak_points: weak, skeleton_only: false }
@@ -304,7 +302,7 @@ export function leaksNumbers(text: string, t: GradeContext, answer: string): boo
 1. `q` khác rỗng, `g.follow_up_type ∈ {"CONCEPT", "CODE_POINTER"}` (khớp loại mong đợi kiểm ở `20` AI-31).
 2. `findForbidden([q], t.forbidden_external_keywords)` rỗng; `checkNames([q], gradeScope(t, answer))` rỗng.
 3. `CONCEPT` — **không lộ vị trí**: không có chuỗi backtick; `LOC_RE` không khớp; không chứa tên file (basename, không phân biệt hoa thường) của `t.steps`; `norm(phần cuối function_name)` của mọi bước ∉ `identWords(q)`; `!leaksNumbers(q)`.
-4. `CODE_POINTER`: `follow_up_step_index` nguyên trong `1..t.steps.length`; `!leaksNumbers(q′)` với `q′` = `q` đã bỏ các cụm `LOC_RE` và `LINE_RE`.
+4. `CODE_POINTER`: `follow_up_step_index` nguyên và ∈ `t.step_indices`; `!leaksNumbers(q′)` với `q′` = `q` đã bỏ các cụm `LOC_RE` và `LINE_RE`.
 
 `feedback_ok` = `f = g.feedback` khác rỗng ∧ không từ cấm ∧ `checkNames([f], gradeScope)` rỗng ∧ (đạt **hoặc** cả 3: (a) mọi từ dạng tên trong backtick của `f` ∈ `identWords(answer)`; (b) `LOC_RE` khớp ⇒ cụm khớp (sau `normText`) phải có trong câu trả lời; (c) `!leaksNumbers(f)`).
 

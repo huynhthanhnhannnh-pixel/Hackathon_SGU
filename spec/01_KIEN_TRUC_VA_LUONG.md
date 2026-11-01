@@ -10,7 +10,7 @@ SimpliFey V2 Pro biến một repo GitHub public (hoặc file `.zip`) thành **b
 1. phân tích từng node (kỹ năng + điểm hay + điểm dở, dùng chung cho mọi người học);
 2. viết tổng quan repo;
 3. đặt câu hỏi Feynman cho đúng các kỹ năng người học còn yếu;
-4. chấm câu trả lời và gợi ý 3 nấc.
+4. chấm câu trả lời và gợi ý 2 nấc rồi lộ đáp án.
 
 Mô hình **BKT** ghi nhận năng lực của 16 kỹ năng lâu dài trong Postgres. Từ đó server chọn kỹ năng cần hỏi — kỹ năng đã thạo vẫn bị hỏi 1 câu, không node nào được miễn (D-34) — và kỹ năng của node đang mở hiện "đang mài mòn" khi trí nhớ phai, chỉ hiển thị (D-35).
 
@@ -30,7 +30,7 @@ Mô hình **BKT** ghi nhận năng lực của 16 kỹ năng lâu dài trong Pos
 | **INV-08** | **Mọi văn bản AI phải qua cổng gác trước khi hiển thị** (`21`). Cổng gác chặn tên bịa, kỹ năng ngoài danh mục, công nghệ ngoài repo; nó **không** kiểm được nghĩa đúng/sai. Không bao giờ tuyên bố "diệt 100% ảo giác". Câu hỏi hỏng ⇒ gọi lại 1 lần ⇒ bỏ câu đó; **không có** câu dự phòng dựng từ AST. |
 | **INV-09** | **Đa ngôn ngữ theo tầng** (Language Registry): `RESOLVED` (có `ImportResolver`: TS/JS, Python, Java, Go, Dart) cạnh chính xác; `STRUCTURAL` (có grammar Tree-sitter) cạnh `INFERRED`, không bảo đảm 100%; `UNSUPPORTED` ⇒ `ERR_UNSUPPORTED_LANGUAGE`. Chỉ TS/JS và Python được kiểm chứng cho bản thi. Không regex fallback, không dùng LLM để dựng đồ thị. |
 | **INV-10** | **Engine tất định:** cùng repo + cùng commit + cùng `ENGINE_VERSION` ⇒ cùng đồ thị, cùng `node_id`, cùng tọa độ (D-10). Mọi vòng lặp duyệt theo khóa đã sort. |
-| **INV-11** | **Màu & lớp hiển thị:** nền `#0F172A`; `AVAILABLE` `#F59E0B`; `COMPLETED` `#10B981`; `FAILED` `#EF4444` (vẫn mở node con — soft-bypass); `LOCKED` xám, viền đứt. Tam giác cảnh báo, "đang phân tích…" (trên node) và "đang mài mòn" (kỹ năng của node đang mở, D-35) là **lớp hiển thị**, không phải trạng thái FSM. |
+| **INV-11** | **Màu & lớp hiển thị:** nền `#0F172A`; `AVAILABLE` `#F59E0B`; `COMPLETED` `#10B981`; `FAILED` `#EF4444` (vẫn mở node con — soft-bypass); `LOCKED` xám, viền đứt. Mã màu chi tiết: `30` Mục 11. Tam giác cảnh báo, "đang phân tích…" (trên node) và "đang mài mòn" (kỹ năng của node đang mở, D-35) là **lớp hiển thị**, không phải trạng thái FSM. |
 | **INV-12** | **Mọi con số nằm ở `CONFIG`** (`02` Mục 1); mọi kiểu nằm ở `02`. File khác chỉ nhắc tên. |
 | **INV-13** | **Định vị:** không tuyên bố tự phát minh Compound AI, BKT, PageRank, Tree-sitter repo-map (Aider đã có). Điểm mới là **cách kết hợp và ứng dụng** vào học kiến trúc mã nguồn. |
 
@@ -74,7 +74,7 @@ flowchart LR
 | 3a | `analyze-node`: kỹ năng + bằng chứng, mẫu kiến trúc, giải thích từng bước, điểm hay, điểm dở — cache dùng chung | AI | `20`, `21` |
 | 3b | `analyze-overview`: tổng quan repo từ các bản phân tích (không gửi code) | AI | `20`, `21` |
 | 4 | `enrich-node`: server lập kế hoạch câu hỏi theo hồ sơ người học, AI viết câu hỏi + đáp án | AI | `20`, `21`, `22` |
-| 5 | `evaluate-feynman`: AI chấm + gợi ý 3 nấc; server quyết Đạt, cập nhật BKT, mở khóa | AI + 0 | `20`, `21`, `22`, `03` |
+| 5 | `evaluate-feynman`: AI chấm + gợi ý 2 nấc rồi lộ đáp án; server quyết Đạt, cập nhật BKT, mở khóa | AI + 0 | `20`, `21`, `22`, `03` |
 
 ---
 
@@ -104,10 +104,10 @@ sequenceDiagram
         FE->>BE: POST /api/analyze-node
         BE->>AI: Phân tích (nếu cache trượt)
         BE->>DB: ai_cache
-        BE-->>FE: NodeAnalysisView + node_state + unlocked_node_ids
+        BE-->>FE: AnalyzeNodeResponse
     end
     FE->>BE: POST /api/analyze-overview (khi mọi node đã phân tích)
-    BE-->>FE: RepoOverviewView
+    BE-->>FE: AnalyzeOverviewResponse
 ```
 
 Node chưa phân tích xong hiện "đang phân tích…". Bấm vào node đó thì Tab 1 chờ bản phân tích; Tab 2 khóa cho tới khi có bản phân tích.
@@ -140,7 +140,7 @@ sequenceDiagram
     loop Mỗi câu chưa xong của run, theo question_index (bỏ câu DROPPED)
         loop Tới khi câu này xong (đạt / hết lượt / bỏ qua)
             U->>FE: Viết câu trả lời ⇒ Nộp
-            FE->>BE: POST /api/evaluate-feynman { run_id, question_index }
+            FE->>BE: POST /api/evaluate-feynman { session_id, run_id, question_index, student_answer, attempt_number }
             BE->>DB: Đọc câu hỏi + đáp án · kiểm độ dài, lượt, trùng, regex
             BE->>AI: Chấm (nếu không bị regex chặn)
             BE->>DB: Transaction: attempt + (BKT nếu câu xong) + (chốt node nếu đây là câu cuối chưa xong của run) + mở khóa
