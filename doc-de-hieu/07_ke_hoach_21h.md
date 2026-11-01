@@ -24,8 +24,8 @@ flowchart LR
 ## 1. Năm vai song song & điểm nối
 
 Nhóm chia 5 vai:
-- **Vai A — Trưởng tích hợp:** Thiết lập dự án, DB migration, auth, API routes, ghép nối, review & merge PR, deploy Vercel.
-- **Vai B — Engine:** Tầng 0 (tải repo, lọc rác), Tầng 1 (parser, AST, đồ thị gọi hàm), Tầng 2 (lát cắt, layout Dagre).
+- **Vai A — Trưởng tích hợp:** Thiết lập dự án, DB migration (gồm bảng `session_snapshots`, D-59), auth, API routes, ghép nối, review & merge PR, deploy Vercel.
+- **Vai B — Engine:** Tầng 0 (tải repo, lọc rác), Tầng 1 (parser, AST, đồ thị gọi hàm), Tầng 2 (lát cắt, layout Dagre, hàng điểm bắt đầu D-55, nối node thuật toán D-56), mẫu entry mobile và `main` (D-57, D-58).
 - **Vai C — AI + BKT:** Lời gọi Gemini (`gemini-3.5-flash-lite`), prompt & responseSchema, cổng gác `guard/*`, gọi lại kèm lý do, ghi mã lỗi, chấm bài, `bkt-engine`.
 - **Vai D — Giao diện:** Cột 1 Bản đồ (ReactFlow), Cột 2 Code (Monaco), Cột 3 Cockpit (X-Ray, Feynman, Tổng quan), chế độ offline.
 - **Vai E — Kiểm thử, demo, slide:** Fixture, chạy bộ test `50`, chạy thử repo demo, duyệt tay output AI, ghi lỗi thành ca test trong review/loi_da_gap.md, video demo dự phòng, slide thuyết trình.
@@ -42,10 +42,10 @@ Nhóm chia 5 vai:
 | Giờ | Mục tiêu | A | B | C | D | E |
 | :-- | :-- | :-- | :-- | :-- | :-- | :-- |
 | H+0–1 | Khung, contracts | Khởi tạo, `contracts`, thử deploy | Thử 3 giả định tải repo | Gọi thử API AI | Khung trang | Fixture |
-| H+1–4 | Chạy bằng dữ liệu giả | Bảng, auth, `/api/me` | Tải, lọc repo | BKT + test | Bản đồ từ fixture | Test `50` |
-| H+4–8 | Lát dọc 1 | Nối ingest, analyze | Bản đồ thật | Phân tích + cổng gác | Tab 1 | Chạy repo demo |
+| H+1–4 | Chạy bằng dữ liệu giả | Bảng (gồm `session_snapshots`), auth, `/api/me` | Tải, lọc repo | BKT + test | Bản đồ từ fixture | Test `50` |
+| H+4–8 | Lát dọc 1 | Nối ingest, analyze | Bản đồ thật (gồm D-55, D-56) | Phân tích + cổng gác | Tab 1 | Chạy repo demo |
 | H+8–12 | Lát dọc 2 | Nối enrich, evaluate | Sửa theo repo demo | Câu hỏi, chấm, gợi ý | Tab 2, đổi màu | Kịch bản A, B |
-| H+12–15 | Giao agent, ngủ xoay | Phiên, API còn lại (giao agent, ngủ từ H+12.5) | Python | Tổng quan | Lịch sử, offline (giao agent, ngủ từ H+12.5) | Test lỗi, slide |
+| H+12–15 | Giao agent, ngủ xoay | Phiên, API còn lại (giao agent, ngủ từ H+12.5) | Python, entry `main` và màn hình React Native (D-57, D-58) | Tổng quan | Lịch sử, offline (giao agent, ngủ từ H+12.5) | Test lỗi, slide |
 | H+15–17 | Đủ endpoint (H+16), đóng băng (H+17) | Kiểm việc agent, merge, deploy | Ngủ | Duyệt tay, bundle | Kiểm việc agent, sửa giao diện | Ngủ |
 | H+17–19 | Tập demo | Sửa lỗi | Sửa lỗi | Ngủ tới H+18.5, rồi sửa lỗi | Sửa lỗi | Definition of Done (H+17), video dự phòng |
 | H+19–21 | Về đích | Commit cuối | Kiểm | Kiểm | Kiểm | Slide, nộp |
@@ -71,7 +71,7 @@ Nhóm chia 5 vai:
 
 Cắt từ trên xuống. Mỗi mục cắt phải ghi lại vào `00_QUYET_DINH.md` sau cuộc thi.
 
-1. Resolver Java / Go / Dart và tầng `STRUCTURAL` (giữ TS/JS + Python; INV-09 vẫn đúng vì chỉ hai ngôn ngữ này được tuyên bố đã kiểm chứng).
+1. Resolver Java / Go / Dart và tầng `STRUCTURAL` (giữ TS/JS + Python; INV-09 vẫn đúng vì chỉ hai ngôn ngữ này được tuyên bố đã kiểm chứng). Gồm cả màn hình Flutter, Android, iOS của D-57 và entry D-58 của ngôn ngữ ngoài TS/JS, Python. React Native vẫn thuộc TS/JS nhưng làm sau lõi.
 2. `report-wrong` (ẩn nút "Báo sai").
 3. Màn hình lịch sử học (`/history`).
 4. Phần AI của tổng quan (chỉ hiện `facts`).
