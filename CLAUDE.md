@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Repo rules for every AI (Claude, Antigravity, …): @AGENTS.md. The `.ai/` folder exists only on the working branch, not on `main`. When it is present, `.ai/QUY_TRINH.md` holds the check commands and task protocol, and Claude's role is planner/reviewer: write tasks in `.ai/tasks/`, verify with `.ai/tools/` scripts instead of re-reading whole files, commit only what passed.
+Repo rules for every AI (Claude, Antigravity, …): @AGENTS.md. The `.kb/` folder is local to each machine and never committed (set up with `ak bat-dau`). When it is present, `.kb/README.md` holds the check commands and task protocol, and Claude's role is planner/reviewer: write tasks in `.kb/tasks/`, verify with `.kb/tools/` scripts instead of re-reading whole files, commit only what passed.
 
 ## Repository state
 
