@@ -133,8 +133,9 @@ flowchart TD
   CHK_END -- "Chưa" --> STREAM
   CHK_END -- "Xong" --> NEXT["Chuyển sang bước định danh"]
   CHK_SIZE -- "Vượt quá 15 MB" --> CUT["Cắt cụt luồng, giữ đúng 15 MB đầu"]
-  CUT --> FLAG["Đánh dấu cờ cắt cụt và tiếp tục"]
-  FLAG --> NEXT
+  CUT --> FLAG["Đánh dấu cờ cắt cụt"]
+  FLAG --> SEL["Lấy danh sách file, tải chọn lọc (D-63)"]
+  SEL --> NEXT
 
   SRC -- "Người dùng tải file zip" --> UPLOAD["Kiểm tra chữ ký PK và dung lượng"]
   UPLOAD --> UPLOAD_CHK{"Dung lượng dưới 4.5 MB?"}
@@ -142,10 +143,16 @@ flowchart TD
   UPLOAD_CHK -- "Vượt quá" --> ERR["Báo lỗi vượt trần dung lượng"]
 ```
 
-### Cơ chế cắt cụt thông minh khi tải từ GitHub
+### Repo lớn: cắt zip rồi tải chọn lọc (D-63)
 Đối với các kho chứa trên GitHub, dung lượng tối đa cho phép tải về là 15 MB (tính theo dung lượng nén). Nhưng nếu một kho chứa lớn có dung lượng 20 MB hay 50 MB thì sao?
-Các công cụ thông thường sẽ lập tức ngắt mạng và quăng ra một màn hình báo lỗi thất bại. Nhưng cách làm đó rất đáng tiếc, bởi vì đa số các kho chứa nặng là do chứa nhiều file hình ảnh, tài liệu PDF, hoặc các thư viện ngoài.
-Thay vì bỏ cuộc, hệ thống áp dụng kỹ thuật **Cắt cụt luồng**: Khi tổng số byte nhận về chạm ngưỡng đúng 15 MB, kết nối mạng sẽ được chủ động đóng lại, hệ thống giữ nguyên vẹn 15 MB đầu tiên nhận được, bật cờ báo hiệu dữ liệu bị cắt ngắn, và vẫn cho phép quy trình đi tiếp! Những file mã nguồn nằm ở phần đầu của gói nén vẫn sẽ được giải nén và phân tích bình thường.
+GitHub xếp file trong zip theo thứ tự thư mục, nên 15 MB đầu có thể chỉ chứa tài liệu, còn thư mục code chính nằm ở phần bị cắt. Đo ngày 01/11/2026: `fastapi` dừng ở `docs/`, `next.js` dừng ở `examples/`, `vscode` dừng ở `extensions/`. Phần bị cắt mang theo cả mục lục của zip, và GitHub không cho đọc nhảy tới cuối file.
+Vì vậy, khi chạm đúng 15 MB, hệ thống đóng kết nối, bật cờ cắt cụt rồi đổi cách lấy code:
+
+1. Hỏi GitHub API danh sách toàn bộ file và kích thước, chưa tải nội dung.
+2. Tự chọn thư mục nhiều code nhất, không tính các thư mục phụ như `docs`, `scripts`, `bench`. Người học đổi được thư mục trên giao diện.
+3. Chỉ tải các file đã chọn (tối đa 100 file) từ `raw.githubusercontent.com`, rồi đi tiếp như luồng thường.
+
+Nếu không lấy được danh sách (thiếu `GITHUB_TOKEN`, bị giới hạn lượt gọi, hết giờ), hệ thống dùng phần zip đã giữ và cảnh báo rằng kết quả có thể thiếu thư mục chính.
 
 ### Đồng hồ bảo vệ và thử lại tự động
 Một đồng hồ đếm ngược với thời hạn tối đa 5000 mili-giây được kích hoạt để bao quát toàn bộ quá trình: từ lúc kết nối, kéo byte, đọc mục lục cho đến khi giải nén xong. Nếu mạng bị đứt giữa chừng hoặc file nén bị lỗi dữ liệu đường truyền, hệ thống sẽ kiên nhẫn nghỉ 500 mili-giây rồi thử tải lại đúng 1 lần nữa. Nếu sau lần thử lại mà vẫn không thành công thì mới phát thông báo lỗi đường truyền.
@@ -166,7 +173,7 @@ Dịch vụ nén của GitHub có một đặc điểm rất tiện lợi: họ 
 Hệ thống tự thực hiện thuật toán quét ngược từ cuối mảng byte để tìm chữ ký EOCD, bóc tách chuỗi 40 ký tự hex này ra. Nếu tìm thấy, phiên bản được định danh chính xác bằng mã commit đó. Sau này, bất kỳ ai muốn mở lại, hệ thống chỉ cần căn cứ vào đúng mã commit đó để tải lại chính xác phiên bản trong quá khứ.
 
 ### Tạo mã băm toàn bộ file (Archive Hash)
-Nếu file zip bị cắt ngắn ở bước 4 (vượt quá 15 MB dẫn đến mất phần đuôi EOCD), hoặc đối với các file do người dùng tự tải lên từ máy tính cá nhân (không phải do GitHub sinh ra nên không có mã commit), hệ thống sẽ tính mã băm SHA-256 trên toàn bộ mảng byte nén nhận được.
+Nếu phải dùng phần zip đã cắt ở bước 4 (mất phần đuôi EOCD, không lấy được danh sách file), hoặc đối với các file do người dùng tự tải lên từ máy tính cá nhân (không phải do GitHub sinh ra nên không có mã commit), hệ thống sẽ tính mã băm SHA-256 trên toàn bộ mảng byte nén nhận được. Khi tải chọn lọc thành công, mã commit lấy từ GitHub API.
 Mã băm này có tính chất bất biến: nếu file nén không đổi một bit nào, mã băm sinh ra sẽ luôn giống hệt nhau. Nhờ vậy, tính tất định của hệ thống vẫn được bảo toàn nguyên vẹn.
 
 Tra chi tiết: spec/10_ENGINE_INGEST.md Mục 5.
@@ -188,7 +195,7 @@ Mục lục trung tâm của file zip giống như trang mục lục ở đầu 
 Chỉ khi đọc xong mục lục này, hệ thống mới biết chính xác mình cần lấy file nào và bỏ file nào mà chưa tốn một giọt tài nguyên nào để giải nén nội dung!
 
 ### Xử lý dự phòng bằng luồng (Streaming)
-Nếu file zip bị cắt cụt do vượt quá 15 MB ở bước trước, phần mục lục ở đuôi file sẽ bị mất. Khi đó, hệ thống tự động chuyển sang chế độ dự phòng thông minh gồm hai lượt quét luồng:
+Nếu tải chọn lọc không thành công và phải dùng phần zip đã cắt, phần mục lục ở đuôi file đã mất. Khi đó, hệ thống tự động chuyển sang chế độ dự phòng thông minh gồm hai lượt quét luồng:
 - **Lượt 1:** Quét qua tiêu đề của từng phần tử xuất hiện trong luồng byte để ghi lại danh sách tên file và đo dung lượng thực tế, hoàn toàn không lưu nội dung file vào bộ nhớ.
 - **Lượt 2:** Sau khi đã chọn lọc được những file quan trọng nhất, hệ thống quét lại luồng byte lần thứ hai và chỉ giải nén đúng những file đã được chọn.
 
@@ -385,7 +392,7 @@ Tra chi tiết: spec/10_ENGINE_INGEST.md Mục 10.
 ## 11. Bảo mật mã nguồn: Che giấu bí mật (Zero-Leak) và phòng vệ trước câu lệnh độc hại
 
 Khi sinh viên làm đồ án web hoặc bài tập lớn, một thói quen rất phổ biến là viết thẳng các thông tin bí mật vào trong code:
-- Điền thẳng chuỗi khóa ký token: `const JWT_SECRET = "khoa_bi_mat_rat_dai_va_kho_doan";`
+- Điền thẳng chuỗi khóa ký token: `const JWT_SECRET = "example-jwt-secret-123";`
 - Điền thẳng mật khẩu cơ sở dữ liệu: `postgres://postgres:mat_khau_123@localhost:5432/shop_db`
 - Hoặc sao chép cả khóa API của bên thứ ba vào code để dùng tạm cho tiện.
 

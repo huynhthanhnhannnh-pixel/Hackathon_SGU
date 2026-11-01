@@ -56,7 +56,7 @@ Không tự nhận đã phát minh Compound AI, BKT, PageRank, hay repo-map bằ
 | :-- | :-- |
 | AI chấm và cổng gác không bảo đảm 100%; cổng gác chặn tên bịa và công nghệ không có trong repo, nhưng **không kiểm được nghĩa** AI nói đúng hay sai (INV-08) | Duyệt tay toàn bộ output của repo demo; hiện bằng chứng (bước + tên); nhãn "Nhận định của AI"; nút "Báo sai" |
 | Chỉ **TS/JS và Python** được kiểm chứng cho bản thi. Java, Go, Dart có bộ phân giải riêng trong thiết kế nhưng chưa kiểm chứng. Ngôn ngữ khác có grammar Tree-sitter chạy ở tầng `STRUCTURAL`: cạnh là suy luận, chưa kiểm chứng (INV-09) | Cạnh suy luận vẽ nét đứt và có huy hiệu độ tin cậy thấp; ngôn ngữ không có grammar thì báo `ERR_UNSUPPORTED_LANGUAGE` |
-| Repo nén ≤ `MAX_STREAM_BYTES` (15 MB), upload `.zip` ≤ `MAX_UPLOAD_BYTES` (4,5 MB), giữ ≤ `MAX_CLEAN_FILES` (100) file code. Chỉ nhận link gốc repo, chạy nhánh mặc định (D-38) | Repo lớn bị cắt bớt và có cảnh báo. Link tới nhánh / thư mục con tự cắt về gốc kèm ghi chú; monorepo thì chọn lại thư mục trên giao diện, hoặc upload `.zip` chỉ chứa thư mục mã nguồn |
+| Repo nén quá `MAX_STREAM_BYTES` (15 MB) thì tải chọn lọc 1 thư mục (D-63), upload `.zip` ≤ `MAX_UPLOAD_BYTES` (4,5 MB), giữ ≤ `MAX_CLEAN_FILES` (100) file code. Chỉ nhận link gốc repo, chạy nhánh mặc định (D-38) | Repo lớn chỉ phân tích 1 thư mục, tối đa 100 file, có cảnh báo. Link tới nhánh / thư mục con tự cắt về gốc kèm ghi chú; đổi thư mục trên giao diện, hoặc upload `.zip` chỉ chứa thư mục mã nguồn |
 | Phân tích tĩnh có thể **sót cạnh** khi code dùng gọi động, DI qua cấu hình, reflection hoặc import động | Không bịa cạnh để bù; cạnh không chắc thì gắn nhãn |
 | Bộ chấm AI **chưa được hiệu chuẩn** với giảng viên; ngưỡng `PASS_CORE_ACCURACY` do nhóm tự đặt | Server tự quyết đạt (D-13); duyệt tay câu trả lời mẫu; hiệu chuẩn nằm ở roadmap GĐ2 |
 | Tham số BKT đặt tay, chưa fit. Mỗi kỹ năng chỉ có vài quan sát trên một repo, nên điểm chỉ là **ước lượng sơ bộ** | Fit EM bằng pyBKT khi có dữ liệu pilot |
@@ -111,7 +111,7 @@ Mỗi câu chỉ một người trả lời, người đỡ chỉ thêm khi đư
 ### B. Engine & bản đồ
 
 **B1. "Đây là repo của tôi, chạy thử ngay được không?"**
-Đ: Được, với link gốc của repo public trên github.com (nhánh mặc định) hoặc `.zip` ≤ 4,5 MB; repo nén ≤ 15 MB, giữ tối đa 100 file code. TS/JS và Python đã kiểm chứng; ngôn ngữ khác có grammar thì cạnh là suy luận, vẽ nét đứt. Output AI trên repo của thầy chưa qua duyệt tay như repo demo. Rồi chạy thật theo [`KICH_BAN_DEMO.md`](KICH_BAN_DEMO.md) Mục 4.
+Đ: Được, với link gốc của repo public trên github.com (nhánh mặc định) hoặc `.zip` ≤ 4,5 MB; repo nén quá 15 MB thì tự chọn thư mục chính, giữ tối đa 100 file code. TS/JS và Python đã kiểm chứng; ngôn ngữ khác có grammar thì cạnh là suy luận, vẽ nét đứt. Output AI trên repo của thầy chưa qua duyệt tay như repo demo. Rồi chạy thật theo [`KICH_BAN_DEMO.md`](KICH_BAN_DEMO.md) Mục 4.
 
 **B2. "Làm sao biết hàm nào gọi hàm nào mà không cần compiler?"**
 Đ: Tree-sitter đọc cú pháp, lập danh bạ tên hàm; hệ thống phân giải import rồi nối từng lời gọi tới định nghĩa thật. Ngôn ngữ có bộ phân giải riêng thì cạnh khá chính xác với code viết theo mẫu phổ biến; ngôn ngữ khác nối bằng luật chung, cạnh gắn nhãn suy luận. Gọi động, DI qua cấu hình, reflection có thể làm sót cạnh; hệ thống không bịa cạnh để bù.
@@ -286,7 +286,7 @@ Nhóm kiểm soát bằng:
 | Gửi AI ≤ 100 dòng / ≤ 1.500 token code mỗi node, đã che secret | Khẳng định | `NODE_MAX_LINES`, `NODE_MAX_CODE_TOKENS` |
 | AI ở 4 lời gọi; phân tích node và tổng quan được cache dùng chung, câu hỏi sinh mới | Khẳng định | INV-02, D-37 |
 | ~58.500 token ≈ 0,05 USD người đầu; ~38.000 ≈ 0,03 USD người sau | "ước lượng, chưa đo, theo giá Gemini 3.5 Flash-Lite" | `02` Mục 1.1 |
-| Repo nén ≤ 15 MB, upload `.zip` ≤ 4,5 MB, ≤ 100 file code; chỉ link gốc repo | Khẳng định | `MAX_STREAM_BYTES`, `MAX_UPLOAD_BYTES`, `MAX_CLEAN_FILES`, D-38 |
+| Repo nén quá 15 MB thì tải chọn lọc 1 thư mục, upload `.zip` ≤ 4,5 MB, ≤ 100 file code; chỉ link gốc repo | Khẳng định | `MAX_STREAM_BYTES`, `MAX_UPLOAD_BYTES`, `MAX_CLEAN_FILES`, D-38, D-63 |
 | TS/JS và Python đã kiểm chứng | Chỉ nói sau khi chạy đủ test | INV-09 |
 | BKT: đạt ngay 0,25 → 0,5767; đạt sau gợi ý → 0,4202; trượt → 0,0791 | "tính theo công thức", không phải số đo trên người học | `50` Mục 3 |
 | Chu kỳ bán rã 14 ngày; 0,95 sau 30 ngày còn ~0,41 | Nói kèm "mô phỏng" | `DECAY_HALF_LIFE_DAYS`, `50` Mục 3.6 |

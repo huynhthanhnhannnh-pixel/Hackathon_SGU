@@ -256,6 +256,7 @@ Tên biến giữ đúng như `spec/03` Mục 8.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase, publishable key `sb_publishable_…` | Không |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase, secret key `sb_secret_…` | **Có** |
 | `GEMINI_API_KEY` | Google AI Studio (`gemini-3.5-flash-lite`, D-50) | **Có** |
+| `GITHUB_TOKEN` | GitHub, **Settings > Developer settings > Fine-grained tokens**, chọn **Public Repositories (read-only)**, không cấp thêm quyền (D-63) | **Có** |
 | `DEMO_MODE` | Tự đặt: `true` ở máy demo, `false` trên web thật | Không |
 | `NEXT_PUBLIC_DEMO_MODE` | Đặt giống `DEMO_MODE` | Không |
 

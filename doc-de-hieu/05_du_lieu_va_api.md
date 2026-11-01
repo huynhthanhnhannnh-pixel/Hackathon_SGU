@@ -180,7 +180,7 @@ Khóa phiên = (user_id, source, snapshot_id, subdir, engine_version)
 - `user_id`: Mã tài khoản của người học.
 - `source`: Nguồn nạp repo (`GITHUB` hoặc `ZIP`).
 - `snapshot_id`: Mã nhận diện trạng thái mã nguồn.
-  - Đối với GitHub: Đây là commit SHA dài 40 ký tự hex, được đọc trực tiếp từ phần bình luận EOCD (End of Central Directory) của gói zip tải về từ máy chủ GitHub codeload. Nếu vì lý do nào đó mà phần bình luận này không chứa SHA hợp lệ, hệ thống sẽ tính mã băm SHA-256 trên toàn bộ dữ liệu file zip nén và gắn nhãn là `ARCHIVE_HASH`; phiên vẫn mở lại được vì kết quả engine đã lưu trong `session_snapshots` (D-59).
+  - Đối với GitHub: Đây là commit SHA dài 40 ký tự hex, được đọc trực tiếp từ phần bình luận EOCD (End of Central Directory) của gói zip tải về từ máy chủ GitHub codeload, hoặc lấy từ GitHub API khi tải chọn lọc (D-63). Nếu vì lý do nào đó mà phần bình luận này không chứa SHA hợp lệ, hệ thống sẽ tính mã băm SHA-256 trên toàn bộ dữ liệu file zip nén và gắn nhãn là `ARCHIVE_HASH`; phiên vẫn mở lại được vì kết quả engine đã lưu trong `session_snapshots` (D-59).
   - Đối với file `.zip` do người dùng tự tải lên: `snapshot_id` là mã băm `ARCHIVE_HASH` (mã SHA-256 của toàn bộ dữ liệu file nén). Nhờ bảng `session_snapshots`, phiên `.zip` vẫn mở lại bình thường (D-59).
 - `subdir`: Đường dẫn thư mục con nếu người học chọn phân tích một dự án nằm bên trong monorepo (mặc định là chuỗi rỗng nếu học toàn bộ repo).
 - `engine_version`: Phiên bản của engine phân tích tĩnh (ví dụ `1.0.0`). Khi nhóm phát triển thay đổi luật phân tích đồ thị dẫn đến việc thay đổi cấu trúc node, phiên bản này sẽ được nâng lên.
@@ -679,6 +679,7 @@ Trong môi trường vận hành thực tế, các sự cố về mạng, dịch
 | Tên biến môi trường | Phạm vi sử dụng | Ý nghĩa và lưu ý bảo mật |
 | :-- | :-- | :-- |
 | `GEMINI_API_KEY` | Chỉ máy chủ (Server-only) | Khóa API bí mật dùng để kết nối với dịch vụ Gemini AI của Google phục vụ 4 tác vụ phân tích và chấm điểm. Biến này không được gửi về phía trình duyệt web. |
+| `GITHUB_TOKEN` | Chỉ máy chủ (Server-only) | Token chỉ đọc repo công khai, dùng để lấy danh sách file khi tải chọn lọc repo lớn (D-63). Thiếu token thì hệ thống dùng phần zip đã cắt và báo cảnh báo. |
 | `NEXT_PUBLIC_SUPABASE_URL` | Công khai (Client và Server) | Địa chỉ URL của dự án Supabase, cho phép trình duyệt khởi tạo kết nối và thực hiện đăng nhập OAuth với GitHub. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Công khai (Client và Server) | Khóa công khai ẩn danh của Supabase (`sb_publishable_...`), có quyền hạn bị giới hạn bởi các chính sách bảo mật hàng RLS. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Chỉ máy chủ (Server-only) | Khóa bí mật đặc quyền quản trị cao nhất của Supabase (`sb_secret_...`). Khóa này cho phép máy chủ vượt qua các rào chắn RLS để thực hiện toàn bộ các tác vụ ghi dữ liệu học tập vào Postgres một cách an toàn. |

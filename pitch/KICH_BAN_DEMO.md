@@ -196,7 +196,7 @@ Câu hỏi online do AI sinh mới mỗi lần mở Tab 2 (không cache câu h�
 - "Repo của thầy chưa qua bước duyệt tay như repo demo, nên AI có thể nhận định sai. Vì vậy mới có nhãn 'Nhận định của AI' và nút 'Báo sai'."
 - "Hai ngôn ngữ nhóm đã kiểm chứng là TS/JS và Python. Ngôn ngữ khác có grammar thì cạnh vẽ nét đứt, là cạnh suy luận."
 - "Chỉ nhận link gốc repo; link tới nhánh hay thư mục con sẽ tự cắt về gốc, chạy nhánh mặc định."
-- "Giới hạn: repo nén tối đa 15 MB, file `.zip` upload tối đa 4,5 MB, giữ tối đa 100 file code." (Đọc lại `CONFIG` ở `02` trước khi lên.)
+- "Giới hạn: repo nén quá 15 MB thì hệ thống tự chọn thư mục chính, file `.zip` upload tối đa 4,5 MB, giữ tối đa 100 file code." (Đọc lại `CONFIG` ở `02` trước khi lên.)
 
 Lúc đó ô vừa mở và 1–2 ô kế tiếp sẽ hiện "đang phân tích…" thật.
 

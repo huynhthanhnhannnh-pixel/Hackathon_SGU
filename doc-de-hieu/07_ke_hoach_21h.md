@@ -44,7 +44,7 @@ Nhóm chia 5 vai:
 | H+0–1 | Khung, contracts | Khởi tạo, `contracts`, thử deploy | Thử 3 giả định tải repo | Gọi thử API AI | Khung trang | Fixture |
 | H+1–4 | Chạy bằng dữ liệu giả | Bảng (gồm `session_snapshots`), auth, `/api/me` | Tải, lọc repo | BKT + test | Bản đồ từ fixture | Test `50` |
 | H+4–8 | Lát dọc 1 | Nối ingest, analyze | Bản đồ thật (gồm D-55, D-56) | Phân tích + cổng gác | Tab 1 | Chạy repo demo |
-| H+8–12 | Lát dọc 2 | Nối enrich, evaluate | Sửa theo repo demo | Câu hỏi, chấm, gợi ý | Tab 2, đổi màu | Kịch bản A, B |
+| H+8–12 | Lát dọc 2 | Nối enrich, evaluate | Sửa theo repo demo, tải chọn lọc (D-63) | Câu hỏi, chấm, gợi ý | Tab 2, đổi màu | Kịch bản A, B |
 | H+12–15 | Giao agent, ngủ xoay | Phiên, API còn lại (giao agent, ngủ từ H+12.5) | Python, entry `main` và màn hình React Native (D-57, D-58) | Tổng quan | Lịch sử, offline (giao agent, ngủ từ H+12.5) | Test lỗi, slide |
 | H+15–17 | Đủ endpoint (H+16), đóng băng (H+17) | Kiểm việc agent, merge, deploy | Ngủ | Duyệt tay, bundle | Kiểm việc agent, sửa giao diện | Ngủ |
 | H+17–19 | Tập demo | Sửa lỗi | Sửa lỗi | Ngủ tới H+18.5, rồi sửa lỗi | Sửa lỗi | Definition of Done (H+17), video dự phòng |
@@ -71,7 +71,7 @@ Nhóm chia 5 vai:
 
 Cắt từ trên xuống. Mỗi mục cắt phải ghi lại vào `00_QUYET_DINH.md` sau cuộc thi.
 
-1. Resolver Java / Go / Dart và tầng `STRUCTURAL` (giữ TS/JS + Python; INV-09 vẫn đúng vì chỉ hai ngôn ngữ này được tuyên bố đã kiểm chứng). Gồm cả màn hình Flutter, Android, iOS của D-57 và entry D-58 của ngôn ngữ ngoài TS/JS, Python. React Native vẫn thuộc TS/JS nhưng làm sau lõi.
+1. Resolver Java / Go / Dart và tầng `STRUCTURAL` (giữ TS/JS + Python; INV-09 vẫn đúng vì chỉ hai ngôn ngữ này được tuyên bố đã kiểm chứng). Gồm cả màn hình Flutter, Android, iOS của D-57 và entry D-58 của ngôn ngữ ngoài TS/JS, Python. React Native vẫn thuộc TS/JS nhưng làm sau lõi. Tải chọn lọc D-63 cũng cắt ở mục này: repo lớn dùng phần zip đã giữ.
 2. `report-wrong` (ẩn nút "Báo sai").
 3. Màn hình lịch sử học (`/history`).
 4. Phần AI của tổng quan (chỉ hiện `facts`).
