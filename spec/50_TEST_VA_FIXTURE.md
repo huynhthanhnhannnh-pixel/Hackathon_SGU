@@ -80,6 +80,7 @@ findById(id) {
 **N2 — Xem hồ sơ**
 ```ts
 // Bước 1 · ENTRY_POINT · src/routes/user.routes.ts dòng 6–9
+// Liên hệ hỗ trợ: security-contact@shop-demo.vn (email giả để test maskSensitive)
 router.get('/profile', authMiddleware, async (req, res) => {
   const user = await userService.getProfile(req.user.id);
   res.json(user);
@@ -303,6 +304,10 @@ Minh gọi AI đặt câu hỏi ở cả 5 node đã học (N1–N5); node mà m
 | D18 | "Báo sai" Q1 của B4 ngay sau khi trượt | Q1 🚩; `AUTH_SECURITY` trở lại 0.25; N2 tính lại màu: Q2 đạt ⇒ `COMPLETED` |
 | D19 | Mở lại phiên `.zip` (D-59): upload `.zip` repo mẫu, xóa cache RAM, mở lại phiên | `can_resume = true`, `resume_blocker = null`; `ingest { session_id }` trả đúng bản đồ và `trace_steps[].snippet` như lần đầu; không có request tới codeload |
 | D20 | Tải trước có giới hạn (D-46): mở repo 7 node, đang mở N1 | Client chỉ gọi `POST /api/analyze-node` cho N1 và 1–2 node kế tiếp; không tải toàn bộ; số lời gọi đồng thời ≤ `CONFIG.ANALYZE_CONCURRENCY` |
+| D21 | Câu trả lời có từ xấu rõ nghĩa (có dấu) | `ERR_ANSWER_INAPPROPRIATE` (400) tại bước 1; không tính lượt; 0 token; không gọi AI; ô rung và báo lỗi dưới ô (D-65) |
+| D22 | Câu trả lời kỹ thuật chứa từ `kill`, `attack`, `hack` | Không bị chặn bởi bộ lọc từ xấu; vẫn gửi cho AI chấm bình thường (D-65) |
+| D23 | Câu trả lời chứa email / SĐT VN / CCCD / secret (`sk-...`, JWT) | `maskSensitive` che thành `***` trước khi gọi AI (`gradeWithAI`) và trước khi ghi DB `student_answer` (D-65) |
+| D24 | Ghi chú nút "Báo sai" (`req.note`) chứa PII hoặc secret | `maskSensitive` che thành `***` trước khi lưu vào `dispute_reports` (D-65) |
 
 ### 3.5. Kịch bản E — Huy quay lại sau 30 ngày (mài mòn, chỉ hiển thị)
 
@@ -365,3 +370,4 @@ Trạng thái ban đầu của Huy: N3 `COMPLETED`.
 - [ ] `Ctrl+Shift+D` ⇒ chế độ offline chạy hết kịch bản demo, nhãn offline luôn hiện.
 - [ ] Mọi test `50` xanh (`npx vitest run`).
 - [ ] Repo thi có test tên bắt đầu bằng `GUARD-04` (`21` Test bắt buộc, `50` Mục 2.1), chạy xanh (`npx vitest run -t "GUARD-04"` — dùng cho demo cổng gác).
+- [ ] Bộ lọc an toàn: che đúng email, SĐT, CCCD, secret trong code và bài làm; từ xấu ở câu trả lời trả `ERR_ANSWER_INAPPROPRIATE` không mất lượt; câu kỹ thuật không bị chặn nhầm (D-65).

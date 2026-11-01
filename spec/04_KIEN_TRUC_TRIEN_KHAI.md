@@ -361,6 +361,15 @@ jobs:
 4. **Điều khoản Quyền riêng tư AI (Gemini Privacy):**
    - Gói Free của Gemini API cho phép Google sử dụng dữ liệu nhập/xuất để huấn luyện mô hình.
    - Hệ thống chủ động giảm thiểu rủi ro bằng cách: (a) Che toàn bộ secret và khóa API trong code trước khi gửi; (b) Chỉ gửi các lát cắt hàm ngắn, không gửi toàn bộ repo; (c) Người tự cài đặt có thể dùng key gói Paid Tier (Cloud Billing) để được cam kết không sử dụng dữ liệu huấn luyện theo điều khoản của Google.
+5. **Bộ lọc an toàn & che dữ liệu nhạy cảm (`maskSensitive` — D-65):**
+   - **Hàm `maskSensitive(text)`:** Đặt tại `src/lib/moderation.ts`, dùng chung cho cả server và client (nếu cần), 0 token, xử lý regex thuần.
+   - **Cửa nhận repo (`10` Mục 11):** Sau khi `redactSecrets` che các secret thông dụng, mã nguồn chạy tiếp qua `maskSensitive` để che email (`[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}`), số điện thoại VN (`(\+84|0)(3|5|7|8|9)[0-9]{8}`), CCCD 12 số (`\b0[0-9]{11}\b`), từ xấu, và các mẫu secret bổ sung (`\bsk-[A-Za-z0-9_-]{20,}\b`, `\bgithub_pat_[A-Za-z0-9_]{22,}\b`, JWT `\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b`, chuỗi gán trong dấu \` \`). Mọi mục nhạy cảm được che bằng `***`, bảo toàn số dòng (`\n`), cộng dồn số lần che vào `redacted_secret_count`.
+   - **Cửa câu trả lời (`03` Mục 6.2):** Ngay sau bước kiểm tra độ dài:
+     + Quét từ xấu: nếu phát hiện từ xấu ⇒ trả ngay mã lỗi `ERR_ANSWER_INAPPROPRIATE` (HTTP 400), không tính lượt, không gọi AI (0 token).
+     + Nếu đạt: chạy qua `maskSensitive` để che email, số điện thoại, CCCD và secret trước khi gửi cho `gradeWithAI` và trước khi lưu vào CSDL (`question_attempts.student_answer`).
+     + Ghi chú của nút "Báo sai" (`report-wrong`, `03` Mục 6.4) cũng chạy qua `maskSensitive` trước khi ghi vào bảng `dispute_reports`.
+   - **Danh sách từ xấu:** Chỉ bao gồm từ ngữ có dấu và cụm từ rõ nghĩa (xúc phạm, tục tĩu rõ ràng). Tuyệt đối không bắt dạng không dấu mơ hồ (`cac`, `lon`) để tránh chặn nhầm code/tên biến; không chứa các từ kỹ thuật phổ biến (`kill`, `attack`, `hack`, `daemon`, `terminate`, `abort`...).
+   - **Phạm vi bảo vệ:** Cơ chế chống prompt injection (`21`) giữ nguyên; không bật bộ lọc nội dung Gemini (tránh false-positive khi phân tích mã nguồn); không kiểm tra từ xấu ở đầu ra AI; không sửa `spec/20`, `spec/21`.
 
 ---
 
@@ -373,7 +382,7 @@ Bản thi phục vụ mục tiêu thử thách 21 giờ. Bảng dưới đây ch
 | **1. RAM / thời gian chạy Function khi Ingest** | Semaphore `CONFIG.MAX_CONCURRENT_INGESTIONS` trong 1 instance; giới hạn RAM / thời gian của Vercel Functions gói free | HTTP 503 `ERR_SERVER_BUSY` tăng; Function hết giờ hoặc hết RAM trong Vercel Observability | **Bậc 3:** Tách Ingest Engine thành cụm Worker riêng, điều phối bằng hàng đợi tác vụ (`pgmq` hoặc BullMQ/Redis) |
 | **2. Quota API Gemini** | Hạn mức gói Free của Gemini; `CONFIG.SESSION_TOKEN_QUOTA` mỗi phiên | HTTP 429 `ERR_AI_UNAVAILABLE` hoặc `ERR_TOKEN_QUOTA_EXCEEDED` | **Bậc 4:** Gắn Cloud Billing, chuyển `analyze-node`, `analyze-overview` qua hàng đợi rate-limited |
 | **3. Cache RAM theo instance** | LRU `CONFIG.INGESTION_CACHE_MAX_ENTRIES`, TTL `CONFIG.INGESTION_CACHE_TTL_MS`; mất khi instance bị thay hoặc redeploy | Nhiều lần đọc `session_snapshots` (trượt cache RAM); thời gian `/api/ingest` và `enrich-node` tăng | **Bậc 2:** Bộ nhớ đệm dùng chung (vd Upstash Redis) |
-| **4. Kết nối Postgres** | Giới hạn kết nối của gói Supabase đang dùng | Lỗi `ERR_PERSISTENCE_UNAVAILABLE` do cạn pool | Dùng Supavisor Transaction Pooler hoặc nâng gói Compute của Supabase |
+| **4. Kết nối Postgres** | Pooler Supavisor (port 6543, Transaction mode) qua `DATABASE_URL`, driver `postgres` `prepare: false` | Timeout kết nối pooler khi đồng thời quá nhiều request | Nâng gói Compute Supabase hoặc tách read-replica / dedicate pool |
 
 ---
 
@@ -434,7 +443,8 @@ Chốt **phiên bản chính xác ở giờ H+0** bằng lệnh cài đặt, ghi
 | `web-tree-sitter` + file `.wasm` của từng grammar | Cùng ABI với grammar | Parser |
 | `fflate` | 0.8.x | Giải nén zip trong RAM |
 | `@google/genai` | 1.x | Gemini, structured output |
-| `@supabase/supabase-js`, `@supabase/ssr` | 2.x | Auth + DB |
+| `postgres` | 3.x | DB client (truy vấn, `db.tx` dùng `sql.begin`, `prepare: false`) |
+| `@supabase/supabase-js`, `@supabase/ssr` | 2.x | Auth (OAuth GitHub, xác thực token) |
 | `pino` | 9.x | Log JSON 1 dòng ra stdout (`04` Mục 9, D-28) |
 | `vitest` | 2.x hoặc 3.x | Test hàm thuần (`50`) |
 
@@ -443,3 +453,29 @@ Chốt **phiên bản chính xác ở giờ H+0** bằng lệnh cài đặt, ghi
 **Nạp grammar trên Vercel (D-61):** engine chỉ chạy trong `POST /api/ingest` (mở lại phiên đọc `session_snapshots`, không parse lại). File trong `public/` không tự đóng gói vào hàm server ⇒ `next.config.ts` khai báo `outputFileTracingIncludes: { "/api/ingest": ["./public/grammars/*.wasm", "./node_modules/web-tree-sitter/*.wasm"] }`; route `ingest` đặt `export const runtime = "nodejs"`; `Parser.init({ locateFile })` trỏ tới `tree-sitter.wasm` trong `node_modules/web-tree-sitter/`; grammar nạp bằng `Language.load(await fs.readFile(path.join(process.cwd(), "public/grammars", adapter.wasm_grammar)))`.
 
 > ⚠️ **Phải kiểm chứng ở H+1:** nạp được grammar TS/JS + Python bằng `initParsers()` (`11` ENG-11). Kiểm cả trên bản preview Vercel: ingest repo demo thành công (chạy được ở máy local chưa đủ). **Fallback (D-32):** lệch ABI ⇒ đổi bản `web-tree-sitter` trong `package.json` cho khớp với grammar `.wasm` đã có sẵn, không tự build lại grammar.
+
+---
+
+## 17. GitHub tự canh lỗ hổng & An ninh CI/CD (D-65)
+
+1. **Dependabot alerts & security updates:** Bật trên kho GitHub; cấu hình `.github/dependabot.yml` cập nhật dependencies định kỳ hằng tuần (package-ecosystem: `npm`, directory: `/`, schedule: `weekly`). Khi có lỗ hổng CVE trong dependency, Dependabot tự động tạo PR nâng cấp phiên bản an toàn tối thiểu.
+2. **Secret scanning & Push protection:** Bật Secret scanning kèm Push protection trên repo GitHub nhằm quét lịch sử commit và chặn ngay khi developer thực hiện `git push` nếu phát hiện API key, token hoặc khóa riêng tư vô tình lọt vào commit.
+3. **CodeQL default setup:** Bật CodeQL default setup trong GitHub Advanced Security; tự động phân tích ngữ nghĩa mã nguồn JavaScript/TypeScript trên PR và nhánh chính mà không cần viết workflow tùy biến phức tạp.
+4. **Security workflow (`.github/workflows/security.yml`):** Chạy trên mọi Pull Request và lịch hằng tuần (`schedule: cron '0 0 * * 1'`), thực thi `npm audit --omit=dev --audit-level=critical` để phát hiện và chặn các lỗ hổng mức nghiêm trọng (critical) ở các gói chạy production.
+5. **Security headers trong `next.config.ts`:** Route handler và trang giao diện trả về các tiêu đề HTTP bảo vệ:
+   - `X-Content-Type-Options: nosniff` (ngăn trình duyệt đoán sai MIME type).
+   - `X-Frame-Options: DENY` (chặn nhúng vào iframe, phòng thủ Clickjacking).
+   - `Referrer-Policy: strict-origin-when-cross-origin` (giới hạn rò rỉ URL nguồn).
+   - `Strict-Transport-Security: max-age=31536000; includeSubDomains` (ép kết nối HTTPS).
+   - *Lưu ý:* Không đặt CSP (Content Security Policy) ở bản thi để tránh xung đột với Monaco Editor và ReactFlow web worker/inline styles.
+
+### Bảng đối chiếu lỗi bảo mật phổ biến với luật sẵn có
+
+| Lỗ hổng phổ biến | Rủi ro | Cơ chế phòng thủ của SimpliFey |
+| :-- | :-- | :-- |
+| **Lộ Secret / API Key** | Đẩy secret lên repo, rò rỉ qua log hoặc gửi cho AI | GitHub Secret scanning + Push protection; `redactSecrets` (`10`) + `maskSensitive` (`04`) che trước khi gửi AI hoặc lưu DB; cấm ghi bí mật vào log (D-28); env chỉ nằm ở server |
+| **Dependency chứa CVE** | Thư viện bên thứ ba có lỗ hổng nghiêm trọng | Dependabot alerts & security updates tự tạo PR sửa; workflow `.github/workflows/security.yml` chạy `npm audit --audit-level=critical` chặn PR |
+| **SQL Injection** | Chèn mã SQL độc qua tham số đầu vào | Driver `postgres` 3.x tự động tham số hóa tagged template literal (`sql\`...\``); RLS bật trên mọi bảng; không ghép chuỗi SQL |
+| **XSS / Clickjacking** | Chèn script độc hại vào trình duyệt, nhúng iframe | Headers `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`; React tự escape; văn bản AI là chữ thuần (không `dangerouslySetInnerHTML`) |
+| **Lộ dữ liệu chéo người dùng** | Đọc tiến độ, điểm số, bài làm của tài khoản khác | RLS Postgres bắt buộc `auth.uid() = user_id`; kiểm tra quyền sở hữu ở mọi endpoint (API-05); không lưu code đầy đủ (D-59) |
+| **Prompt Injection / Jailbreak** | Người học dùng bài làm để điều khiển AI chấm | Chuẩn hóa NFC + regex chặn câu lệnh; 0 điểm `OFF_TOPIC` (`21`); không đưa `code_context` vào prompt chấm (D-36); responseSchema cố định |

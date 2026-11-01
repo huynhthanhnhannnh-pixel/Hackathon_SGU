@@ -818,7 +818,7 @@ export type LearningErrorCode =
   | "ERR_OVERVIEW_NOT_READY"        // Còn node chưa phân tích xong
   | "ERR_QUESTION_FINISHED"         // Nộp / bỏ qua câu đã xong
   | "ERR_ATTEMPT_OUT_OF_SYNC"       // attempt_number lệch số lượt thật (2 tab)
-  | "ERR_ANSWER_TOO_SHORT" | "ERR_ANSWER_TOO_LONG" | "ERR_ANSWER_DUPLICATE"   // Không tính lượt
+  | "ERR_ANSWER_TOO_SHORT" | "ERR_ANSWER_TOO_LONG" | "ERR_ANSWER_DUPLICATE" | "ERR_ANSWER_INAPPROPRIATE"   // Không tính lượt
   | "ERR_REPORT_NOT_ALLOWED";       // Báo sai câu không FAILED / đã báo
 
 export type AiErrorCode =
@@ -851,7 +851,7 @@ export interface ApiError {
 
 | HTTP | Mã lỗi |
 | :-: | :-- |
-| 400 | `ERR_INVALID_GITHUB_URL`, `ERR_UPLOAD_INVALID`, `ERR_ANSWER_TOO_SHORT`, `ERR_ANSWER_TOO_LONG`, `ERR_ANSWER_DUPLICATE` |
+| 400 | `ERR_INVALID_GITHUB_URL`, `ERR_UPLOAD_INVALID`, `ERR_ANSWER_TOO_SHORT`, `ERR_ANSWER_TOO_LONG`, `ERR_ANSWER_DUPLICATE`, `ERR_ANSWER_INAPPROPRIATE` |
 | 401 | `ERR_UNAUTHENTICATED` |
 | 403 | `ERR_DEMO_MODE_DISABLED`, `ERR_REPORT_NOT_ALLOWED` |
 | 404 | `ERR_PREFLIGHT_404_OR_PRIVATE`, `ERR_BRANCH_NOT_FOUND`, `ERR_SESSION_NOT_FOUND` |

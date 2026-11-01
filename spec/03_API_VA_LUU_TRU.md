@@ -82,7 +82,7 @@ Không lặp ở cột "Lỗi riêng":
 ### `GET /api/sessions`
 
 Mỗi `LearningSessionSummary` được tính khi đọc, không lưu:
-- `completed_count` / `failed_count` đếm `node_progress.status`; `total_nodes = graph_skeleton.length`.
+- Truy vấn nhanh, tránh N+1: chỉ lấy các cột cần thiết, không lấy `graph_skeleton` đầy đủ qua mạng mà dùng `jsonb_array_length(graph_skeleton)` để tính `total_nodes`; `completed_count` và `failed_count` đếm từ `node_progress.status` bằng `LEFT JOIN` / `GROUP BY` trong một truy vấn duy nhất thay vì truy vấn lặp từng phiên.
 - `engine_version ≠ CONFIG.ENGINE_VERSION` ⇒ `can_resume = false`, `resume_blocker = "ENGINE_UPDATED"`.
 - Còn lại ⇒ `true`, `null` (mọi phiên, kể cả `.zip`, mở lại từ `session_snapshots` — D-59).
 
@@ -179,6 +179,7 @@ create table node_runs (                               -- 1 lần học 1 node (
   finished_at timestamptz
 );
 create unique index node_runs_one_open on node_runs (session_id, node_id) where finished_at is null;
+create index on node_runs (session_id, node_id);
 
 create table question_attempts (                       -- Chỉ thêm, không sửa
   id             bigint generated always as identity primary key,
@@ -215,6 +216,8 @@ create table dispute_reports (                         -- Nút "Báo sai" (D-22)
   note           text not null check (char_length(note) <= 500),           -- = CONFIG.REPORT_NOTE_MAX_CHARS
   created_at     timestamptz not null default now()
 );
+create index on dispute_reports (run_id);
+create index on dispute_reports (user_id);
 ```
 
 ### 3.1. `node_runs.questions` (jsonb) — kiểu `RunQuestion`
@@ -316,18 +319,19 @@ async function enrichNode(req: EnrichNodeRequest, userId: string): Promise<Enric
 
 ```mermaid
 flowchart TD
-  A["POST /api/evaluate-feynman"] --> B{"1 · Độ dài"}
-  B -- "sai" --> EB["ERR_ANSWER_TOO_*<br/>không tính lượt"]
-  B -- "đúng" --> C{"2 · Đọc DB, không khóa<br/>run · câu hỏi · đáp án (D-36)"}
+  A["POST /api/evaluate-feynman"] --> B{"1 · Độ dài & Từ ngữ"}
+  B -- "sai độ dài" --> EB["ERR_ANSWER_TOO_*<br/>không tính lượt"]
+  B -- "có từ xấu" --> EIN["ERR_ANSWER_INAPPROPRIATE<br/>0 token · không tính lượt"]
+  B -- "hợp lệ" --> C{"2 · Đọc DB, không khóa<br/>run · câu hỏi · đáp án (D-36)"}
   C -- "DB lỗi" --> EC["ERR_PERSISTENCE_UNAVAILABLE<br/>không gọi AI, không tính lượt"]
   C -- "câu đã xong · lệch lượt · trùng lần trước" --> ED["ERR_QUESTION_FINISHED · ERR_ATTEMPT_OUT_OF_SYNC<br/>ERR_ANSWER_DUPLICATE · không tính lượt"]
   C -- "hợp lệ" --> D{"3 · isInjection?"}
   D -- "có" --> D1["injectionGrading<br/>0 token, vẫn tính 1 lượt"]
-  D -- "không" --> D2["gradeWithAI"]
+  D -- "không" --> D2["gradeWithAI<br/>(che secret, PII bằng maskSensitive)"]
   D2 -- "hết quota · AI hỏng" --> EE["ERR_TOKEN_QUOTA_EXCEEDED · ERR_AI_UNAVAILABLE<br/>không tính lượt"]
   D1 --> F["decidePass + decideFollowUp"]
   D2 -- "có kết quả" --> F
-  F --> G{"4 · Transaction ngắn<br/>khóa run · ghi lượt · câu xong ⇒ BKT · finalizeRunIfDone"}
+  F --> G{"4 · Transaction ngắn<br/>khóa run · ghi lượt (che PII) · BKT · finalizeRunIfDone"}
   G -- "ghi xong" --> OK["EvaluateFeynmanResponse"]
   G -- "DB lỗi sau DB_RETRY_DELAYS_MS" --> RC["ERR_PERSISTENCE_UNAVAILABLE<br/>bỏ kết quả chấm, không tính lượt · Thử lại (D-40)"]
 ```
@@ -338,30 +342,32 @@ async function evaluateFeynman(req: EvaluateFeynmanRequest, userId: string): Pro
   const now = Date.now();
   // 1. Đầu vào (0 token, 0 DB)
   validateAnswerLength(req.student_answer);                              // src/lib/similarity.ts, dùng chung với client: số ký tự không phải khoảng trắng < ANSWER_MIN_CHARS ⇒ _TOO_SHORT; độ dài thô > ANSWER_MAX_CHARS ⇒ _TOO_LONG
+  if (hasInappropriateWords(req.student_answer)) throw ERR_ANSWER_INAPPROPRIATE; // moderation.ts: có từ xấu ⇒ 400, không tính lượt, không gọi AI (D-65)
+  const cleanAnswer = maskSensitive(req.student_answer);                // Che email, SĐT VN, CCCD 12 số, secret bằng *** trước khi gọi AI và lưu
 
   // 2. Đọc KHÔNG khóa — DB lỗi ⇒ ERR_PERSISTENCE_UNAVAILABLE, không gọi AI
   const { run, session } = await readForGrading(req, userId);           // run thuộc phiên của userId, 1 ≤ question_index ≤ n — sai ⇒ ERR_SESSION_NOT_FOUND
   const q = run.questions[req.question_index - 1];                      // Câu hỏi + đáp án mẫu + ý bắt buộc đọc từ DB (D-36)
   if (run.finished_at || q.finished) throw ERR_QUESTION_FINISHED;
   if (req.attempt_number !== q.attempts_used + 1) throw ERR_ATTEMPT_OUT_OF_SYNC;
-  if (q.last_answer && similarity(req.student_answer, q.last_answer) >= CONFIG.ANSWER_DUPLICATE_SIMILARITY) throw ERR_ANSWER_DUPLICATE;
+  if (q.last_answer && similarity(cleanAnswer, q.last_answer) >= CONFIG.ANSWER_DUPLICATE_SIMILARITY) throw ERR_ANSWER_DUPLICATE;
 
-  // 3. Chấm (ngoài transaction)
+  // 3. Chấm (ngoài transaction, gửi cleanAnswer đã che)
   const maxAttempts = CONFIG.MAX_ATTEMPTS_PER_QUESTION;
   const t = { ...q, steps: run.steps, forbidden_external_keywords: run.forbidden_external_keywords }; // GradeContext (20 AI-27)
-  const grading = isInjection(req.student_answer)                       // 21: chuẩn hóa NFC rồi chỉ bắt mẫu câu lệnh
+  const grading = isInjection(cleanAnswer)                              // 21: chuẩn hóa NFC rồi chỉ bắt mẫu câu lệnh
     ? injectionGrading(q)                                               // 0 điểm, OFF_TOPIC, không gợi ý, 0 token — VẪN tính 1 lượt
-    : await gradeWithAI(t, req.student_answer, req.attempt_number, maxAttempts, session); // 20: không code_context (D-36); quota ⇒ ERR_TOKEN_QUOTA_EXCEEDED; hỏng ⇒ ERR_AI_UNAVAILABLE
-  const isPassed = decidePass(grading, q.must_have_points, req.student_answer);        // D-13
-  const followUp = decideFollowUp(grading, req.attempt_number, maxAttempts, isPassed, t, req.student_answer); // 20, 21
+    : await gradeWithAI(t, cleanAnswer, req.attempt_number, maxAttempts, session); // 20: không code_context (D-36); quota ⇒ ERR_TOKEN_QUOTA_EXCEEDED; hỏng ⇒ ERR_AI_UNAVAILABLE
+  const isPassed = decidePass(grading, q.must_have_points, cleanAnswer); // D-13
+  const followUp = decideFollowUp(grading, req.attempt_number, maxAttempts, isPassed, t, cleanAnswer); // 20, 21
 
   // 4. Transaction ngắn — DB lỗi sau CONFIG.DB_RETRY_DELAYS_MS ⇒ ERR_PERSISTENCE_UNAVAILABLE, bỏ kết quả chấm (D-40)
   return withDbRetry(() => db.tx(async (tx) => {
     const run2 = await tx.lockRun(run.id);                               // SELECT … FOR UPDATE
     const q2 = run2.questions[req.question_index - 1];
     if (q2.finished || q2.attempts_used !== req.attempt_number - 1) throw ERR_ATTEMPT_OUT_OF_SYNC; // Bỏ kết quả chấm
-    await tx.insertAttempt(run2.id, q2, req, grading, isPassed);         // 4.1
-    q2.attempts_used += 1; q2.last_answer = req.student_answer;          // 4.2
+    await tx.insertAttempt(run2.id, q2, { ...req, student_answer: cleanAnswer }, grading, isPassed); // 4.1: lưu câu trả lời đã che
+    q2.attempts_used += 1; q2.last_answer = cleanAnswer;                 // 4.2
     let skillChange: SkillChange | null = null;
     if (isPassed || q2.attempts_used === maxAttempts) {                  // 4.3 Câu xong
       q2.finished = true; q2.ended_by = "ANSWER";
@@ -393,7 +399,7 @@ Quy tắc mở đáp án: `question.reveal` chỉ có khi câu `finished` (đạ
 1. Khóa run. Câu phải có `outcome = FAILED`, `ended_by = ANSWER`, `disputed = false`; ngược lại `ERR_REPORT_NOT_ALLOWED`.
 2. Đặt `disputed = true`.
 3. Nếu `skill_states.p_mastery` của kỹ năng đúng bằng `p_after` (sai số `CONFIG.BKT_REVERT_EPSILON`): đặt lại `p_mastery = p_before` (`p_before` là điểm **đã decay** dùng làm tiên nghiệm lúc cập nhật), `practice_count -= 1`, giữ nguyên `last_practiced_at` và `correct_count` (`revertSkillChange`, `22`).
-4. Insert `dispute_reports`.
+4. Insert `dispute_reports` (ghi chú `note` được che secret và thông tin cá nhân qua `maskSensitive` trước khi lưu).
 5. Tính lại màu node (Mục 6.5, câu `disputed` bị bỏ qua).
 6. Trả `ReportWrongResponse`.
 
@@ -435,7 +441,7 @@ Run xong khi mọi câu `finished`. Câu `DROPPED` và câu `disputed` không t�
 | Hết quota phiên | `ERR_TOKEN_QUOTA_EXCEEDED` cho mọi lời gọi AI mới; câu đang làm không nộp được; chế độ Offline chỉ dành cho repo demo |
 | Commit bị force-push xóa / repo bị xóa hoặc chuyển private | Phiên cũ vẫn học tiếp từ `session_snapshots` (D-59); dán link mới ⇒ phiên mới |
 | Chế độ Offline (`Ctrl+Shift+D`) | Không gọi API học; không ghi Postgres; nhãn "Chế độ Offline — dữ liệu ghi lại, không lưu tiến độ" |
-| Câu trả lời chứa thông tin cá nhân | Lưu ≤ `ANSWER_MAX_CHARS`, chỉ đọc qua API của chủ tài khoản, xóa theo tài khoản |
+| Câu trả lời chứa thông tin cá nhân / secret | Đã qua `maskSensitive` che email, SĐT, CCCD, secret bằng `***` trước khi gửi AI và lưu DB; xóa theo tài khoản (D-65) |
 
 ---
 
@@ -443,6 +449,7 @@ Run xong khi mọi câu `finished`. Câu `DROPPED` và câu `disputed` không t�
 
 | Biến | Dùng cho | Ghi chú |
 | :-- | :-- | :-- |
+| `DATABASE_URL` | Kết nối Postgres qua Supavisor Transaction Pooler (port 6543) | Driver `postgres` 3.x, `prepare: false`, kết nối bền vững trên serverless Vercel (D-65) |
 | `GEMINI_API_KEY` | 4 lời gọi AI | Không bao giờ gửi xuống client |
 | `GITHUB_TOKEN` | Tải chọn lọc repo lớn (`10` Mục 4A) | Chỉ server; token chỉ đọc repo công khai; thiếu ⇒ ING-49 |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client đăng nhập GitHub | Công khai được; `NEXT_PUBLIC_SUPABASE_ANON_KEY` nhận publishable key `sb_publishable_…` |

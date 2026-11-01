@@ -270,11 +270,11 @@ export function hasInjectionText(code: string): boolean;
 
 1. **ING-110 Mẫu** (theo thứ tự, trên toàn văn bản; `MASK = "<REDACTED_SECRET>"`):
    - Khối `-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----` … `-----END …PRIVATE KEY-----` ⇒ từng dòng (cả BEGIN/END) thay bằng thụt lề + `MASK`, giữ `\n`.
-   - `AKIA[0-9A-Z]{16}`, `\b(ghp|gho|ghs|ghu)_[A-Za-z0-9]{36}\b`, `\bAIza[0-9A-Za-z_-]{35}\b` ⇒ thay cả token.
-   - `(password|passwd|pwd|secret|api_?key|token|private_?key|access_?key)\s*[:=]\s*(["'])([^"'\s]+)\2` (không phân biệt hoa thường, khớp cả trong `JWT_SECRET`), nhóm 3 dài ≥ `CONFIG.SECRET_MIN_VALUE_LENGTH` ⇒ thay nội dung trong nháy (giữ tên biến, giữ nháy).
+   - `AKIA[0-9A-Z]{16}`, `\b(ghp|gho|ghs|ghu)_[A-Za-z0-9]{36}\b`, `\bgithub_pat_[A-Za-z0-9_]{22,}\b`, `\bsk-[A-Za-z0-9_-]{20,}\b`, JWT `\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b`, `\bAIza[0-9A-Za-z_-]{35}\b` ⇒ thay cả token.
+   - `(password|passwd|pwd|secret|api_?key|token|private_?key|access_?key)\s*[:=]\s*(["'`])([^"'`\s]+)\2` (không phân biệt hoa thường, khớp cả trong `JWT_SECRET`, chuỗi trong nháy đơn, nháy kép hoặc dấu \` \`), nhóm 3 dài ≥ `CONFIG.SECRET_MIN_VALUE_LENGTH` ⇒ thay nội dung trong nháy (giữ tên biến, giữ nháy).
    - `(mongodb(\+srv)?|postgres(ql)?|mysql|redis|amqp)://([^:/\s]+):([^@\s]+)@` ⇒ thay phần mật khẩu.
 2. **Bảo toàn dòng.** Số `\n` trước/sau che bằng nhau (lệch ⇒ bỏ file + warning, không giữ bản chưa che). `redacted_secret_count` = tổng số lần khớp (1 khối key = 1).
-3. Bản đã che là bản duy nhất trong RAMCodeStore; Tầng 1–2, `snippet` và lát cắt gửi AI đều đọc từ bản này.
+3. Bản đã che là bản duy nhất trong RAMCodeStore; Tầng 1–2, `snippet` và lát cắt gửi AI đều đọc từ bản này. Sau `redactSecrets`, mã nguồn chạy tiếp qua `maskSensitive` (`04` Mục 13) để che email, số điện thoại VN, CCCD 12 số và từ xấu bằng `***`, bảo toàn số dòng; số lần che được cộng dồn vào `redacted_secret_count` (D-65).
 4. **ING-113 Cờ injection** (không sửa code): khớp `/(ignore|disregard|forget)\s+(all\s+)?(the\s+)?(previous|above|prior)\s+(instructions?|prompts?)|you\s+are\s+now\b|system\s+prompt|<\/?\s*(system|instructions?)\s*>/i` ⇒ path vào `suspicious_instruction_files` (sort, không trùng). Chỉ server — `toClientResult` loại bỏ (`11` Mục 15); phòng thủ thuộc `20`/`21`.
 
 ---
