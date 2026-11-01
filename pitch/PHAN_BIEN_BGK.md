@@ -147,7 +147,7 @@ AI khi đó hỏi kiểu thuật toán: chạy tay với input nhỏ, Big-O, tì
 Đ: Bản đồ phải tất định (cùng commit ⇒ cùng node, cùng tọa độ, để mở lại phiên) và miễn phí. LLM không đáp ứng được cả hai, nên spec cấm dùng LLM dựng đồ thị.
 
 **B10. "Repo private thì sao?"**
-Đ: Nén thành `.zip` (≤ 4,5 MB) rồi kéo thả vào. Nhưng bản dùng thử chạy gói free của Gemini, nên chỉ dùng với code không bí mật (xem E4). File chỉ nằm trong RAM và được định danh bằng SHA-256. Đăng nhập GitHub chỉ xin quyền đọc email và hồ sơ công khai (`user:email`), không đọc được repo private. Đọc repo private qua GitHub App với quyền chỉ đọc nằm ở roadmap.
+Đ: Nén thành `.zip` (≤ 4,5 MB) rồi kéo thả vào. Nhưng bản dùng thử chạy gói free của Gemini, nên chỉ dùng với code không bí mật (xem E4). File zip chỉ nằm trong RAM và được định danh bằng SHA-256; chỉ đoạn code đã cắt được lưu lại (xem E1). Đăng nhập GitHub chỉ xin quyền đọc email và hồ sơ công khai (`user:email`), không đọc được repo private. Đọc repo private qua GitHub App với quyền chỉ đọc nằm ở roadmap.
 
 ### C. AI & cổng gác
 
@@ -220,7 +220,7 @@ Mỗi kỹ năng chỉ có vài quan sát trên một repo, nên điểm là ư�
 **E2. "Code của sinh viên có bị gửi đi đâu không?"**
 Đ:
 - Mỗi lời gọi AI chỉ gửi code các bước của một node (≤ `NODE_MAX_LINES` dòng), đã che secret ngay từ lúc tải.
-- Code không ghi xuống đĩa hay DB.
+- File nguồn không ghi xuống đĩa hay DB; chỉ đoạn code đã cắt của phiên được lưu ở `session_snapshots` (D-59).
 - Câu trả lời của người học chỉ chủ tài khoản đọc được; xóa tài khoản là xóa hết.
 - Bản dùng thử chạy gói free của Gemini, nên chỉ dành cho repo công khai (xem E4). Trước khi pilot thật, nhóm sẽ chuyển sang API trả phí và thêm màn hình xin đồng ý theo Nghị định 13/2023.
 
@@ -247,7 +247,7 @@ Hai cơ chế đầu chỉ là tối ưu trong 1 instance, đúng sai của hệ
 
 **E7. "Tại sao chọn Vercel? Vercel serverless làm mất cache RAM thì sao?"**
 Đ: Đúng là trên Vercel, cache RAM và semaphore chỉ sống trong 1 instance và có thể mất bất kỳ lúc nào. Nhóm chấp nhận điều đó và thiết kế để **không dựa vào cache** (D-27):
-1. **Phiên gắn commit SHA (D-39):** trượt cache ⇒ tải lại zip theo đúng SHA của phiên và chạy lại engine tất định ⇒ bản đồ y hệt, tiến độ ghép lại từ Postgres.
+1. **Phiên gắn commit SHA (D-39):** trượt cache ⇒ đọc kết quả engine đã lưu của phiên trong `session_snapshots` (D-59) ⇒ bản đồ y hệt, tiến độ ghép lại từ Postgres.
 2. **Tiến độ, câu hỏi, đáp án đều ở Postgres**, không ở RAM ⇒ request rơi vào instance nào cũng chấm đúng (D-36).
 3. **Đổi lại:** miễn phí, deploy khi merge vào `main`, cùng vùng Singapore với Supabase, và người tự cài từ mã nguồn mở dùng được gói free (D-33).
 Từ D-59, phiên `.zip` cũng mở lại được vì đoạn code đã cắt được lưu theo phiên.

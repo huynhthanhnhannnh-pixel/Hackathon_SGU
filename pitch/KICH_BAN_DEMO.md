@@ -260,14 +260,14 @@ Luật dùng:
 
 - **Người nói:** Vai B
 - **Câu mồi:** Phút 0:35: "Bước này máy đọc code bằng thuật toán, không gọi AI, nên không tốn token."
-- **Bản 30 giây:** "Dạ, bản đồ được dựng bằng thuật toán trên máy chủ, không tốn token. Tree-sitter đọc cú pháp và lập danh bạ tên hàm để nối lời gọi tới định nghĩa thật. Nhóm dùng hàm entry làm gốc mỗi bài học, Tarjan để khử chu trình, và PageRank chỉ xếp hạng bài học. Thuật toán tất định nên không cần lưu code. Giới hạn là gọi động có thể sót cạnh, và mới kiểm chứng trên TS/JS và Python."
+- **Bản 30 giây:** "Dạ, bản đồ được dựng bằng thuật toán trên máy chủ, không tốn token. Tree-sitter đọc cú pháp và lập danh bạ tên hàm để nối lời gọi tới định nghĩa thật. Nhóm dùng hàm entry làm gốc mỗi bài học, Tarjan để khử chu trình, và PageRank chỉ xếp hạng bài học. Hệ thống chỉ lưu đoạn code đã cắt, không lưu file nguồn. Giới hạn là gọi động có thể sót cạnh, và mới kiểm chứng trên TS/JS và Python."
 - **Bản 2 phút:**
   - Tree-sitter bóc tách cú pháp tĩnh, lập danh bạ tên hàm và nối từng lời gọi tới định nghĩa thật.
   - Gốc mỗi bài học là một hàm entry (route, controller, command, screen); PageRank chỉ dùng xếp hạng giữa các lát cắt.
   - Thuật toán Tarjan gộp các nhóm gọi vòng nhau để bảo đảm đồ thị không có chu trình.
-  - Tính tất định: cùng mã commit luôn cho cùng bản đồ, hệ thống không cần lưu lại code mà vẫn mở lại đúng phiên.
+  - Tính tất định: cùng mã commit luôn cho cùng bản đồ. Mở lại phiên đọc đoạn code đã cắt trong `session_snapshots`, không tải lại repo.
   - Giới hạn kỹ thuật: gọi động hoặc reflection có thể làm sót cạnh; hiện chỉ mới kiểm chứng trên TS/JS và Python.
-- **Slide phụ:** Slide phụ S1: chuỗi từ link repo tới 6–8 ô. Lấy từ sơ đồ ở `doc-de-hieu/02_engine.md` mục "Sơ đồ 13 giai đoạn chuyển hóa", rút còn 5–6 khối.
+- **Slide phụ:** Slide phụ S1: chuỗi từ link repo tới bản đồ. Lấy từ sơ đồ ở `doc-de-hieu/02_engine.md` mục "Sơ đồ 13 giai đoạn chuyển hóa", rút còn 5–6 khối.
 
 Mã câu liên quan ở `PHAN_BIEN_BGK.md`: B2, B3, B4, B5, B9.
 
