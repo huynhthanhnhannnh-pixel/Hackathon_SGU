@@ -44,6 +44,18 @@
 18. Nếu một thành viên phải **vắng một khoảng** (ví dụ việc gia đình) thì có ảnh hưởng tới tư cách thi của đội không?
 19. Ăn uóng như thế nào
 
+## 7. Xin ý kiến về dự án
+
+20. Nhóm em làm sản phẩm biến một repo GitHub công khai (hoặc file `.zip`) thành **bản đồ kiến trúc** gồm tối đa 20 phần chính, rồi cho người học trả lời câu hỏi và **tự giải thích lại** (kiểu Feynman) để AI chấm và gợi ý. Anh thấy hướng này có phù hợp với đề bài và tiêu chí của cuộc thi không?
+21. Mỗi repo chỉ hiện **tối đa 20 phần chính**, repo lớn sẽ không thấy hết từng file. Anh thấy giới hạn này có chấp nhận được không?
+    *`CONFIG` giới hạn 20 node.*
+22. AI vẫn có thể giải thích sai. Nhóm em có bộ kiểm chặn tên bịa và công nghệ không có trong repo, nhưng **không bảo đảm đúng nghĩa 100%** và ghi rõ nhãn "AI" trên giao diện. Cách xử lý và trình bày giới hạn này như vậy có ổn không?
+    *INV về guardrail.*
+23. Nhóm em dùng các kỹ thuật **đã có sẵn** (BKT để theo dõi mức hiểu, PageRank, Tree-sitter) và sáng tạo ở **cách kết hợp** thành một sản phẩm học tập. Khi chấm tính sáng tạo, như vậy có được đánh giá cao không?
+24. Với 21 giờ code, anh ưu tiên **một luồng chính chạy trọn vẹn, ổn định** hay **nhiều tính năng** dù chưa hoàn thiện?
+    *Quyết định cắt việc theo `doc-de-hieu/07_ke_hoach_21h.md`.*
+25. Anh có góp ý nào khác về ý tưởng, người dùng mục tiêu hoặc cách demo của nhóm em không ạ?
+
 ---
 
 ## Ghi câu trả lời
