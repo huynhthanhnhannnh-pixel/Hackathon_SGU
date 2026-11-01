@@ -195,7 +195,7 @@ Các ý dưới đây có thể làm được về kỹ thuật nhưng **nhóm k
 | :-- | :-- |
 | Fast-Track `P ≥ 0.85` | Bỏ khỏi bản thi (D-34): node mà mọi kỹ năng ≥ `CONFIG.MASTERED_MIN` vẫn hỏi 1 câu; miễn thi chỉ còn là ý tương lai (Mục 6) |
 | Ngưỡng cứng "70/70" (`core_accuracy` và `simplicity`) | `PASS_CORE_ACCURACY` + luật D-13 (đủ ý bắt buộc có trích dẫn thật); `simplicity` **không** ảnh hưởng đạt |
-| Quota 10.000 token/phiên **đếm ở client** | `SESSION_TOKEN_QUOTA` (80.000), **đếm ở server** (API-06) |
+| Quota 10.000 token/phiên **đếm ở client** | `SESSION_TOKEN_QUOTA` (200.000), **đếm ở server** (API-06) |
 | Debounce bằng Jaccard | Độ giống `1 − Levenshtein/max(len)` ≥ `ANSWER_DUPLICATE_SIMILARITY` (0,8), kiểm ở server |
 | ≈ $0.03/phiên; "$110–120/tháng cho 1.000 MAU"; "chi phí vận hành < $15/tháng" | ~0,05 USD người đầu / ~0,03 USD người sau (ước lượng); người tự cài trả theo key của mình |
 | Response Cache trên Redis khóa `hash(snippet)+tier` | `ai_cache` ở Postgres, đã có, chỉ cho bản phân tích node và tổng quan; câu hỏi không cache (D-37) |

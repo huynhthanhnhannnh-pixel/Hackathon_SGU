@@ -15,7 +15,7 @@ Repo **tài liệu** tiếng Việt cho dự án SimpliFey (hackathon SGU 2026).
 3. Không phá bất biến INV-01..13 (`spec/01` Mục 2). Không hứa "100%". Không nhận là mình phát minh BKT / PageRank / Tree-sitter.
 4. Không bịa số đo (độ trễ, chi phí, số người dùng). Số chưa đo ⇒ ghi "mục tiêu / ước tính, chưa đo".
 5. Thông tin bên ngoài phải có URL nguồn chính thức; không có ⇒ ghi "CHƯA KIỂM CHỨNG".
-6. Viết tiếng Việt, sơ đồ Mermaid, đường dẫn tương đối. File spec ≤ 40 000 byte (riêng `spec/20` ≤ 47 433, `spec/02` ≤ 43 500, `spec/21` ≤ 43 000).
+6. Viết tiếng Việt, sơ đồ Mermaid, đường dẫn tương đối. File spec ≤ 40 000 byte (riêng `spec/20` ≤ 47 433, `spec/02` ≤ 45 000, `spec/21` ≤ 43 000).
 
 ## Cần X ⇒ đọc
 | Cần | Đọc |

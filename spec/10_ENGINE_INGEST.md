@@ -41,29 +41,7 @@ flowchart TB
 Thứ tự: `GITHUB_URL` ⇒ Mục 1–4; `GITHUB_COMMIT` / `ZIP_UPLOAD` ⇒ Mục 4; sau đó 5 → 13.
 
 ```typescript
-// nội bộ — src/server/engine/index.ts
-type IngestSource =
-  | { kind: "GITHUB_URL"; repo_url: string; subdir_override: string | null }
-  | { kind: "GITHUB_COMMIT"; owner: string; repo: string; sha: string; subdir: string }  // 03 §4 — chỉ khi phiên thiếu session_snapshots (D-59)
-  | { kind: "ZIP_UPLOAD"; file_name: string; bytes: Uint8Array; subdir_override: string | null };
-
-interface VirtualFileOrigin {           // nội bộ — SourceMapStore
-  kind: "NOTEBOOK" | "SFC";
-  original_path: string;                // "nb/eda.ipynb"
-  line_origin: string[];                // [i] = nhãn của dòng ảo i+1: "cell 4" | "<script>" | ""
-}
-
-interface IngestOutput {                // nội bộ — chỉ sống trong runEngine
-  repo_name: string;
-  snapshot: RepoSnapshotKey;
-  fingerprint: ProjectFingerprint;
-  report: IngestionReport;              // engine_ms = 0, skipped.parse_error = 0 — 11 điền tiếp
-  code: Map<string, string>;            // RAMCodeStore: path POSIX ⇒ nội dung đã làm sạch + che secret
-  file_language: Map<string, LanguageId>;
-  manifests: Map<string, string>;       // ManifestStore — không tính vào CONFIG.MAX_CLEAN_FILES
-  source_map: Map<string, VirtualFileOrigin>;
-  module_info: { go_module_path: string | null; dart_package_name: string | null; package_entry_files: string[] };
-}
+// IngestSource, VirtualFileOrigin, IngestOutput: `02` Mục 4
 export async function runIngest(src: IngestSource, signal: AbortSignal): Promise<IngestOutput>;
 ```
 

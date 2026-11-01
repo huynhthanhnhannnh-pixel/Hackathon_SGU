@@ -31,7 +31,7 @@
 ```typescript
 export const CONFIG = {
   // ---------- Phiên bản (đổi ⇒ khóa cache mới) ----------
-  ENGINE_VERSION: "1.3.0",            // Đổi khi đổi bất kỳ luật Tầng 0–2 làm đổi đồ thị / node_id (D-10, D-53 … D-58)
+  ENGINE_VERSION: "1.4.0",            // Đổi khi đổi bất kỳ luật Tầng 0–2 làm đổi đồ thị / node_id (D-10, D-53 … D-58, D-61)
   PROMPT_VERSION: "1.0.0",            // Đổi khi đổi prompt hoặc responseSchema của 4 lời gọi AI
 
   // ---------- Tầng 0: tải & lọc (10_ENGINE_INGEST) ----------
@@ -120,7 +120,7 @@ export const CONFIG = {
   GRADING_QUOTE_MIN_CHARS: 3,         // Đoạn trích (đã chuẩn hóa) ngắn hơn ⇒ ý đó không tính (D-13)
   LLM_MAX_OUTPUT_TOKENS: { ANALYZE: 900, OVERVIEW: 600, QUESTIONS: 900, GRADE: 500 },
   ANALYZE_CONCURRENCY: 3,             // Số lời gọi analyze-node chạy cùng lúc / phiên
-  SESSION_TOKEN_QUOTA: 80000,         // Tổng token vào + ra / phiên học, đếm ở server
+  SESSION_TOKEN_QUOTA: 200000,        // Tổng token vào + ra / phiên học, đếm ở server
   ANALYSIS_MIN_SKILLS: 1,
   ANALYSIS_MAX_SKILLS: 3,
   ANALYSIS_MAX_PATTERNS: 2,
@@ -186,8 +186,10 @@ export const CONFIG = {
 | Token: phân tích / tổng quan / đặt câu hỏi / chấm | ~2,000→700 · ~1,500→400 · ~1,600→650 · ~800→200 (vào→ra) | Mỗi lời gọi ra ≤ `LLM_MAX_OUTPUT_TOKENS` |
 | **Người học đầu tiên của 1 repo (7 node, ~15 câu)** | ~37 lời gọi · **~58,500 token** · ~$0.05 | Giá Gemini 3.5 Flash-Lite ($0.30 / 1M vào, $2.50 / 1M ra) |
 | Người học sau cùng repo (trúng cache phân tích) | ~29 lời gọi · ~38,000 token · ~$0.03 | Tốn lượt đặt câu hỏi + chấm (câu hỏi không cache, D-37) |
+| **Người học đầu tiên của repo 20 node** | ~106 lời gọi · **~167,000 token** · ~$0.14 | Tính tỉ lệ từ dòng 7 node, chưa đo |
+| Người học sau, repo 20 node | ~83 lời gọi · ~109,000 token · ~$0.09 | Tính tỉ lệ từ dòng 7 node, chưa đo |
 | Chế độ Offline | 0 token | Dữ liệu ghi lại, đã duyệt tay |
-| Dung lượng Postgres / người học | < 100 KB | Gồm câu trả lời ≤ `ANSWER_MAX_CHARS` |
+| Dung lượng Postgres / người học | < 100 KB, cộng `session_snapshots` tới ~120 KB phần code với phiên 20 node, chưa đo | Gồm câu trả lời ≤ `ANSWER_MAX_CHARS`; phần code = `NODE_MAX_CODE_TOKENS` × `CHARS_PER_TOKEN` × 20 |
 
 ---
 
@@ -395,6 +397,29 @@ export interface FunctionCallEdge {    // Đồ thị gọi hàm (cấp hàm, d�
   confidence: "RESOLVED" | "INFERRED";
   ambiguous: boolean;                 // Nhiều implementor / nhiều ứng viên cùng hậu tố
   call_count: number;
+}
+
+export type IngestSource =
+  | { kind: "GITHUB_URL"; repo_url: string; subdir_override: string | null }
+  | { kind: "GITHUB_COMMIT"; owner: string; repo: string; sha: string; subdir: string }  // 03 §4 — chỉ khi phiên thiếu session_snapshots (D-59)
+  | { kind: "ZIP_UPLOAD"; file_name: string; bytes: Uint8Array; subdir_override: string | null };
+
+export interface VirtualFileOrigin {  // SourceMapStore
+  kind: "NOTEBOOK" | "SFC";
+  original_path: string;              // "nb/eda.ipynb"
+  line_origin: string[];              // [i] = nhãn của dòng ảo i+1: "cell 4" | "<script>" | ""
+}
+
+export interface IngestOutput {       // Chỉ sống trong runEngine
+  repo_name: string;
+  snapshot: RepoSnapshotKey;
+  fingerprint: ProjectFingerprint;
+  report: IngestionReport;            // engine_ms = 0, skipped.parse_error = 0 — 11 điền tiếp
+  code: Map<string, string>;          // RAMCodeStore: path POSIX ⇒ nội dung đã làm sạch + che secret
+  file_language: Map<string, LanguageId>;
+  manifests: Map<string, string>;     // ManifestStore — không tính vào CONFIG.MAX_CLEAN_FILES
+  source_map: Map<string, VirtualFileOrigin>;
+  module_info: { go_module_path: string | null; dart_package_name: string | null; package_entry_files: string[] };
 }
 ```
 
@@ -652,6 +677,8 @@ export interface RunQuestion extends QuestionPlanItem, Omit<GeneratedQuestionRaw
   p_after: number | null;
   last_answer: string | null;        // Kiểm trùng ở server
 }
+
+export type GradeContext = RunQuestion & { steps: RunStepRef[]; forbidden_external_keywords: string[] };  // Dựng từ 1 dòng node_runs (`03` Mục 3.1): câu question_index + steps + forbidden_external_keywords của run; CHỈ SERVER
 
 export interface SessionRow {            // 1 dòng learning_sessions (`03` Mục 3); CHỈ SERVER
   id: string;

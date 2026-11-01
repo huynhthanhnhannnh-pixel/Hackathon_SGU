@@ -92,7 +92,7 @@ Sau khi bước vào không gian làm việc chính, bạn sẽ thấy toàn b�
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ HEADER: shop-api · main @ 5be1c2a │ [Express] │ Bản đồ 850ms · 0 token │ 12,400/80,000  │
+│ HEADER: shop-api · main @ 5be1c2a │ [Express] │ Bản đồ 850ms · 0 token │ 12,400/200,000 │
 ├──────────────────────────┬───────────────────────────────┬─────────────────────────────┤
 │ CỘT 1: BẢN ĐỒ (25%)      │ CỘT 2: CODE MONACO (45%)      │ CỘT 3: BUỒNG LÁI (30%)      │
 │                          │                               │                             │
@@ -124,7 +124,7 @@ Thanh đầu trang là nơi cung cấp các thông số tổng quát về phiên
 - **Thông tin kho mã nguồn:** Hiển thị tên dự án, tên nhánh và 7 ký tự viết tắt của mã commit (ví dụ: `shop-api · main @ 5be1c2a`). Nút "Repo khác" cho phép bạn thoát khỏi phiên làm việc hiện tại để phân tích một dự án mới, nhưng vẫn giữ nguyên toàn bộ hồ sơ kỹ năng mà bạn đã tích lũy.
 - **Thẻ nhận diện công nghệ (vân tay):** Các thẻ nhỏ thể hiện phong cách kiến trúc và framework chính mà máy chủ nhận diện được từ repo (chẳng hạn Express). Nếu phát hiện đây là một dự án monorepo chứa nhiều dự án con, hệ thống sẽ hiện nhãn "Monorepo · {thư mục}" cùng nút "Đổi thư mục" để bạn dễ dàng chuyển vùng phân tích sang thư mục con khác.
 - **Thời gian xử lý không tốn token:** Đồng hồ hiển thị thời gian máy chủ tiếp nhận và dựng đồ thị (ví dụ giả định: "Bản đồ 850 ms · 0 token"). Khi nhấp vào con số này, một bảng chi tiết các số đo hiệu năng sẽ mở ra. Con số 0 token khẳng định việc dựng bản đồ hoàn toàn do thuật toán máy tính thực hiện mà không cần tiêu tốn tài nguyên gọi AI.
-- **Thước đo hạn mức token của phiên:** Mỗi phiên học được cấp một hạn mức tối đa là 80.000 token AI phục vụ cho các tác vụ phân tích, tổng quan, đặt câu hỏi và chấm bài (ví dụ giả định: "12,400 / 80,000"). Khi số lượng token đã dùng chạm hoặc vượt mức 80.000, thước đo sẽ chuyển sang màu đỏ. Trong chế độ demo Offline, thanh này luôn hiện cố định "0 token".
+- **Thước đo hạn mức token của phiên:** Mỗi phiên học được cấp một hạn mức tối đa là 200.000 token AI phục vụ cho các tác vụ phân tích, tổng quan, đặt câu hỏi và chấm bài (ví dụ giả định: "12,400 / 200,000"). Khi số lượng token đã dùng chạm hoặc vượt mức 200.000, thước đo sẽ chuyển sang màu đỏ. Trong chế độ demo Offline, thanh này luôn hiện cố định "0 token".
 - **Quản lý tài khoản cá nhân:** Hiển thị ảnh đại diện và tên người dùng GitHub của bạn. Menu thả xuống gồm 3 mục:
   - "Lịch sử học phiên này": Xem lại danh sách các câu hỏi đã trả lời trong phiên.
   - "Đăng xuất": Thoát khỏi tài khoản hiện tại qua hàm đăng xuất của Supabase và đưa bạn trở về màn hình đăng nhập ban đầu.
@@ -180,7 +180,7 @@ flowchart TD
 | Nhóm thư mục | Tên Component | Dữ liệu đầu vào (Props) | Dữ liệu đọc trực tiếp từ Store Zustand | Trách nhiệm hiển thị và tương tác |
 | :-- | :-- | :-- | :-- | :-- |
 | `landing/*` | `Landing`, `RepoInput`, `ZipDropzone`, `ResumeList`, `IngestOverlay` | `ResumeList` nhận mảng tóm tắt các phiên học cũ (`sessions: LearningSessionSummary[]`) | Hồ sơ người học `profile`, danh sách phiên `ui.sessions`, trạng thái chờ `ui.pending` | Quản lý toàn bộ giao diện màn hình tiếp nhận, xử lý nhập link, kéo thả file nén, khôi phục phiên học và lớp phủ chờ xử lý |
-| `header/*` | `AppHeader`, `TokenMeter`, `AccountMenu`, `PersonaMenu` | `AccountMenu` nhận `profile`; `PersonaMenu` nhận chế độ persona hiện tại `current` | Kết quả phân tích `result`, số token đã dùng `progress.tokens_used`, `profile`, cờ `is_offline_mode`, chỉ số hiệu năng `ui.metrics` | Giữ cố định trên đầu trang; hiển thị thông tin dự án, thước đo hạn mức 80.000 token AI, menu tài khoản và menu chuyển persona demo |
+| `header/*` | `AppHeader`, `TokenMeter`, `AccountMenu`, `PersonaMenu` | `AccountMenu` nhận `profile`; `PersonaMenu` nhận chế độ persona hiện tại `current` | Kết quả phân tích `result`, số token đã dùng `progress.tokens_used`, `profile`, cờ `is_offline_mode`, chỉ số hiệu năng `ui.metrics` | Giữ cố định trên đầu trang; hiển thị thông tin dự án, thước đo hạn mức 200.000 token AI, menu tài khoản và menu chuyển persona demo |
 | `canvas/*` | `DagCanvas`, `CanvasToolbar` | `CanvasToolbar` nhận vân tay công nghệ `fingerprint` và báo cáo nạp `report` | `result`, trạng thái các node `progress.nodes`, bản phân tích các node `analyses`, mã node đang chọn `active_node_id` | Dựng bản đồ tương tác ReactFlow, hiển thị thanh thông tin tổng thể của bản đồ |
 | `canvas/*` | `GraphNodeCard` | Thông tin cấu trúc của node (`node`), trạng thái học tập (`state`), kết quả phân tích (`analysis`), và cờ đang chọn (`active`) | Không đọc trực tiếp (nhận qua props từ bản đồ cha để tối ưu render) | Thể hiện một thẻ node trên đồ thị với màu sắc tương ứng (xám, vàng, xanh, đỏ), biểu tượng capstone, cảnh báo hoặc nhãn đang phân tích |
 | `code/*` | `CodePane` | Không nhận prop | Node đang mở, bước đang chọn `active_step`, phân tích của node `analyses[active]`, bước gợi ý `ui.hint_step` | Nhúng trình đọc mã nguồn Monaco Editor ở chế độ chỉ đọc, tô màu cú pháp, đồng bộ số dòng gốc và hiển thị vạch sáng đánh dấu |
@@ -450,7 +450,7 @@ Khi bạn bấm nút "Nộp", trình duyệt sẽ chạy bộ kiểm tra nghiêm
 1. **Kiểm tra độ dài tối thiểu:** Không tính khoảng trắng, câu trả lời phải có từ 15 ký tự trở lên. Nếu bạn chỉ gõ vài từ cụt lủn như "ok" hay "do vòng lặp", hệ thống lập tức từ chối và báo lỗi `ERR_ANSWER_TOO_SHORT`.
 2. **Kiểm tra độ dài tối đa:** Giới hạn tối đa 2000 ký tự, có bộ đếm ký tự hiển thị trực tiếp theo thời gian thực dưới ô nhập.
 3. **Phát hiện câu trả lời trùng lặp:** Trình duyệt so sánh câu trả lời bạn vừa gõ với câu trả lời bị trượt ở lần trước đó của cùng câu hỏi bằng thuật toán khoảng cách Levenshtein. Nếu độ tương đồng đạt từ 80% trở lên (tỉ lệ tương đồng ≥ 0.8), hệ thống sẽ chặn lại và báo lỗi `ERR_ANSWER_DUPLICATE`: "Bạn chưa bổ sung ý mới so với lần trước — hãy diễn giải khác hoặc chi tiết hơn."
-4. **Chống bấm liên tục và kiểm soát hạn mức:** Nút "Nộp" chuyển sang "Đang chấm…" và bị khóa cho tới khi có phản hồi của máy chủ **và** đã qua 3000 ms (`CONFIG.SUBMIT_DEBOUNCE_MS`). Nếu phiên học đã dùng hết hạn mức 80.000 token AI, ô nhập và nút nộp bị tắt kèm thông báo: "Hết hạn mức AI của phiên — không chấm được bài mới".
+4. **Chống bấm liên tục và kiểm soát hạn mức:** Nút "Nộp" chuyển sang "Đang chấm…" và bị khóa cho tới khi có phản hồi của máy chủ **và** đã qua 3000 ms (`CONFIG.SUBMIT_DEBOUNCE_MS`). Nếu phiên học đã dùng hết hạn mức 200.000 token AI, ô nhập và nút nộp bị tắt kèm thông báo: "Hết hạn mức AI của phiên — không chấm được bài mới".
 - Giao diện hỗ trợ phím tắt `Ctrl+Enter` để nộp bài nhanh và tự động lưu lại bản nháp câu trả lời theo từng câu để bạn không bị mất chữ khi chuyển qua lại giữa các tab.
 
 #### 4. Kết quả chấm bài và Thẻ gợi ý tím
@@ -544,7 +544,7 @@ Khi một dự án có nhiều node, việc phân tích mã nguồn được đi
 - Số lượng tác vụ phân tích chạy song song tối đa là 3 tác vụ cùng lúc.
 - **Ưu tiên linh hoạt theo hành vi người dùng:** Nếu bạn đang xem node N1 mà bỗng nhiên bấm chuột chuyển sang xem node N3, hàng đợi sẽ lập tức chuyển trọng tâm ưu tiên sang node N3 và các node kế tiếp của N3.
 - Khi một node vào hàng đợi, thẻ node trên bản đồ hiện biểu tượng xoay và chữ "đang phân tích…". Nếu máy chủ phân tích xong, kết quả được lưu vào `analyses`. Nếu gặp sự cố, node đó chuyển sang trạng thái thất bại phân tích và hiển thị nút "Thử lại phân tích".
-- Nếu phiên hết hạn mức 80.000 token AI, hàng đợi dừng lại và các node đang chờ chuyển sang thất bại phân tích.
+- Nếu phiên hết hạn mức 200.000 token AI, hàng đợi dừng lại và các node đang chờ chuyển sang thất bại phân tích.
 - **Tự động kích hoạt tổng quan:** Khi mọi node trên bản đồ đều đã hoàn thành phân tích (hoặc đã xác nhận thất bại), giao diện sẽ tự động gửi yêu cầu tạo bản tổng quan dự án đúng 1 lần duy nhất. Nếu máy chủ báo chưa đủ điều kiện, giao diện sẽ im lặng chờ đợi và tự động gọi lại sau khi có thêm kết quả phân tích mới.
 
 ### 7.4. Luồng xử lý khi bấm chọn một node

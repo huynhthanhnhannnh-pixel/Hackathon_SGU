@@ -37,7 +37,7 @@ flowchart TD
 - **Bọc dữ liệu bằng thẻ đánh dấu an toàn:** Mã nguồn của người dùng, tên tập tin và câu trả lời của người học là những nguồn dữ liệu chưa được kiểm chứng, có thể vô tình hoặc cố ý chứa các câu lệnh đánh lừa mô hình. Hệ thống luôn bọc các dữ liệu này trong các thẻ đánh dấu riêng biệt và tự động thay thế ký tự mở thẻ `<` thành ký tự an toàn `‹` để tránh việc kẻ xấu cố tình đóng thẻ giả mạo.
 - **Bảo vệ quyền riêng tư và dữ liệu nhạy cảm:** Trước khi gửi mã nguồn cho AI, bộ lọc tĩnh đã che toàn bộ mật khẩu hay khóa bí mật bằng chuỗi đánh dấu riêng. Hệ thống không gửi mã định danh người dùng, họ tên, email hay dữ liệu học tập cá nhân lên các dịch vụ AI bên ngoài.
 - **Server tự tra cứu số dòng thật:** Mô hình ngôn ngữ lớn thường đếm dòng rất kém và hay nói sai vị trí. Vì vậy, hệ thống không bao giờ tin số dòng mà AI nhắc tới trong phản hồi. Máy chủ sẽ đối chiếu tên hàm hoặc biến do AI chỉ định với bảng vị trí dòng mã thực tế đã được máy đo đạc từ trước để tô sáng trên giao diện.
-- **Hạn mức 80.000 token mỗi phiên học:** Để ngăn ngừa tình trạng cạn kiệt kinh phí hoặc bị lạm dụng, mỗi phiên học có một hạn mức trần là 80.000 token (tính tổng cả token gửi đi và token nhận về theo số đo thực tế từ nhà cung cấp dịch vụ). Trước khi thực hiện một lời gọi mới, nếu hạn mức đã hết thì hệ thống từ chối ngay mà không gửi yêu cầu đi. Ngược lại, nếu dữ liệu đã nằm trong bộ nhớ đệm thì người học được dùng ngay lập tức với chi phí 0 token.
+- **Hạn mức 200.000 token mỗi phiên học:** Để ngăn ngừa tình trạng cạn kiệt kinh phí hoặc bị lạm dụng, mỗi phiên học có một hạn mức trần là 200.000 token (tính tổng cả token gửi đi và token nhận về theo số đo thực tế từ nhà cung cấp dịch vụ). Trước khi thực hiện một lời gọi mới, nếu hạn mức đã hết thì hệ thống từ chối ngay mà không gửi yêu cầu đi. Ngược lại, nếu dữ liệu đã nằm trong bộ nhớ đệm thì người học được dùng ngay lập tức với chi phí 0 token.
 - **Văn phong chuẩn mực:** Phản hồi của AI hướng tới sinh viên Việt Nam nên luôn được yêu cầu viết bằng tiếng Việt ngắn gọn, rõ ràng, không dùng định dạng trang trí rườm rà. Các định danh như tên biến, tên hàm, tên thuộc tính hay tên tập tin bắt buộc phải đặt trong dấu phẩy ngược (backtick).
 
 Tra chi tiết: spec/20_AI_GOI_VA_PROMPT.md Mục 1.
@@ -69,7 +69,7 @@ Kết quả trả về từ mỗi yêu cầu được phân vào một trong ba 
 flowchart TD
   START["Bắt đầu một lời gọi logic"] --> CACHE_CHECK{"Đã có trong bộ nhớ đệm?<br/>(ai_cache)"}
   CACHE_CHECK -- "Có" --> USE_CACHE["Dùng ngay bản lưu<br/>Tốn 0 token"]
-  CACHE_CHECK -- "Chưa có" --> QUOTA_CHECK{"Còn hạn mức?<br/>(dưới 80.000 token)"}
+  CACHE_CHECK -- "Chưa có" --> QUOTA_CHECK{"Còn hạn mức?<br/>(dưới 200.000 token)"}
   QUOTA_CHECK -- "Hết" --> ERR_QUOTA["Báo lỗi hết hạn mức<br/>Không gửi yêu cầu"]
   QUOTA_CHECK -- "Còn" --> CALL["Gửi yêu cầu tới Gemini"]
   CALL --> RESULT{"Kết quả trả về"}
@@ -404,7 +404,7 @@ Trong môi trường thực tế, việc tương tác với các mô hình ngôn
 
 | Tác vụ AI | Tình huống xảy ra sự cố | Cách hệ thống xử lý | Người học thấy gì trên giao diện |
 | :-- | :-- | :-- | :-- |
-| **Mọi lời gọi** | Đã chạm mức 80.000 token trong phiên học | Không gửi yêu cầu tới AI, không tính lượt làm bài; báo lỗi cạn kiệt hạn mức token | Thông báo: "Phiên này đã dùng hết hạn mức AI: vẫn đọc được bản phân tích đã có và bỏ qua câu để xem đáp án, nhưng không chấm được bài mới." |
+| **Mọi lời gọi** | Đã chạm mức 200.000 token trong phiên học | Không gửi yêu cầu tới AI, không tính lượt làm bài; báo lỗi cạn kiệt hạn mức token | Thông báo: "Phiên này đã dùng hết hạn mức AI: vẫn đọc được bản phân tích đã có và bỏ qua câu để xem đáp án, nhưng không chấm được bài mới." |
 | **Phân tích lát cắt** (`analyze-node`) | Yêu cầu cuối cùng bị lỗi mạng hoặc bị cổng gác loại bỏ toàn bộ | Không lưu vào bộ nhớ đệm; đánh dấu ô bài học là phân tích thất bại | Ô bài học vẫn hiện màu vàng bình thường kèm nút "Thử lại phân tích". Các ô kế tiếp vẫn mở khóa bình thường kèm biểu tượng tam giác vàng. |
 | **Phân tích lát cắt** (`analyze-node`) | AI chỉ trả về được cấu trúc các bước và kỹ năng cơ bản (bản khung) | Vẫn lưu bản khung này vào bộ nhớ đệm `ai_cache` | Tab X-Ray hiển thị khung các bước và kỹ năng, phần diễn giải chi tiết ghi: "(chưa có lời giải thích)". |
 | **Tổng quan kiến trúc** (`analyze-overview`) | Bị sự cố mạng hoặc bị cổng gác chặn sau khi thử lại | Không lưu bộ nhớ đệm; để phần tóm tắt AI là giá trị rỗng | Tab Tổng quan vẫn hiển thị đầy đủ các dữ liệu đo đếm tĩnh (loại dự án, framework, công nghệ, danh sách ô gốc, đường đi chính). |

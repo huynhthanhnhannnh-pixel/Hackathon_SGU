@@ -6,7 +6,7 @@
 
 ## Đọc nhanh
 
-- **Mục 1 — Quyết định đang có hiệu lực:** gồm mọi D chưa hủy, xếp theo mã tăng dần (D-01 … D-10, D-12, D-13, D-15, D-16, D-18 … D-20, D-22, D-23, D-27 … D-60). Viết thẳng theo nội dung hiện hành, không giữ chữ cũ đã bị bãi bỏ.
+- **Mục 1 — Quyết định đang có hiệu lực:** gồm mọi D chưa hủy, xếp theo mã tăng dần (D-01 … D-10, D-12, D-13, D-15, D-16, D-18 … D-20, D-22, D-23, D-27 … D-62). Viết thẳng theo nội dung hiện hành, không giữ chữ cũ đã bị bãi bỏ.
 - **Mục 2 — Chờ chốt:** hiện không còn quyết định nào.
 - **Mục 3 — Câu hỏi còn mở:** Q-03, Q-10, Q-13. Không chặn việc code; có người chịu trách nhiệm và mặc định nếu chưa trả lời.
 - **Mục 4 — Lịch sử:** các D đã hủy hoặc thay thế (D-11, D-14, D-17, D-21, D-24, D-25, D-26) và các câu hỏi đã đóng (Q-01, Q-02, Q-04 … Q-09, Q-11, Q-12).
@@ -14,7 +14,7 @@
 
 | Mục | Nội dung | File được trỏ tới |
 | :-: | :-- | :-- |
-| 1 | Quyết định đang có hiệu lực (54 quyết định) | `01`, `02`, `03`, `04`, `10`, `11`, `20`, `21`, `22`, `30`, `50`, `doc-de-hieu/`, `pitch/` |
+| 1 | Quyết định đang có hiệu lực (55 quyết định) | `01`, `02`, `03`, `04`, `10`, `11`, `20`, `21`, `22`, `30`, `50`, `doc-de-hieu/`, `pitch/` |
 | 2 | Chờ chốt (không còn) | — |
 | 3 | Câu hỏi còn mở (Q-03, Q-10, Q-13) | `02`, `50` |
 | 4 | Lịch sử (7 D đã hủy/thay thế, 10 Q đã đóng) | — |
@@ -79,6 +79,7 @@
 | **D-59** | **Lưu đoạn code đã cắt của phiên vào Postgres:**<br>• Bảng `session_snapshots`: 1 dòng / phiên, chứa `StaticEngineResult` của phiên (node, đoạn code đã cắt `trace_steps`/`dto_snippet`, tên, danh sách file, tọa độ).<br>• **Không** lưu file nguồn đầy đủ, buffer zip, AST.<br>• Ghi cùng transaction tạo phiên; mọi lần vào phiên (mở lại, `analyze-node`, `enrich-node`) đọc từ đây ⇒ người học luôn thấy cùng đoạn code; cache RAM chỉ để nhanh hơn.<br>• Client không đọc trực tiếp (RLS không có chính sách); xóa theo phiên / tài khoản.<br>• Thay INV-04 cũ ("không lưu `snippet`"), bỏ `resume_blocker = "ZIP_SOURCE"`; Q-12 hết hiệu lực. | `01`, `02`, `03`, `04`, `10`, `30`, `50`, `doc-de-hieu/`, `pitch/` |
 | **D-60** | **Đổi tên hằng còn mang chữ Fast-Track:** `CONFIG.FAST_TRACK_MIN` ⇒ `CONFIG.MASTERED_MIN` (ngưỡng "đã thạo", giá trị giữ nguyên). Câu "Không Fast-Track" trong spec đổi thành "Không miễn thi". Lịch sử D-21, D-34, Q-07 giữ chữ cũ để truy vết. | `02`, `03`, `22`, `50`, `pitch/`, `README.md`, `CLAUDE.md` |
 | **D-61** | **Đồng bộ sau rà soát spec 01/11/2026:**<br>• Bỏ dự phòng cuối của ENG-74 và hằng `CONFIG.VIP_FALLBACK_LAST_RESORT_TOP`: không hàm nào có `complexity ≥ CONFIG.VIP_FALLBACK_MIN_SCORE` ⇒ không sinh node thuật toán; không còn node nào ⇒ `ERR_NO_ARCHITECTURAL_SLICE` (khớp D-54, T-ENG-30).<br>• Grammar `.wasm` nằm ở `public/grammars/`, route `ingest` đọc bằng `fs` và đóng gói vào hàm server qua `outputFileTracingIncludes` (`04` Mục 16).<br>• Kiểu ghi `// nội bộ` chỉ dùng trong 1 file spec được để tại file đó; kiểu đi qua API, ghi DB hoặc dùng ở ≥ 2 file spec ở `02`. `RunQuestion`, `SessionRow`, `DbTx` chuyển vào `02` Mục 7.<br>• Trường API `token_used` đổi thành `tokens_used`, cùng tên cột DB.<br>• Gợi ý `CODE_POINTER` chỉ trỏ bước thuộc `step_indices` của câu (`21` GUARD-13).<br>• Thêm test entry màn hình mobile và entry chương trình (`11` T-ENG-39, T-ENG-40; `50` Mục 5). | `02`, `03`, `04`, `11`, `20`, `21`, `22`, `30`, `50`, `AGENTS.md`, `CLAUDE.md` |
+| **D-62** | **Quota token, phiên bản engine, trần byte `spec/02`** (chốt 01/11/2026):<br>• `CONFIG.SESSION_TOKEN_QUOTA` từ 80 000 lên 200 000 để đủ repo 20 node (D-53).<br>• `CONFIG.ENGINE_VERSION` từ `"1.3.0"` lên `"1.4.0"` (bù D-61).<br>• `IngestSource`, `IngestOutput`, `VirtualFileOrigin`, `GradeContext` chuyển vào `02` vì dùng ở ≥ 2 file spec (D-61); trần `spec/02` từ 43 500 lên 45 000 byte. | `02`, `10`, `20`, `doc-de-hieu/`, `pitch/`, `AGENTS.md`, `CLAUDE.md` |
 
 ---
 

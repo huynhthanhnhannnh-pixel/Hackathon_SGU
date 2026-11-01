@@ -190,7 +190,7 @@ Do hệ thống chạy trên nền tảng serverless, các cơ chế kiểm soá
 - **Cơ chế Semaphore tiếp nhận repo:** Giới hạn tối đa 4 tác vụ nạp repo diễn ra đồng thời trong một tiến trình máy chủ, điều phối theo hàng đợi vào trước ra trước (FIFO). Nếu phải xếp hàng chờ quá 10 giây, hệ thống trả về thông báo máy chủ đang bận để bảo vệ bộ nhớ.
 - **Bản đồ ghép lời gọi AI (In-Flight Map):** Khi nhiều người dùng cùng bấm vào một node chưa có kết quả phân tích và rơi vào cùng một instance, máy chủ chỉ gửi một yêu cầu tới Gemini API; các yêu cầu gửi tới sau sẽ cùng lắng nghe chung kết quả đang chờ trong bộ nhớ RAM, tránh việc gọi lặp gây lãng phí tài nguyên.
 - **Thử lại có độ trễ ngẫu nhiên (Backoff và Jitter):** Khi gọi AI mà gặp lỗi quá tải hoặc nghẽn mạng tạm thời, hệ thống tự động thử lại 1 lần sau 500 mili-giây cộng thêm một khoảng ngẫu nhiên từ 0 đến 100 mili-giây để phân tán lưu lượng, tránh tạo thành đợt sóng dồn dập làm sập dịch vụ.
-- **Kiểm soát hạn mức phiên học:** Mỗi phiên học được cấp hạn mức trần là 80.000 token (tính cả lượng gửi đi và nhận về). Máy chủ đếm số token sau từng lượt gọi; nếu vượt ngưỡng thì khóa các lượt gọi mới để tránh phát sinh chi phí ngoài ý muốn.
+- **Kiểm soát hạn mức phiên học:** Mỗi phiên học được cấp hạn mức trần là 200.000 token (tính cả lượng gửi đi và nhận về). Máy chủ đếm số token sau từng lượt gọi; nếu vượt ngưỡng thì khóa các lượt gọi mới để tránh phát sinh chi phí ngoài ý muốn.
 
 ### Chiến lược bộ nhớ đệm (Cache)
 - **Bộ nhớ đệm RAM đồ thị trong tiến trình:** Kết quả phân tích đồ thị được lưu trong bộ nhớ RAM tối đa 20 repo gần nhất và tự hết hạn sau 10 phút để tăng tốc độ phản hồi. Khi trượt bộ nhớ đệm RAM, máy chủ chỉ cần đọc lại kết quả đã lưu trong bảng `session_snapshots` ở Postgres qua hàm `getSessionStaticResult(session)` mà không cần tải lại file hay chạy lại engine. Nhờ vậy, cả phiên GitHub lẫn phiên từ file `.zip` đều mở lại được bình thường (D-59).
@@ -201,7 +201,7 @@ Do hệ thống chạy trên nền tảng serverless, các cơ chế kiểm soá
 | Nút thắt | Giới hạn ở bản thi hiện tại | Dấu hiệu cảnh báo | Hướng nâng cấp tiếp theo |
 | :-- | :-- | :-- | :-- |
 | **1. Bộ nhớ RAM và thời gian chạy Function** | Giới hạn tài nguyên của gói dịch vụ miễn phí; tối đa 4 tác vụ nạp đồng thời | Xuất hiện lỗi máy chủ bận hoặc thời gian thực thi chạm trần | Tách Engine thành cụm máy chủ xử lý tác vụ nền riêng (Worker) qua hàng đợi tin nhắn |
-| **2. Hạn mức API của dịch vụ AI** | Hạn mức gói miễn phí của nhà cung cấp; hạn mức 80.000 token mỗi phiên | Xuất hiện lỗi quá hạn mức token hoặc lỗi từ chối dịch vụ từ AI | Đăng ký gói dịch vụ trả phí theo mức dùng thực tế, đưa các tác vụ phân tích nền vào hàng đợi |
+| **2. Hạn mức API của dịch vụ AI** | Hạn mức gói miễn phí của nhà cung cấp; hạn mức 200.000 token mỗi phiên | Xuất hiện lỗi quá hạn mức token hoặc lỗi từ chối dịch vụ từ AI | Đăng ký gói dịch vụ trả phí theo mức dùng thực tế, đưa các tác vụ phân tích nền vào hàng đợi |
 | **3. Bộ nhớ đệm RAM theo tiến trình đơn lẻ** | Bộ nhớ đệm tạm trong RAM bị mất khi nền tảng serverless thay đổi tiến trình | Máy chủ phải đọc lại từ bảng `session_snapshots` trong Postgres | Sử dụng bộ nhớ đệm phân tán dùng chung cho toàn hệ thống (như Redis) |
 | **4. Số lượng kết nối cơ sở dữ liệu** | Giới hạn số lượng kết nối đồng thời của gói dịch vụ cơ sở dữ liệu | Xuất hiện lỗi không thể kết nối lưu trữ dữ liệu | Bật tính năng gom cụm kết nối giao dịch (Transaction Pooler) hoặc nâng cấp gói máy chủ |
 
