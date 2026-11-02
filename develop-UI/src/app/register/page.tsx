@@ -32,11 +32,9 @@ export default function RegisterPage() {
       <Header activePage="register" />
 
       <main className="flex-1 flex items-center justify-center py-16 px-6 relative overflow-hidden">
-        {/* Nền decor hữu cơ nhẹ nhàng */}
         <div className="absolute w-[520px] h-[460px] bg-[#ffdcc5] opacity-50 rounded-[48px] rotate-2 pointer-events-none -z-10" />
         <div className="absolute w-[480px] h-[420px] bg-[#e2e7ff] opacity-40 rounded-[40px] -rotate-3 pointer-events-none -z-10" />
 
-        {/* Khung đăng ký căn giữa */}
         <div className="w-full max-w-[480px] bg-white rounded-2xl p-8 sm:p-10 shadow-[0px_16px_40px_rgba(0,0,0,0.08)] border border-gray-100">
           <div className="text-center mb-8">
             <span className="text-[13px] font-bold text-[#944b00] tracking-wider uppercase font-sans">
@@ -50,7 +48,6 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          {/* Form đăng ký */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-[14px] font-semibold text-[#131b2e] mb-1.5">

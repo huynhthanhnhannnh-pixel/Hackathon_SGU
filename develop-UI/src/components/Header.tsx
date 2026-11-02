@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 
 interface HeaderProps {
-  activePage?: "home" | "login" | "register" | "roadmap" | "other";
+  activePage?: "home" | "login" | "register" | "roadmap" | "how-it-works" | "other";
   userName?: string;
 }
 
@@ -21,7 +21,6 @@ export function Header({ userName }: HeaderProps = {}) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
 
-  // Đóng panel cài đặt khi bấm ra ngoài
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -40,7 +39,6 @@ export function Header({ userName }: HeaderProps = {}) {
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-[#E5E7EB]">
       <div className="max-w-[1440px] mx-auto px-6 h-[72px] flex items-center justify-between">
-        {/* Logo & Navigation */}
         <div className="flex items-center gap-12">
           <Link href="/" className="flex items-center group">
             <span className="font-extrabold text-[32px] tracking-tight text-[#ff9640] font-sans text-3d-subtle inline-block transition-transform duration-200 group-hover:scale-[1.03]">
@@ -59,7 +57,7 @@ export function Header({ userName }: HeaderProps = {}) {
               <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-[#131b2e] rounded-full transition-all duration-300 ease-out group-hover:w-full" />
             </Link>
             <Link
-              href="/#how-it-works"
+              href="/how-it-works"
               className="group relative inline-flex items-center text-[14px] font-medium text-[#554337] hover:text-[#131b2e] transition-transform duration-300 ease-out hover:scale-105 origin-center py-1"
             >
               <span className="transition-all duration-300 group-hover:font-semibold">
@@ -79,7 +77,6 @@ export function Header({ userName }: HeaderProps = {}) {
           </nav>
         </div>
 
-        {/* Right Actions */}
         <div className="flex items-center gap-5">
           {userName ? (
             <div className="flex items-center gap-3">
@@ -108,7 +105,6 @@ export function Header({ userName }: HeaderProps = {}) {
             </>
           )}
 
-          {/* Button Cài đặt (Không viền, không background) + Dropdown Panel */}
           <div className="relative flex items-center" ref={settingsRef}>
             <button
               type="button"
@@ -118,7 +114,6 @@ export function Header({ userName }: HeaderProps = {}) {
               aria-label="Cài đặt hệ thống"
               aria-expanded={isSettingsOpen}
             >
-              {/* Icon bánh răng: khi hover xoay tròn 1 vòng (360 độ), không phóng to, không in đậm */}
               <svg
                 width="24"
                 height="24"
@@ -135,7 +130,6 @@ export function Header({ userName }: HeaderProps = {}) {
               </svg>
             </button>
 
-            {/* Panel xổ xuống (Dropdown Panel) */}
             {isSettingsOpen && (
               <div className="absolute right-0 top-[calc(100%+12px)] w-[260px] bg-white rounded-2xl shadow-[0px_16px_40px_rgba(0,0,0,0.12)] border border-gray-100 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="px-3 py-2 border-b border-gray-100 mb-1">

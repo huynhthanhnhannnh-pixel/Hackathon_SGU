@@ -26,11 +26,9 @@ export default function LoginPage() {
       <Header activePage="login" />
 
       <main className="flex-1 flex items-center justify-center py-16 px-6 relative overflow-hidden">
-        {/* Nền decor hữu cơ nhẹ nhàng phía sau khung đăng nhập */}
         <div className="absolute w-[500px] h-[440px] bg-[#ffdcc5] opacity-50 rounded-[48px] rotate-2 pointer-events-none -z-10" />
         <div className="absolute w-[460px] h-[400px] bg-[#e2e7ff] opacity-40 rounded-[40px] -rotate-3 pointer-events-none -z-10" />
 
-        {/* Khung đăng nhập căn giữa */}
         <div className="w-full max-w-[480px] bg-white rounded-2xl p-8 sm:p-10 shadow-[0px_16px_40px_rgba(0,0,0,0.08)] border border-gray-100">
           <div className="text-center mb-8">
             <span className="text-[13px] font-bold text-[#944b00] tracking-wider uppercase font-sans">
@@ -44,7 +42,6 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Form Email / Mật khẩu */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-[14px] font-semibold text-[#131b2e] mb-1.5">

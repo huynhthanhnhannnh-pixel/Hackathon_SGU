@@ -25,12 +25,9 @@ export default function Home() {
     <div className="min-h-screen bg-white flex flex-col justify-between selection:bg-[#ff9640]/20 selection:text-[#944b00]">
       <Header activePage="home" />
 
-      {/* ─── MAIN CONTENT ─── */}
       <main className="flex-1">
-        {/* SECTION 1: WIDESCREEN HERO SECTION */}
         <section className="max-w-[1440px] mx-auto px-6 lg:px-12 pt-10 pb-16">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Left Column: Headline & Ingestion Form */}
             <div className="lg:col-span-6 flex flex-col justify-center">
               <div className="space-y-4">
                 <h1 className="text-[52px] xl:text-[62px] font-extrabold text-[#131b2e] leading-[1.12] tracking-tight">
@@ -46,7 +43,6 @@ export default function Home() {
                 </p>
               </div>
 
-              {/* Ingestion Card */}
               <div className="mt-8 bg-white rounded-2xl p-6 shadow-[0px_10px_30px_rgba(0,0,0,0.06)] border border-gray-100 max-w-[608px]">
                 <div className="flex items-center gap-2.5 mb-3.5">
                   <div className="w-5 h-5 relative flex items-center justify-center">
@@ -64,7 +60,6 @@ export default function Home() {
 
                 <form onSubmit={handleScan} className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                   <div className="relative flex-1 flex items-center bg-[#f2f3ff] rounded-lg border border-transparent focus-within:border-[#ff9640] transition-colors overflow-hidden py-3.5 px-3.5">
-                    {/* Fixed Icon container with backdrop to guarantee text never overlaps icon */}
                     <div className="flex-shrink-0 mr-3 flex items-center justify-center z-10 bg-[#f2f3ff]">
                       <Image
                         src="/assets/2f0de.svg"
@@ -73,7 +68,6 @@ export default function Home() {
                         height={16}
                       />
                     </div>
-                    {/* Independent marquee viewport */}
                     <div className="flex-1 overflow-hidden relative">
                       <span className="animate-marquee-scroll text-[14px] font-mono font-medium text-[#131b2e] cursor-default select-all inline-block">
                         {repoUrl}
@@ -99,15 +93,11 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Right Column: Visual Stage with Organic Backdrops & Hero Image & Floating Cards */}
             <div className="lg:col-span-6 relative flex items-center justify-center min-h-[500px]">
-              {/* Organic fluid backdrop 1 (Peach/Orange) */}
               <div className="absolute w-[490px] h-[410px] bg-[#ffdcc5] opacity-80 rounded-[48px] rotate-2 pointer-events-none" />
 
-              {/* Organic fluid backdrop 2 (Periwinkle/Blue) */}
               <div className="absolute w-[440px] h-[370px] bg-[#e2e7ff] opacity-70 rounded-[40px] -rotate-3 pointer-events-none" />
 
-              {/* Main Image */}
               <div className="relative z-10 w-full max-w-[500px] h-[370px] rounded-[24px] overflow-hidden shadow-[0px_20px_40px_rgba(0,0,0,0.12)]">
                 <Image
                   src="/assets/bced1.png"
@@ -118,7 +108,6 @@ export default function Home() {
                 />
               </div>
 
-              {/* Floating Card 1 (Top-Left): Feynman Tutor */}
               <div className="absolute -top-7 -left-4 sm:-left-8 z-20 -rotate-3 hover:rotate-0 transition-transform duration-300">
                 <div className="bg-white rounded-2xl p-3.5 flex items-center gap-3 shadow-[0px_12px_24px_rgba(0,0,0,0.12)] border border-gray-100 max-w-[340px]">
                   <div className="relative flex-shrink-0 w-12 h-14 bg-[#f2f2f2] rounded-xl flex items-center justify-center">
@@ -141,7 +130,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Floating Card 2 (Bottom-Left): Personalized Roadmap Progress */}
               <div className="absolute -bottom-8 -left-6 sm:-left-12 z-20 rotate-4 hover:rotate-0 transition-transform duration-300">
                 <div className="bg-white rounded-2xl p-4 shadow-[0px_16px_32px_rgba(0,0,0,0.12)] border border-gray-100 w-[310px] sm:w-[330px]">
                   <div className="flex items-center gap-3 mb-3">
@@ -175,7 +163,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Metric Accent Badge (Bottom Right) */}
               <div className="absolute -bottom-4 -right-2 sm:-right-4 z-20 -rotate-2 hover:rotate-0 transition-transform duration-300">
                 <div className="bg-white rounded-xl px-3.5 py-2.5 flex items-center gap-2.5 shadow-[0px_8px_20px_rgba(0,0,0,0.1)] border border-gray-100">
                   <div className="w-4 h-4 relative flex-shrink-0">
@@ -200,10 +187,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* SECTION 2: BOTTOM VALUE PROPOSITION STRIP */}
         <section className="bg-white border-t border-gray-100 py-14">
           <div className="max-w-[1440px] mx-auto px-6 lg:px-12">
-            {/* Section Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
               <div>
                 <p className="text-[15px] font-bold text-[#944b00] tracking-wider uppercase mb-1.5 font-sans">
@@ -220,9 +205,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 3 Value Proposition Columns */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {/* Card 1 */}
               <div className="bg-white rounded-2xl p-6 shadow-[0px_4px_16px_rgba(0,0,0,0.06)] border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-shadow">
                 <div>
                   <div className="w-12 h-12 rounded-lg border-2 border-[#ff9640] flex items-center justify-center p-2 mb-4 bg-white">
@@ -242,7 +225,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Card 2 */}
               <div className="bg-white rounded-2xl p-6 shadow-[0px_4px_16px_rgba(0,0,0,0.06)] border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-shadow">
                 <div>
                   <div className="w-12 h-12 rounded-lg border-2 border-[#ff9640] flex items-center justify-center p-2 mb-4 bg-white">
@@ -257,7 +239,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Card 3 */}
               <div className="bg-white rounded-2xl p-6 shadow-[0px_4px_16px_rgba(0,0,0,0.06)] border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-shadow">
                 <div>
                   <div className="w-12 h-12 rounded-lg border-2 border-[#ff9640] flex items-center justify-center p-2 mb-4 bg-white">
@@ -281,7 +262,6 @@ export default function Home() {
         </section>
       </main>
 
-      {/* ─── FOOTER ─── */}
       <Footer />
     </div>
   );

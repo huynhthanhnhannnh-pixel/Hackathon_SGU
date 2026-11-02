@@ -11,7 +11,7 @@ interface RoadmapCourse {
   id: string;
   title: string;
   description: string;
-  progress: number; // 0 - 100
+  progress: number;
   isCompleted: boolean;
   iconSrc: string;
   category?: string;
@@ -69,13 +69,10 @@ export default function RoadmapPage() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col justify-between selection:bg-[#ff9640]/20 selection:text-[#944b00]">
-      {/* Navbar đồng bộ với User Header */}
       <Header userName="User" activePage="roadmap" />
 
-      {/* Main Content */}
       <main className="flex-1 max-w-[1440px] w-full mx-auto px-6 lg:px-12 py-10">
         <div className="max-w-[960px] mx-auto">
-          {/* Header Title with Graduation Cap Icon */}
           <div className="flex items-center justify-center gap-3.5 mb-10">
             <div className="w-[48px] h-[48px] rounded-[16px] bg-[#fff7ed] border border-[#fed7aa] flex items-center justify-center shadow-xs shrink-0">
               <Image
@@ -91,18 +88,15 @@ export default function RoadmapPage() {
             </h1>
           </div>
 
-          {/* Slice Cards Deck Container (Khung viền bao quanh toàn bộ danh sách repo theo chuẩn roadmap/[courseId]) */}
           <div className="bg-white border border-[#c0c0c0] rounded-[18px] p-5 sm:p-7 shadow-[0px_4px_16px_rgba(0,0,0,0.06)] space-y-4">
             {courses.map((course) => {
               if (course.isCompleted) {
-                // Thẻ đã hoàn thành (Màu xanh Emerald đặc trưng theo Figma design)
                 return (
                   <div
                     key={course.id}
                     className="group bg-[#047857] border-2 border-[#004f1a] rounded-[16px] p-5 sm:p-6 text-white shadow-xs transition-all duration-300 ease-out hover:shadow-lg hover:-translate-y-1 hover:border-[#007025]"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-                      {/* Left: Star Badge + Content */}
                       <div className="flex items-start gap-4">
                         <div className="w-[48px] h-[48px] rounded-[10px] bg-white border border-[#047857] flex items-center justify-center shrink-0 shadow-xs transition-transform duration-300 group-hover:scale-105">
                           <Image
@@ -121,7 +115,6 @@ export default function RoadmapPage() {
                             {course.description}
                           </p>
 
-                          {/* Badge Đã hoàn thành */}
                           <div className="mt-3.5 inline-flex items-center gap-2 bg-white text-[#047857] px-3.5 py-1.5 rounded-[6px] font-bold text-[13px] shadow-xs">
                             <span>Đã hoàn thành</span>
                             <Check className="w-3.5 h-3.5 text-[#047857] stroke-[3]" />
@@ -129,7 +122,6 @@ export default function RoadmapPage() {
                         </div>
                       </div>
 
-                      {/* Right: Nút Xem lại bài */}
                       <div className="shrink-0 sm:self-center">
                         <button
                           type="button"
@@ -143,14 +135,12 @@ export default function RoadmapPage() {
                 );
               }
 
-              // Thẻ đang học (CARD 2: Active Focus - Nền kem viền cam nổi bật)
               return (
                 <div
                   key={course.id}
                   className="group relative overflow-hidden bg-[#fff7ed] border-2 border-[#ff9640] rounded-[16px] p-5 sm:p-6 shadow-[0px_4px_12px_rgba(255,150,64,0.12)] transition-all duration-300 ease-out hover:shadow-xl hover:-translate-y-1 hover:border-[#ff7e14]"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 relative z-10">
-                    {/* Left: Ribbon/Medal Badge + Content */}
                     <div className="flex items-start gap-4">
                       <div className="w-[48px] h-[48px] rounded-[10px] bg-[#ff9640] flex items-center justify-center shrink-0 shadow-xs transition-transform duration-300 group-hover:scale-105">
                         <Image
@@ -169,7 +159,6 @@ export default function RoadmapPage() {
                           {course.description}
                         </p>
 
-                        {/* Thanh tiến độ + % */}
                         <div className="mt-4 flex items-center gap-3">
                           <div className="w-[180px] sm:w-[240px] h-[8px] bg-[#ffe4d1] rounded-full overflow-hidden">
                             <div
@@ -184,7 +173,6 @@ export default function RoadmapPage() {
                       </div>
                     </div>
 
-                    {/* Right: Nút Tiếp tục học */}
                     <div className="shrink-0 sm:self-center">
                       <Link
                         href={`/roadmap/${course.id}`}
@@ -202,7 +190,6 @@ export default function RoadmapPage() {
         </div>
       </main>
 
-      {/* Footer đồng bộ */}
       <Footer />
     </div>
   );
