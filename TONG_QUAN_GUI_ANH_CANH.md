@@ -39,9 +39,16 @@ Các node nối với nhau theo thứ tự nên học. Ví dụ phải hiểu "G
 Em đi theo đúng thứ tự dữ liệu chạy. Bước 1–4 **hoàn toàn không dùng AI**. AI chỉ xuất hiện ở bước 5, 7, 8, và bước nào có AI thì em ghi luôn chỗ khóa ngay tại bước đó.
 
 ```mermaid
-flowchart LR
-    B1["1 · Nhận repo"] --> B2["2 · Đọc cú pháp<br/>đồ thị gọi hàm"] --> B3["3 · Cắt luồng"] --> B4["4 · Xếp, nối,<br/>vẽ bản đồ"]
-    B4 --> B5["5 · AI phân tích node"] --> B6["6 · BKT chọn câu"] --> B7["7 · AI đặt câu hỏi"] --> B8["8 · Trả lời và chấm"] --> B9["9 · Cập nhật BKT"]
+flowchart TB
+    subgraph R1["Dựng bản đồ (không AI)"]
+        direction LR
+        B1["1 · Nhận repo"] --> B2["2 · Đọc cú pháp<br/>đồ thị gọi hàm"] --> B3["3 · Cắt luồng"] --> B4["4 · Xếp, nối,<br/>vẽ bản đồ"]
+    end
+    subgraph R2["Học một node"]
+        direction LR
+        B5["5 · AI phân tích node"] --> B6["6 · BKT chọn câu"] --> B7["7 · AI đặt câu hỏi"] --> B8["8 · Trả lời và chấm"] --> B9["9 · Cập nhật BKT"]
+    end
+    R1 --> R2
     style B5 fill:#fde68a
     style B7 fill:#fde68a
     style B8 fill:#fde68a
