@@ -404,6 +404,7 @@ Trong môi trường thực tế, việc tương tác với các mô hình ngôn
 
 | Tác vụ AI | Tình huống xảy ra sự cố | Cách hệ thống xử lý | Người học thấy gì trên giao diện |
 | :-- | :-- | :-- | :-- |
+| **Mọi lời gọi** | Biến `AI_DISABLED="true"` (bán tự động khi chạm trần ngân sách) | Khóa khẩn cấp toàn bộ lời gọi AI, không gọi Gemini, không tính lượt; trả ngay `ERR_AI_UNAVAILABLE` (D-66) | Báo dịch vụ AI tạm ngưng hoạt động; người học vẫn xem được kết quả phân tích có sẵn, nạp repo và chạy chế độ Offline bình thường. |
 | **Mọi lời gọi** | Đã chạm mức 200.000 token trong phiên học | Không gửi yêu cầu tới AI, không tính lượt làm bài; báo lỗi cạn kiệt hạn mức token | Thông báo: "Phiên này đã dùng hết hạn mức AI: vẫn đọc được bản phân tích đã có và bỏ qua câu để xem đáp án, nhưng không chấm được bài mới." |
 | **Phân tích lát cắt** (`analyze-node`) | Yêu cầu cuối cùng bị lỗi mạng hoặc bị cổng gác loại bỏ toàn bộ | Không lưu vào bộ nhớ đệm; đánh dấu ô bài học là phân tích thất bại | Ô bài học vẫn hiện màu vàng bình thường kèm nút "Thử lại phân tích". Các ô kế tiếp vẫn mở khóa bình thường kèm biểu tượng tam giác vàng. |
 | **Phân tích lát cắt** (`analyze-node`) | AI chỉ trả về được cấu trúc các bước và kỹ năng cơ bản (bản khung) | Vẫn lưu bản khung này vào bộ nhớ đệm `ai_cache` | Tab X-Ray hiển thị khung các bước và kỹ năng, phần diễn giải chi tiết ghi: "(chưa có lời giải thích)". |
@@ -414,7 +415,7 @@ Trong môi trường thực tế, việc tương tác với các mô hình ngôn
 | **Chấm câu trả lời** (`evaluate-feynman`) | Mất kết nối mạng hoặc lỗi máy chủ AI sau khi đã thử lại | Không tính lượt làm bài của sinh viên; không trừ số lần nộp | Báo lỗi kết nối, mời sinh viên bấm "Nộp bài" lại mà không bị mất lượt. |
 | **Chấm câu trả lời** (`evaluate-feynman`) | Gợi ý hoặc nhận xét của AI vi phạm quy tắc cổng gác | Tự động hủy phản hồi vi phạm của AI, thay thế bằng gợi ý mẫu tĩnh viết sẵn | Sinh viên vẫn nhận được gợi ý sư phạm đúng nấc và an toàn mà không nhận ra AI vừa bị lỗi. |
 | **Chấm câu trả lời** (`evaluate-feynman`) | Câu trả lời của sinh viên chứa mẫu tấn công tiêm lệnh | Chấm ngay 0 điểm, không gọi AI (tốn 0 token), tính 1 lượt làm bài | Thông báo: "Câu trả lời có câu lệnh gửi cho hệ thống chấm nên không được chấm. Hãy giải thích đoạn code bằng lời của bạn." |
-| **Khởi động server** | Thiếu khóa bí mật `GEMINI_API_KEY` | Máy chủ từ chối khởi động để ngăn chặn việc vận hành thiếu cấu hình | Nhật ký hệ thống ghi rõ lỗi thiếu khóa API trước khi tiến trình dừng. |
+| **Khởi động server** | `GEMINI_BACKEND="studio"` mà thiếu `GEMINI_API_KEY` | Máy chủ từ chối khởi động khi chạy chế độ Studio mà thiếu khóa API. Trên Cloud Run (`GEMINI_BACKEND="vertex"`), hệ thống xác thực trực tiếp qua Vertex AI bằng service account (`roles/aiplatform.user`), không cần khóa API này (D-64, D-66) | Nhật ký hệ thống ghi rõ lỗi thiếu khóa API trước khi tiến trình dừng. |
 
 > [!NOTE]
 > Các con số ước tính về thời gian phản hồi, dung lượng token và chi phí trong các tài liệu thiết kế ban đầu đều là mục tiêu phỏng đoán, chưa được đo đạc chính thức trên mã nguồn thực tế. Số lượng token hiển thị trên thanh tiến trình của người học được trích xuất trực tiếp từ siêu dữ liệu sử dụng thực tế do dịch vụ AI trả về sau mỗi yêu cầu.
