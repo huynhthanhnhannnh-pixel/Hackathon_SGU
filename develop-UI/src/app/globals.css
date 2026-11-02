@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-plus-jakarta), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, monospace;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #131b2e;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+@keyframes marquee-bounce {
+  0%, 15% {
+    transform: translateX(0px);
+  }
+  50%, 65% {
+    transform: translateX(calc(-100% + 240px));
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+.animate-marquee-scroll {
+  display: inline-block;
+  white-space: nowrap;
+  animation: marquee-bounce 7s ease-in-out infinite;
+}
+
+.animate-marquee-scroll:hover {
+  animation-play-state: paused;
+}
+
+.text-3d-subtle {
+  text-shadow: 
+    0 1px 0 #e6761c,
+    0 2px 0 #cc620f,
+    0 3px 1px rgba(0, 0, 0, 0.1),
+    0 5px 8px rgba(255, 150, 64, 0.25);
+}
+
