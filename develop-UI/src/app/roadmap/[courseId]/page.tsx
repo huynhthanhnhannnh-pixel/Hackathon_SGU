@@ -138,12 +138,12 @@ export default function LessonDetailPage({
                       </div>
 
                       <div className="shrink-0 sm:self-center">
-                        <button
-                          type="button"
-                          className="w-full sm:w-auto px-6 py-2.5 bg-white text-[#131b2e] font-bold text-[13px] rounded-[12px] shadow-sm hover:bg-gray-100 transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95"
+                        <Link
+                          href="/learn"
+                          className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2.5 bg-white text-[#131b2e] font-bold text-[13px] rounded-[12px] shadow-sm hover:bg-gray-100 transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95"
                         >
                           {slice.actionLabel}
-                        </button>
+                        </Link>
                       </div>
                     </div>
                   </div>
@@ -190,13 +190,13 @@ export default function LessonDetailPage({
                       </div>
 
                       <div className="shrink-0 sm:self-center">
-                        <button
-                          type="button"
+                        <Link
+                          href="/learn"
                           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#ff9640] hover:bg-[#ff8624] text-white font-bold text-[13px] rounded-[12px] shadow-[0px_4px_10px_rgba(255,150,64,0.3)] hover:shadow-[0px_6px_16px_rgba(255,150,64,0.4)] transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95"
                         >
                           <span>{slice.actionLabel}</span>
                           <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-                        </button>
+                        </Link>
                       </div>
                     </div>
                   </div>

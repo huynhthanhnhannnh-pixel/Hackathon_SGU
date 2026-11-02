@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   User,
   BookOpen,
@@ -65,21 +66,32 @@ export function Header({ userName }: HeaderProps = {}) {
               </span>
               <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-[#131b2e] rounded-full transition-all duration-300 ease-out group-hover:w-full" />
             </Link>
-            <Link
-              href="/#explore"
+            <a
+              href="https://github.com"
+              target="_blank"
+              rel="noopener noreferrer"
               className="group relative inline-flex items-center text-[14px] font-medium text-[#554337] hover:text-[#131b2e] transition-transform duration-300 ease-out hover:scale-105 origin-center py-1"
             >
               <span className="transition-all duration-300 group-hover:font-semibold">
                 Tìm kiếm repo yêu thích của bạn
               </span>
               <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-[#131b2e] rounded-full transition-all duration-300 ease-out group-hover:w-full" />
-            </Link>
+            </a>
           </nav>
         </div>
 
         <div className="flex items-center gap-5">
           {userName ? (
             <div className="flex items-center gap-3">
+              <div className="w-[38px] h-[38px] rounded-full bg-[#eaedff] border-2 border-[#ff9640] overflow-hidden shrink-0 shadow-xs flex items-center justify-center">
+                <Image
+                  src="/assets/report/89b02.png"
+                  alt={`Avatar của ${userName}`}
+                  width={38}
+                  height={38}
+                  className="w-full h-full object-cover"
+                />
+              </div>
               <span className="text-[16px] font-bold text-[#131b2e]">
                 Xin chào {userName}!
               </span>
@@ -169,22 +181,19 @@ export function Header({ userName }: HeaderProps = {}) {
                     <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      alert("Tùy chọn độ khó bài học Feynman");
-                      setIsSettingsOpen(false);
-                    }}
-                    className="flex items-center justify-between w-full px-3 py-2.5 rounded-xl text-[14px] font-medium text-[#131b2e] hover:bg-gray-50 transition-colors cursor-pointer"
+                  <Link
+                    href="/learn"
+                    onClick={() => setIsSettingsOpen(false)}
+                    className="flex items-center justify-between w-full px-3 py-2.5 rounded-xl text-[14px] font-medium text-[#131b2e] hover:bg-[#fff7ed] hover:text-[#ff9640] transition-colors"
                   >
                     <div className="flex items-center gap-2.5">
-                      <Sliders className="w-4 h-4 text-[#625e56]" />
-                      <span>Chế độ học Feynman</span>
+                      <Sliders className="w-4 h-4 text-[#ff9640]" />
+                      <span>Buồng lái Feynman</span>
                     </div>
                     <span className="text-[11px] bg-orange-100 text-[#944b00] px-2 py-0.5 rounded-full font-bold">
                       BKT-v2
                     </span>
-                  </button>
+                  </Link>
 
                   <button
                     type="button"

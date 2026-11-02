@@ -1,23 +1,19 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Inter, JetBrains_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, Inter } from "next/font/google";
 import "./globals.css";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta",
   subsets: ["latin", "vietnamese"],
   weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin", "vietnamese"],
   weight: ["400", "500", "600", "700"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin", "vietnamese"],
-  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -33,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body
-        className={`${plusJakartaSans.variable} ${inter.variable} ${jetbrainsMono.variable} font-sans antialiased bg-white text-[#131b2e]`}
+        className={`${plusJakartaSans.variable} ${inter.variable} font-sans antialiased bg-white text-[#131b2e]`}
       >
         {children}
       </body>

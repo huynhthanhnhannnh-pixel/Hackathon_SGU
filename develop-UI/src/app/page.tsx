@@ -6,6 +6,7 @@ import { BookOpenCheck } from "lucide-react";
 
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { LottieAnimation } from "@/components/LottieAnimation";
 
 export default function Home() {
   const [repoUrl] = useState("https://github.com/simplifey/nest-store-core");
@@ -28,7 +29,7 @@ export default function Home() {
       <main className="flex-1">
         <section className="max-w-[1440px] mx-auto px-6 lg:px-12 pt-10 pb-16">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            <div className="lg:col-span-6 flex flex-col justify-center">
+            <div className="lg:col-span-6 flex flex-col justify-center -translate-y-3 lg:-translate-y-2">
               <div className="space-y-4">
                 <h1 className="text-[52px] xl:text-[62px] font-extrabold text-[#131b2e] leading-[1.12] tracking-tight">
                   <span>Học thú vị hơn</span>
@@ -43,7 +44,7 @@ export default function Home() {
                 </p>
               </div>
 
-              <div className="mt-8 bg-white rounded-2xl p-6 shadow-[0px_10px_30px_rgba(0,0,0,0.06)] border border-gray-100 max-w-[608px]">
+              <div className="mt-6 bg-white rounded-2xl p-6 shadow-[0px_10px_30px_rgba(0,0,0,0.06)] border border-gray-100 max-w-[608px]">
                 <div className="flex items-center gap-2.5 mb-3.5">
                   <div className="w-5 h-5 relative flex items-center justify-center">
                     <Image
@@ -91,9 +92,19 @@ export default function Home() {
                   </button>
                 </form>
               </div>
+
+              {/* Animation Robot Lottie Companion: Căn giữa khối Hero, kích thước to thêm 30% (273px) */}
+              <div className="mt-4 max-w-[608px] w-full flex items-center justify-center">
+                <LottieAnimation
+                  animationPath="/assets/animation-robot.json"
+                  width={273}
+                  height={273}
+                  className="-my-4"
+                />
+              </div>
             </div>
 
-            <div className="lg:col-span-6 relative flex items-center justify-center min-h-[500px]">
+            <div className="lg:col-span-6 relative flex items-center justify-center min-h-[500px] -translate-y-[18px]">
               <div className="absolute w-[490px] h-[410px] bg-[#ffdcc5] opacity-80 rounded-[48px] rotate-2 pointer-events-none" />
 
               <div className="absolute w-[440px] h-[370px] bg-[#e2e7ff] opacity-70 rounded-[40px] -rotate-3 pointer-events-none" />
