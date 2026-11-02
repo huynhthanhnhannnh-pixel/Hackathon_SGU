@@ -41,12 +41,12 @@ flowchart TD
 
 ---
 
-## 2. Gọi model (`gemini.ts`)
+## 2. Gọi model (`gemini.ts`; SDK: `05`, D-66)
 
 ### Request (AI-11)
 
 ```typescript
-// nội bộ — parse() trả null ⇒ INVALID_JSON (thiếu trường / sai kiểu nguyên thủy); kết quả đã cộng token (AI-07)
+// nội bộ — parse() trả null (thiếu trường / sai kiểu) ⇒ INVALID_JSON; kết quả đã cộng token (AI-07)
 interface LlmRequest<T> { kind: keyof typeof CONFIG.LLM_MAX_OUTPUT_TOKENS; system: string; user: string; schema: Schema;
   sessionId: string; parse: (json: unknown) => T | null }
 type LlmOutcome<T> = ({ ok: true; value: T } | { ok: false; kind: "TRANSIENT" | "INVALID_JSON" | "FATAL" }) & { tokens_in: number; tokens_out: number };
@@ -55,6 +55,7 @@ export async function callLLMOnce<T>(req: LlmRequest<T>): Promise<LlmOutcome<T>>
 ai.models.generateContent({ model: CONFIG.LLM_MODEL, contents: [{ role: "user", parts: [{ text: req.user }] }],
   config: { systemInstruction: req.system, temperature: CONFIG.LLM_TEMPERATURE,
     maxOutputTokens: CONFIG.LLM_MAX_OUTPUT_TOKENS[req.kind],
+    safetySettings: ["HARASSMENT", "HATE_SPEECH", "SEXUALLY_EXPLICIT", "DANGEROUS_CONTENT"].map((c) => ({ category: `HARM_CATEGORY_${c}`, threshold: "BLOCK_ONLY_HIGH" })),
     thinkingConfig: { thinkingBudget: CONFIG.LLM_THINKING_BUDGET },   // model không cho tắt ⇒ bỏ dòng này
     responseMimeType: "application/json", responseSchema: req.schema,
     abortSignal: AbortSignal.timeout(CONFIG.LLM_TIMEOUT_MS) } });
@@ -101,7 +102,7 @@ const DATA_TAGS = ["repo_info","node","skill_catalogue","pattern_catalogue","for
   "must_have_points","steps","attempt","hint_rule","student_answer","guard_feedback"] as const;
 const TAG_RE = new RegExp(`<\\s*/?\\s*(?:${DATA_TAGS.join("|")})\\b`, "gi");
 export const wrapData = (tag: (typeof DATA_TAGS)[number], body: string) =>
-  `<${tag}>\n${body.replace(TAG_RE, (m) => m.replace("<", "‹"))}\n</${tag}>`;     // dữ liệu không đóng/mở được thẻ giả
+  `<${tag}>\n${body.replace(TAG_RE, (m) => m.replace("<", "‹"))}\n</${tag}>`;
 export function renderSteps(node: HybridArchitecturalNode, stepIndices: number[]): string; // chỉ prompt phân tích / đặt câu hỏi; chấm không nhận code (D-36)
 ```
 
@@ -603,6 +604,7 @@ export const injectionGrading = (t: Pick<RunQuestion, "must_have_points">): Grad
 
 | Lời gọi | Tình huống | Xử lý ⇒ client nhận |
 | :-- | :-- | :-- |
+| mọi | `AI_DISABLED="true"` | Không gọi Gemini, không tính lượt ⇒ `ERR_AI_UNAVAILABLE` (D-66) |
 | mọi | Hết quota | Không gọi, không tính lượt ⇒ `ERR_TOKEN_QUOTA_EXCEEDED` |
 | analyze | Request cuối hỏng / mọi lần `checkAnalysis = null` | Không cache; `analysis_failed = true` ⇒ `analysis = null`, node VÀNG + "Thử lại phân tích", node con mở kèm tam giác (D-03) |
 | analyze | Tốt nhất là `skeleton_only` | Cache ⇒ Tab 1 chỉ có khung bước + kỹ năng |
@@ -611,7 +613,7 @@ export const injectionGrading = (t: Pick<RunQuestion, "must_have_points">): Grad
 | questions | Câu bị chặn sau thử lại / mọi câu | `DROPPED`, không BKT (D-03) / không tạo run ⇒ `ERR_AI_REJECTED` |
 | grade | Hỏng sau thử lại | Không tính lượt ⇒ `ERR_AI_UNAVAILABLE` (D-03) |
 | grade | Gợi ý/feedback trượt gác · regex tấn công | Mẫu tĩnh AI-32 · `injectionGrading`, tính 1 lượt |
-| server | Thiếu `GEMINI_API_KEY` | Không khởi động |
+| server | `GEMINI_BACKEND="studio"` mà thiếu `GEMINI_API_KEY` | Không khởi động (D-66) |
 
 Token, độ trễ, chi phí: mục tiêu ở `02` Mục 1.1 (chưa đo). UI hiện `tokens_used` thật từ `usageMetadata`.
 

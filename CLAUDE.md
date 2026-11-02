@@ -21,7 +21,8 @@ Turns a public GitHub repo (or uploaded `.zip`) into a deterministic map of up t
   - `01_KIEN_TRUC_VA_LUONG.md` — invariants INV-01..13, components, flows, node & question lifecycles, where data lives.
   - `02_CONTRACTS.md` — **all** TypeScript types, every API request/response, all error codes, and the single `CONFIG` constants table.
   - `03_API_VA_LUU_TRU.md` — endpoints, Postgres schema, RLS, transactions, state derivation.
-  - `04_KIEN_TRUC_TRIEN_KHAI.md` — deployment architecture, Vercel, Supabase, logging, CI/CD, competition repo tree, tech stack.
+  - `04_KIEN_TRUC_TRIEN_KHAI.md` — deployment architecture, Supabase, logging, CI/CD, competition repo tree, tech stack.
+  - `05_HA_TANG_CLOUD.md` — hạ tầng Google Cloud Run (cấu hình, bảo mật, đóng gói, dự phòng Vercel; sau này thêm CI/CD deploy, staging, Vertex, ngân sách).
   - `10_ENGINE_INGEST.md`, `11_ENGINE_DO_THI.md`, `12_ENGINE_MAU_ENTRY.md` (entry pattern catalogue per framework/language) — Tiers 0–2 (role B).
   - `20_AI_GOI_VA_PROMPT.md`, `21_AI_KIEM_VA_DUYET.md`, `22_BKT_VA_KE_HOACH_CAU_HOI.md` — AI calls, guardrails, BKT & question planning (role C).
   - `30_UI.md` — UI (role D). `50_TEST_VA_FIXTURE.md` — fixtures, end-to-end scenarios, Definition of Done.
