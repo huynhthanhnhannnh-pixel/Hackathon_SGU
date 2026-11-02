@@ -15,6 +15,8 @@ Mỗi phiếu đọc từ trên xuống, làm đúng thứ tự:
 6. Sang phiếu ở mục Tiếp theo.
 AI không bao giờ commit hay push. Commit là của bạn: luật thi yêu cầu mọi thành viên phải có commit.
 
+Máy không có Antigravity (agy) hoặc không có ai-kit: làm cùng phiếu này theo [`khong-co-ai-kit.md`](../khong-co-ai-kit.md).
+
 ## Lịch của bạn
 
 | Giờ | Phiếu | Ghi chú |

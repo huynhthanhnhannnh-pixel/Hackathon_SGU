@@ -154,6 +154,7 @@ flowchart LR
 
 **Trước ngày thi, trên máy mỗi người:**
 1. Clone repo thi, chạy `ak bat-dau`, chép `spec/` và `doc-de-hieu/` vào `.kb/` ([`01_deploy`](../../doc-de-hieu/01_deploy.md) Mục 3.8–3.9). Chạy `node cai-dat.mjs --kiem` trong `ai-kit` để chắc có đủ skill `tao-task`, `giao-task-agy`, `kiem-task`, `doc-spec`, `kiem-contract`.
+   Máy **không có Antigravity (agy)** hoặc **không cài được ai-kit**: làm thêm phần chuẩn bị và đổi Bước 1–2 theo [`khong-co-ai-kit.md`](khong-co-ai-kit.md).
 2. Đọc hết `vai-X/README.md` và lướt các phiếu của mình một lượt. Phiếu **không** chép vào `.kb/`; cứ mở phiếu ở repo tài liệu (hoặc bản in) mà làm theo.
 
 **Trong giờ thi, với mỗi phiếu** (chi tiết ở mục "Một phiếu làm thế nào" trong README mỗi vai):
