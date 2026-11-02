@@ -43,7 +43,7 @@ flowchart LR
     subgraph Browser["Trình duyệt (Next.js client, Zustand chỉ đọc)"]
         UI["Buồng lái 3 cột<br/>ReactFlow · Monaco · Tab X-Ray / Feynman / Tổng quan"]
     end
-    subgraph Server["Vercel Functions (Next.js route handlers, D-27)"]
+    subgraph Server["Cloud Run (Next.js route handlers, D-27, D-64)"]
         API["/api/* (03)"]
         ENG["Engine Tầng 0–2<br/>(10, 11) — RAM"]
         AI["AI client + cổng gác<br/>(20, 21)"]
@@ -218,13 +218,14 @@ Lượt tối đa: `CONFIG.MAX_ATTEMPTS_PER_QUESTION`. Lượt nào là lượt 
 | Dữ liệu | Vị trí lưu | Thời gian sống (TTL) | Ai được ghi | Ai được đọc |
 | :-- | :-- | :-- | :-- | :-- |
 | **Mã nguồn repo, buffer zip, AST** | RAM server (`RAMCodeStore`, `ManifestStore`) | Chỉ trong lúc chạy Tầng 0–2 | Engine | Engine nội bộ |
-| **`StaticEngineResult` của phiên** (node + đoạn code đã cắt + tên, không có file nguồn) | Supabase Postgres (`session_snapshots`, D-59); bản sao RAM (LRU, 1 instance) chỉ để nhanh (D-27) | Theo phiên học (xóa khi xóa phiên / tài khoản); RAM tối đa `CONFIG.INGESTION_CACHE_TTL_MS` | Server (service-role), lúc tạo phiên | Route handlers nội bộ (Client CẤM đọc) |
+| **`StaticEngineResult` của phiên** (node + đoạn code đã cắt + tên, không có file nguồn) | Supabase Postgres (`session_snapshots`, D-59); bản sao RAM (LRU, 1 instance) chỉ để nhanh (D-27) | Theo phiên học (xóa khi xóa phiên / tài khoản); RAM tối đa `CONFIG.INGESTION_CACHE_TTL_MS` | Server (`DATABASE_URL`), lúc tạo phiên | Route handlers nội bộ (Client CẤM đọc) |
 | **`ClientStaticEngineResult` (snippet hiển thị)** | Trình duyệt (Zustand Store) | Phiên làm việc (reload ⇒ server trả lại đúng bản đã lưu) | Server trả về | Trình duyệt |
-| **Tài khoản, phiên, hồ sơ kỹ năng (`skill_states`)** | Supabase Postgres | Vĩnh viễn (tới khi xóa tài khoản) | Server (service-role) | Chủ sở hữu (`auth.uid() = user_id`) |
-| **Tiến độ node (`node_progress`)** | Supabase Postgres | Vĩnh viễn theo phiên học | Server (service-role) | Chủ phiên học |
-| **Lượt học (`node_runs`): câu hỏi, đáp án mẫu, ý bắt buộc** | Supabase Postgres | Vĩnh viễn theo phiên học | Server (service-role) | Chỉ server; client đọc qua API, đáp án chỉ lộ khi câu đã xong (INV-07, D-36) |
-| **Lịch sử nộp (`question_attempts`), Báo sai** | Supabase Postgres | Vĩnh viễn theo tài khoản | Server (service-role) | Chủ phiên học qua API |
-| **Văn bản AI đã kiểm (`ai_cache`)** | Supabase Postgres (`ai_cache`) | Lâu dài; khóa theo phiên bản repo + engine + prompt + model | Server (service-role) | Server nội bộ (Client CẤM đọc) |
+| **Tài khoản, phiên, hồ sơ kỹ năng (`skill_states`)** | Supabase Postgres | Vĩnh viễn (tới khi xóa tài khoản) | Server (`DATABASE_URL`) | Chủ sở hữu (`auth.uid() = user_id`) |
+| **Tiến độ node (`node_progress`)** | Supabase Postgres | Vĩnh viễn theo phiên học | Server (`DATABASE_URL`) | Chủ phiên học |
+| **Lượt học (`node_runs`): câu hỏi, đáp án mẫu, ý bắt buộc** | Supabase Postgres | Vĩnh viễn theo phiên học | Server (`DATABASE_URL`) | Chỉ server; client đọc qua API, đáp án chỉ lộ khi câu đã xong (INV-07, D-36) |
+| **Lịch sử nộp (`question_attempts`), Báo sai** | Supabase Postgres | Vĩnh viễn theo tài khoản | Server (`DATABASE_URL`) | Chủ phiên học qua API |
+| **Văn bản AI đã kiểm (`ai_cache`)** | Supabase Postgres (`ai_cache`) | Lâu dài; khóa theo phiên bản repo + engine + prompt + model | Server (`DATABASE_URL`) | Server nội bộ (Client CẤM đọc) |
+| **`ai_usage`** (lưu vết chi phí từng lời gọi AI) | Supabase Postgres (`ai_usage`) | Lâu dài theo phiên (xóa theo phiên / tài khoản) | Server (`DATABASE_URL`) | Server nội bộ, client cấm đọc (D-66) |
 | **Tùy chọn giao diện (tab, cỡ chữ)** | Trình duyệt (`localStorage`) | Vĩnh viễn trên trình duyệt | Client UI | Client UI |
 
 ---

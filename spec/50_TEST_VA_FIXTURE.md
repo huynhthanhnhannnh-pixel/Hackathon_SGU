@@ -5,7 +5,7 @@
 
 ## Đọc nhanh
 
-- **Có gì:** repo mẫu `shop-api`, fixture phản hồi AI, kịch bản A–E, 7 kiểm thử xuyên module (bắt buộc trước H+17).
+- **Có gì:** repo mẫu `shop-api`, fixture phản hồi AI, kịch bản A–E, 13 kiểm thử xuyên module X-01 … X-13 (bắt buộc trước H+17).
 - **Dùng để:** dựng UI và test cổng gác trước khi engine / AI thật chạy; chạy kịch bản A–E rồi đối chiếu cột "Kỳ vọng".
 - **Quy tắc:** số BKT / decay không làm tròn giữa chừng, chỉ làm tròn 4 chữ số khi hiển thị (đã kiểm bằng script).
 
@@ -14,7 +14,7 @@
 | 1 | Repo mẫu `shop-api`: bản đồ N1–N7 (1.1), code các bước (1.2) | `__fixtures__/shop-api.json` |
 | 2 | Fixture AI: `NodeAnalysisRaw` (2.1), `RepoOverviewRaw` (2.2), câu hỏi N3 (2.3), `GradingRaw` (2.4) | `checkAnalysis`, `checkOverview` (`21`) |
 | 3 | Kịch bản A–E (3.1–3.5), persona (3.6) | `__tests__/*.test.ts` |
-| 4 | Kiểm thử xuyên module X-01 … X-07 | `__tests__/*.test.ts` |
+| 4 | Kiểm thử xuyên module X-01 … X-13 | `__tests__/*.test.ts` |
 | 5 | Definition of Done toàn sản phẩm | `npx vitest run` |
 
 ---
@@ -79,7 +79,8 @@ findById(id) {
 
 **N2 — Xem hồ sơ**
 ```ts
-// Bước 1 · ENTRY_POINT · src/routes/user.routes.ts dòng 6–9
+// Bước 1 · ENTRY_POINT · src/routes/user.routes.ts dòng 5–9
+// Liên hệ hỗ trợ: *** (email giả để test maskSensitive)
 router.get('/profile', authMiddleware, async (req, res) => {
   const user = await userService.getProfile(req.user.id);
   res.json(user);
@@ -303,6 +304,14 @@ Minh gọi AI đặt câu hỏi ở cả 5 node đã học (N1–N5); node mà m
 | D18 | "Báo sai" Q1 của B4 ngay sau khi trượt | Q1 🚩; `AUTH_SECURITY` trở lại 0.25; N2 tính lại màu: Q2 đạt ⇒ `COMPLETED` |
 | D19 | Mở lại phiên `.zip` (D-59): upload `.zip` repo mẫu, xóa cache RAM, mở lại phiên | `can_resume = true`, `resume_blocker = null`; `ingest { session_id }` trả đúng bản đồ và `trace_steps[].snippet` như lần đầu; không có request tới codeload |
 | D20 | Tải trước có giới hạn (D-46): mở repo 7 node, đang mở N1 | Client chỉ gọi `POST /api/analyze-node` cho N1 và 1–2 node kế tiếp; không tải toàn bộ; số lời gọi đồng thời ≤ `CONFIG.ANALYZE_CONCURRENCY` |
+| D21 | Câu trả lời có từ xấu rõ nghĩa (có dấu) | `ERR_ANSWER_INAPPROPRIATE` (400) tại bước 1; không tính lượt; 0 token; không gọi AI; ô rung và báo lỗi dưới ô (D-65) |
+| D22 | Câu trả lời kỹ thuật chứa từ `kill`, `attack`, `hack` | Không bị chặn bởi bộ lọc từ xấu; vẫn gửi cho AI chấm bình thường (D-65) |
+| D23 | Câu trả lời chứa email / SĐT VN / CCCD / secret (`sk-...`, JWT) | Che theo `maskSensitive(redactSecrets(·).code)`: secret ⇒ `<REDACTED_SECRET>`, PII ⇒ `***` trước khi gọi AI (`gradeWithAI`) và trước khi ghi DB `student_answer` (D-65) |
+| D24 | Ghi chú nút "Báo sai" (`req.note`) chứa PII hoặc secret | Che theo `maskSensitive(redactSecrets(·).code)`: secret ⇒ `<REDACTED_SECRET>`, PII ⇒ `***` trước khi lưu vào `dispute_reports` (D-65) |
+| D25 | Cửa repo: comment chứa `support@shop-demo.vn` và `0912345678`; `const ts = 10912345678;` | Email và SĐT ⇒ `***`; `const ts = 10912345678;` không bị che; số `\n` không đổi (D-65) |
+| D26 | Câu trả lời chứa `sk-` + 20 ký tự và một email | Che thành `<REDACTED_SECRET>` và `***`; `redacted_secret_count` không đếm trùng (D-65) |
+| D27 | Câu trả lời có từ xấu gõ dạng NFD; từ xấu nằm trong một từ dài hơn | Từ xấu NFD vẫn bị chặn `ERR_ANSWER_INAPPROPRIATE`; từ xấu trong từ dài hơn không chặn (D-65) |
+| D28 | Chữ AI (`analyze-node`, `analyze-overview`, `enrich-node` hoặc follow-up) chứa từ trong `BAD_WORDS` | Guard bắt như từ cấm (GUARD-07), gọi lại; hết lượt theo luật sẵn có (D-65) |
 
 ### 3.5. Kịch bản E — Huy quay lại sau 30 ngày (mài mòn, chỉ hiển thị)
 
@@ -339,10 +348,15 @@ Trạng thái ban đầu của Huy: N3 `COMPLETED`.
 | X-02 | Không rò trường (API-03) | Quét mọi response trong kịch bản A–E: không có `misconception`, `quote`, `symbol_whitelist`, `suspicious_instruction_files`, `reference_answer` / `must_have_points` của câu chưa xong |
 | X-03 | Không lưu code (INV-04) | Dump Postgres sau kịch bản A–E: mọi dòng code dài ≥ 40 ký tự của repo mẫu xuất hiện trong Postgres phải nằm trong `snippet`/`dto_snippet` của 1 node trong `session_snapshots`; dòng code ngoài các đoạn đã cắt không xuất hiện ở bất kỳ bảng nào (`ai_cache` và `node_runs` chỉ chứa tên) |
 | X-04 | Mở lại phiên | Xóa cache RAM ⇒ `ingest { session_id }` ⇒ cùng `graph_skeleton`, cùng `snippet` từng bước (so `JSON.stringify`), không tải lại zip, tiến độ còn nguyên |
-| X-05 | RLS | Dùng anon key của người A đọc `skill_states` của B ⇒ 0 dòng; đọc `ai_cache` ⇒ 0 dòng; mọi lệnh ghi từ client ⇒ bị từ chối |
+| X-05 | RLS | Dùng anon key của người A đọc `skill_states` của B ⇒ 0 dòng; đọc `ai_cache` ⇒ 0 dòng; đọc `ai_usage` bằng anon key ⇒ 0 dòng; mọi lệnh ghi từ client ⇒ bị từ chối |
 | X-06 | Offline | `Ctrl+Shift+D` ⇒ chạy hết kịch bản demo không có mạng; không có request tới `/api/*` học tập |
 | X-07 | Bản đồ (D-55, D-56) | Mọi node có `prerequisites = []` cùng `position.y` nhỏ nhất; node `algo-*` mà một lát cắt gọi tới có cạnh nối với lát cắt đó (`11` T-ENG-37, T-ENG-38) |
 | X-08 | Repo lớn (D-63) | Zip > `MAX_STREAM_BYTES`, code chính nằm sau phần cắt ⇒ `report.selective_fetch = true`, `COMMIT_SHA`, `root_dir_offset` là thư mục chính, chạy 2 lần cùng `node_id`. API trả 403 ⇒ `selective_fetch = false`, có warning ING-49 |
+| X-09 | Smoke test tự động (D-30) | Gọi `GET /api/health` trả HTTP 200 body text/plain "ok"; gọi `POST /api/ingest` repo demo Q-03 kèm header `Authorization: Bearer <token>` (lấy qua Supabase Auth `grant_type=password` của tài khoản bot trên project dev/staging) trả HTTP 200, có `session_id`, `result.nodes.length >= CONFIG.DISPLAY_MIN_NODES` |
+| X-10 | Healthcheck độc lập (D-64) | Gọi `GET /api/health` không gửi `Authorization` vẫn trả HTTP 200 body "ok"; khi Postgres không kết nối được vẫn trả 200 (không gọi DB, D-64) |
+| X-11 | Ngắt khẩn cấp AI (D-66) | `AI_DISABLED="true"` ⇒ `analyze-node`, `enrich-node`, `evaluate-feynman` trả `ERR_AI_UNAVAILABLE`, không gọi Gemini, `tokens_used` không đổi, không tính lượt; ingest và chế độ Offline vẫn chạy (D-66) |
+| X-12 | Khởi động theo backend AI (D-66) | `GEMINI_BACKEND="studio"` thiếu `GEMINI_API_KEY` ⇒ server không khởi động; `GEMINI_BACKEND="vertex"` không có `GEMINI_API_KEY` ⇒ khởi động bình thường (D-66) |
+| X-13 | Lưu vết chi phí AI (D-66) | Mỗi lời gọi AI thành công ghi đúng 1 dòng `ai_usage`; trúng `ai_cache` thì không ghi (D-66) |
 
 ---
 
@@ -365,3 +379,6 @@ Trạng thái ban đầu của Huy: N3 `COMPLETED`.
 - [ ] `Ctrl+Shift+D` ⇒ chế độ offline chạy hết kịch bản demo, nhãn offline luôn hiện.
 - [ ] Mọi test `50` xanh (`npx vitest run`).
 - [ ] Repo thi có test tên bắt đầu bằng `GUARD-04` (`21` Test bắt buộc, `50` Mục 2.1), chạy xanh (`npx vitest run -t "GUARD-04"` — dùng cho demo cổng gác).
+- [ ] Bộ lọc an toàn: che đúng email, SĐT, CCCD, secret trong code và bài làm; từ xấu ở câu trả lời trả `ERR_ANSWER_INAPPROPRIATE` không mất lượt; câu kỹ thuật không bị chặn nhầm; chữ AI có từ xấu bị guard bắt (D-65).
+- [ ] deploy.yml chạy hết staging ⇒ smoke test đạt ⇒ production sau duyệt (D-30).
+- [ ] `AI_DISABLED`, `/api/health`, `ai_usage` chạy đúng các test trên (D-64, D-66).

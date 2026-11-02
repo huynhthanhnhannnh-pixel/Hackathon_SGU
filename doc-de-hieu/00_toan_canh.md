@@ -42,7 +42,7 @@ Toàn bộ hệ thống SimpliFey được cấu thành từ 4 trụ cột chuy�
 flowchart TD
     ENG["Trụ cột 1 · Engine phân tích tĩnh<br/>(Tầng 0–2: Tải zip, Tree-sitter, lát cắt, Dagre — 0 token)"] --> AI["Trụ cột 2 · AI và Cổng gác kiểm duyệt<br/>(4 lời gọi cấu trúc, đối chiếu ký hiệu thật)"]
     AI --> BKT["Trụ cột 3 · BKT và Thử thách Feynman<br/>(Ước lượng độ thạo, gợi ý 3 nấc)"]
-    BKT --> DATA["Trụ cột 4 · Dữ liệu, API và Giao diện buồng lái<br/>(Postgres RLS, 13 endpoint, buồng lái 3 cột)"]
+    BKT --> DATA["Trụ cột 4 · Dữ liệu, API và Giao diện buồng lái<br/>(Postgres RLS, 14 endpoint, buồng lái 3 cột)"]
 ```
 
 ### Trụ cột 1: Engine phân tích tĩnh (Tầng 0 đến Tầng 2)
@@ -58,7 +58,7 @@ Dựa trên phương pháp học tập nổi tiếng của nhà vật lý Richar
 - *Đọc sâu tài liệu:* [04_bkt_va_cau_hoi.md](04_bkt_va_cau_hoi.md)
 
 ### Trụ cột 4: Nền tảng dữ liệu, API và Giao diện buồng lái 3 cột
-Toàn bộ dữ liệu tiến độ học tập, điểm kỹ năng lâu dài và câu hỏi được lưu trữ an toàn trong cơ sở dữ liệu Supabase Postgres, được bảo vệ bằng chính sách phân quyền cấp hàng (RLS). Hệ thống cung cấp 13 endpoint API thực hiện các nghiệp vụ học tập. Ở phía người dùng, giao diện được tổ chức theo buồng lái 3 cột trực quan: Cột trái là bản đồ kiến trúc có thể tương tác; Cột giữa là trình xem code lát cắt tô sáng chính xác từng bước; Cột phải là buồng lái học tập gồm tab X-Ray phân tích cấu trúc, tab Feynman trả lời thử thách và tab Tổng quan toàn dự án.
+Toàn bộ dữ liệu tiến độ học tập, điểm kỹ năng lâu dài và câu hỏi được lưu trữ an toàn trong cơ sở dữ liệu Supabase Postgres, được bảo vệ bằng chính sách phân quyền cấp hàng (RLS). Hệ thống cung cấp 14 endpoint API thực hiện các nghiệp vụ học tập và vận hành (gồm 13 endpoint học tập và 1 endpoint GET /api/health kiểm tra sức khỏe). Ở phía người dùng, giao diện được tổ chức theo buồng lái 3 cột trực quan: Cột trái là bản đồ kiến trúc có thể tương tác; Cột giữa là trình xem code lát cắt tô sáng chính xác từng bước; Cột phải là buồng lái học tập gồm tab X-Ray phân tích cấu trúc, tab Feynman trả lời thử thách và tab Tổng quan toàn dự án.
 - *Đọc sâu tài liệu:* [05_du_lieu_va_api.md](05_du_lieu_va_api.md) và [06_giao_dien.md](06_giao_dien.md)
 
 Tra chi tiết: spec/01_KIEN_TRUC_VA_LUONG.md Mục 3 và 4.
@@ -159,7 +159,7 @@ flowchart TB
     subgraph Client["Trình duyệt"]
         REQ["Yêu cầu học tập"]
     end
-    subgraph Vercel["Vercel Function (1 instance serverless)"]
+    subgraph CloudRun["Google Cloud Run asia-southeast1 (nhiều bản sao)"]
         SEM{"1 · Semaphore nạp repo<br/>(tối đa 4 tác vụ đồng thời)"}
         LRU[("2 · Bộ nhớ đệm RAM đồ thị<br/>(tối đa 20 mục, 10 phút)")]
         INF{"3 · In-flight Map<br/>(gộp lời gọi AI trùng nhau)"}
@@ -173,7 +173,7 @@ flowchart TB
     REQ --> SEM --> LRU --> INF
     INF --> GEMINI
     INF --> SUPA
-    Vercel -.-> LOG
+    CloudRun -.-> LOG
 ```
 
 ### Chuẩn hóa ghi nhận nhật ký (Logging)
@@ -185,25 +185,25 @@ Nhằm tuân thủ nguyên tắc bảo mật và không lưu file mã nguồn, h
 3. **Không ghi thông tin danh tính và mã token:** Không in mã token truy cập hay header xác thực người dùng.
 4. **Không ghi câu trả lời của người học:** Không in nguyên văn nội dung câu giải thích do người học nhập vào.
 
-### Xử lý đồng thời trong bộ nhớ máy chủ (1 instance)
-Do hệ thống chạy trên nền tảng serverless, các cơ chế kiểm soát đồng thời được cài đặt trực tiếp trong bộ nhớ của từng tiến trình (instance) để tối ưu tốc độ:
-- **Cơ chế Semaphore tiếp nhận repo:** Giới hạn tối đa 4 tác vụ nạp repo diễn ra đồng thời trong một tiến trình máy chủ, điều phối theo hàng đợi vào trước ra trước (FIFO). Nếu phải xếp hàng chờ quá 10 giây, hệ thống trả về thông báo máy chủ đang bận để bảo vệ bộ nhớ.
-- **Bản đồ ghép lời gọi AI (In-Flight Map):** Khi nhiều người dùng cùng bấm vào một node chưa có kết quả phân tích và rơi vào cùng một instance, máy chủ chỉ gửi một yêu cầu tới Gemini API; các yêu cầu gửi tới sau sẽ cùng lắng nghe chung kết quả đang chờ trong bộ nhớ RAM, tránh việc gọi lặp gây lãng phí tài nguyên.
+### Xử lý đồng thời trong bộ nhớ máy chủ (theo từng bản sao Cloud Run)
+Hệ thống chạy chính trên Google Cloud Run (khu vực `asia-southeast1`), có thể co giãn nhiều bản sao container đồng thời; Vercel `sin1` làm bản dự phòng nóng khi demo (D-27, D-64). Các cơ chế kiểm soát đồng thời được cài đặt trực tiếp trong bộ nhớ của từng bản sao container để tối ưu tốc độ:
+- **Cơ chế Semaphore tiếp nhận repo:** Giới hạn tối đa 4 tác vụ nạp repo diễn ra đồng thời trong một bản sao container máy chủ, điều phối theo hàng đợi vào trước ra trước (FIFO). Nếu phải xếp hàng chờ quá 10 giây, hệ thống trả về thông báo máy chủ đang bận để bảo vệ bộ nhớ.
+- **Bản đồ ghép lời gọi AI (In-Flight Map):** Khi nhiều người dùng cùng bấm vào một node chưa có kết quả phân tích và rơi vào cùng một bản sao container, máy chủ chỉ gửi một yêu cầu tới Gemini API; các yêu cầu gửi tới sau sẽ cùng lắng nghe chung kết quả đang chờ trong bộ nhớ RAM, tránh việc gọi lặp gây lãng phí tài nguyên.
 - **Thử lại có độ trễ ngẫu nhiên (Backoff và Jitter):** Khi gọi AI mà gặp lỗi quá tải hoặc nghẽn mạng tạm thời, hệ thống tự động thử lại 1 lần sau 500 mili-giây cộng thêm một khoảng ngẫu nhiên từ 0 đến 100 mili-giây để phân tán lưu lượng, tránh tạo thành đợt sóng dồn dập làm sập dịch vụ.
 - **Kiểm soát hạn mức phiên học:** Mỗi phiên học được cấp hạn mức trần là 200.000 token (tính cả lượng gửi đi và nhận về). Máy chủ đếm số token sau từng lượt gọi; nếu vượt ngưỡng thì khóa các lượt gọi mới để tránh phát sinh chi phí ngoài ý muốn.
 
 ### Chiến lược bộ nhớ đệm (Cache)
-- **Bộ nhớ đệm RAM đồ thị trong tiến trình:** Kết quả phân tích đồ thị được lưu trong bộ nhớ RAM tối đa 20 repo gần nhất và tự hết hạn sau 10 phút để tăng tốc độ phản hồi. Khi trượt bộ nhớ đệm RAM, máy chủ chỉ cần đọc lại kết quả đã lưu trong bảng `session_snapshots` ở Postgres qua hàm `getSessionStaticResult(session)` mà không cần tải lại file hay chạy lại engine. Nhờ vậy, cả phiên GitHub lẫn phiên từ file `.zip` đều mở lại được bình thường (D-59).
+- **Bộ nhớ đệm RAM đồ thị theo từng bản sao:** Kết quả phân tích đồ thị được lưu trong bộ nhớ RAM tối đa 20 repo gần nhất và tự hết hạn sau 10 phút để tăng tốc độ phản hồi cho từng bản sao container. Khi trượt bộ nhớ đệm RAM (do rơi sang bản sao khác hoặc bản sao khởi động lại), máy chủ chỉ cần đọc lại kết quả đã lưu trong bảng `session_snapshots` ở Postgres qua hàm `getSessionStaticResult(session)` mà không cần tải lại file hay chạy lại engine. Nhờ vậy, cả phiên GitHub lẫn phiên từ file `.zip` đều mở lại được bình thường (D-59).
 - **Bộ nhớ đệm AI dùng chung (`ai_cache`):** Các văn bản do AI tạo ra sau khi đã qua cổng gác kiểm duyệt (bản phân tích node, tóm tắt tổng quan kiến trúc) được lưu vào bảng cơ sở dữ liệu Postgres. Khi một người học khác mở cùng repo đó ở cùng phiên bản, dữ liệu được lấy ngay từ cơ sở dữ liệu với chi phí 0 token.
 
 ### Các nút thắt kỹ thuật và lộ trình nâng cấp
 
 | Nút thắt | Giới hạn ở bản thi hiện tại | Dấu hiệu cảnh báo | Hướng nâng cấp tiếp theo |
 | :-- | :-- | :-- | :-- |
-| **1. Bộ nhớ RAM và thời gian chạy Function** | Giới hạn tài nguyên của gói dịch vụ miễn phí; tối đa 4 tác vụ nạp đồng thời | Xuất hiện lỗi máy chủ bận hoặc thời gian thực thi chạm trần | Tách Engine thành cụm máy chủ xử lý tác vụ nền riêng (Worker) qua hàng đợi tin nhắn |
+| **1. Bộ nhớ RAM và tài nguyên container** | Giới hạn RAM/CPU cấu hình trên Cloud Run; tối đa 4 tác vụ nạp đồng thời mỗi container | Xuất hiện lỗi máy chủ bận hoặc thời gian thực thi chạm trần | Tách Engine thành cụm máy chủ xử lý tác vụ nền riêng (Worker) qua hàng đợi tin nhắn |
 | **2. Hạn mức API của dịch vụ AI** | Hạn mức gói miễn phí của nhà cung cấp; hạn mức 200.000 token mỗi phiên | Xuất hiện lỗi quá hạn mức token hoặc lỗi từ chối dịch vụ từ AI | Đăng ký gói dịch vụ trả phí theo mức dùng thực tế, đưa các tác vụ phân tích nền vào hàng đợi |
-| **3. Bộ nhớ đệm RAM theo tiến trình đơn lẻ** | Bộ nhớ đệm tạm trong RAM bị mất khi nền tảng serverless thay đổi tiến trình | Máy chủ phải đọc lại từ bảng `session_snapshots` trong Postgres | Sử dụng bộ nhớ đệm phân tán dùng chung cho toàn hệ thống (như Redis) |
-| **4. Số lượng kết nối cơ sở dữ liệu** | Giới hạn số lượng kết nối đồng thời của gói dịch vụ cơ sở dữ liệu | Xuất hiện lỗi không thể kết nối lưu trữ dữ liệu | Bật tính năng gom cụm kết nối giao dịch (Transaction Pooler) hoặc nâng cấp gói máy chủ |
+| **3. Bộ nhớ đệm RAM theo từng bản sao** | Bộ nhớ đệm tạm trong RAM tồn tại độc lập theo từng bản sao container Cloud Run | Máy chủ phải đọc lại từ bảng `session_snapshots` trong Postgres | Sử dụng bộ nhớ đệm phân tán dùng chung cho toàn hệ thống (như Redis) |
+| **4. Số lượng kết nối cơ sở dữ liệu** | Giới hạn số lượng kết nối đồng thời của gói dịch vụ cơ sở dữ liệu | Xuất hiện lỗi không thể kết nối lưu trữ dữ liệu | Bật tính năng gom cụm kết nối giao dịch (Transaction Pooler Supavisor) hoặc nâng cấp gói máy chủ |
 
 Tra chi tiết: spec/04_KIEN_TRUC_TRIEN_KHAI.md Mục 8, 9 và 14.
 
@@ -261,7 +261,7 @@ Sau khi đọc xong bức tranh toàn cảnh trong tài liệu này, các thành
 | **Phụ trách Engine** | Thuật toán tải zip, lọc file rác, phân tích cú pháp Tree-sitter, trích xuất lát cắt và dựng đồ thị | [02_engine.md](02_engine.md) |
 | **Phụ trách AI và Cổng gác** | Cấu trúc 4 lời gọi AI, cơ chế bọc thẻ an toàn, bộ lọc từ cấm và cổng đối chiếu ký hiệu thật | [03_ai_va_cong_gac.md](03_ai_va_cong_gac.md) |
 | **Phụ trách Thuật toán học tập** | Công thức toán BKT, mô hình suy giảm trí nhớ theo thời gian, thuật toán lập kế hoạch câu hỏi | [04_bkt_va_cau_hoi.md](04_bkt_va_cau_hoi.md) |
-| **Phụ trách Backend và Dữ liệu** | Cấu trúc 8 bảng database, 13 endpoint API, bảo mật RLS và giao dịch chống nghẽn | [05_du_lieu_va_api.md](05_du_lieu_va_api.md) |
+| **Phụ trách Backend và Dữ liệu** | Cấu trúc 10 bảng database, 14 endpoint API, bảo mật RLS và giao dịch chống nghẽn | [05_du_lieu_va_api.md](05_du_lieu_va_api.md) |
 | **Phụ trách Giao diện người dùng** | Buồng lái 3 cột, đồng bộ trạng thái chỉ đọc, tô sáng code Monaco và đồ thị ReactFlow | [06_giao_dien.md](06_giao_dien.md) |
 
 Tra chi tiết: doc-de-hieu/07_ke_hoach_21h.md Mục 1.

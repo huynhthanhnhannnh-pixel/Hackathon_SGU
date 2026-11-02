@@ -31,12 +31,12 @@
 ```typescript
 export const CONFIG = {
   // ---------- Phiên bản (đổi ⇒ khóa cache mới) ----------
-  ENGINE_VERSION: "1.5.0",            // Đổi khi đổi bất kỳ luật Tầng 0–2 làm đổi đồ thị / node_id (D-10, D-53 … D-58, D-61, D-63)
+  ENGINE_VERSION: "1.6.0",      // Đổi khi đổi bất kỳ luật Tầng 0–2 làm đổi đồ thị / node_id (D-10, D-53 … D-58, D-61, D-63, D-65)
   PROMPT_VERSION: "1.0.0",            // Đổi khi đổi prompt hoặc responseSchema của 4 lời gọi AI
 
   // ---------- Tầng 0: tải & lọc (10_ENGINE_INGEST) ----------
   MAX_STREAM_BYTES: 15 * 1024 * 1024, // Byte nén tải từ GitHub
-  MAX_UPLOAD_BYTES: 4.5 * 1024 * 1024,// File zip upload — giới hạn body của Vercel Functions, D-27
+  MAX_UPLOAD_BYTES: 4.5 * 1024 * 1024,// File zip upload — trần upload chung, D-27, D-64
   MAX_INFLATED_BYTES: 8 * 1024 * 1024,// Tổng byte sau giải nén của file được giữ
   MAX_COMPRESSION_RATIO: 100,         // uncompressed / compressed của 1 entry
   MAX_CLEAN_FILES: 100,               // Số file code tối đa giữ lại (D-41)
@@ -182,7 +182,7 @@ export const CONFIG = {
 | Tầng 0 (probe + tải + lọc) | 0.8 – 1.2 s; probe ≤ 0.3 s | Timeout cứng = `STREAM_TIMEOUT_MS` |
 | Tầng 1 + 2 (grammar đã warm) | < 0.25 s | `ENGINE_BUDGET_MS` chỉ để cảnh báo |
 | **Cold-start bản đồ (0 token)** | **< 1.5 s** | Repo ≤ 15 MB nén, mạng ổn định |
-| Repo lớn, tải chọn lọc (D-63) | ~6–8 s | Đo 01/11 trên 3 repo từ máy dev: zip cắt 2,2–2,6 s + danh sách và 100 file 3,9–5,5 s; chưa đo trên Vercel |
+| Repo lớn, tải chọn lọc (D-63) | ~6–8 s | Đo 01/11 trên 3 repo từ máy dev: zip cắt 2,2–2,6 s + danh sách và 100 file 3,9–5,5 s; chưa đo trên Cloud Run |
 | `analyze-node` / `enrich-node` | 6,5–8 s, đo 31/10 bằng đề ngắn; prompt thật chưa đo | Phân tích node đang mở và 1–2 node kế tiếp (D-46), `ANALYZE_CONCURRENCY` song song |
 | `analyze-overview` | chưa đo, dự kiến cùng bậc | Sau khi mọi node phân tích xong |
 | `evaluate-feynman` | chưa đo, dự kiến cùng bậc | |
@@ -818,7 +818,7 @@ export type LearningErrorCode =
   | "ERR_OVERVIEW_NOT_READY"        // Còn node chưa phân tích xong
   | "ERR_QUESTION_FINISHED"         // Nộp / bỏ qua câu đã xong
   | "ERR_ATTEMPT_OUT_OF_SYNC"       // attempt_number lệch số lượt thật (2 tab)
-  | "ERR_ANSWER_TOO_SHORT" | "ERR_ANSWER_TOO_LONG" | "ERR_ANSWER_DUPLICATE"   // Không tính lượt
+  | "ERR_ANSWER_TOO_SHORT" | "ERR_ANSWER_TOO_LONG" | "ERR_ANSWER_DUPLICATE" | "ERR_ANSWER_INAPPROPRIATE"   // Không tính lượt
   | "ERR_REPORT_NOT_ALLOWED";       // Báo sai câu không FAILED / đã báo
 
 export type AiErrorCode =
@@ -851,7 +851,7 @@ export interface ApiError {
 
 | HTTP | Mã lỗi |
 | :-: | :-- |
-| 400 | `ERR_INVALID_GITHUB_URL`, `ERR_UPLOAD_INVALID`, `ERR_ANSWER_TOO_SHORT`, `ERR_ANSWER_TOO_LONG`, `ERR_ANSWER_DUPLICATE` |
+| 400 | `ERR_INVALID_GITHUB_URL`, `ERR_UPLOAD_INVALID`, `ERR_ANSWER_TOO_SHORT`, `ERR_ANSWER_TOO_LONG`, `ERR_ANSWER_DUPLICATE`, `ERR_ANSWER_INAPPROPRIATE` |
 | 401 | `ERR_UNAUTHENTICATED` |
 | 403 | `ERR_DEMO_MODE_DISABLED`, `ERR_REPORT_NOT_ALLOWED` |
 | 404 | `ERR_PREFLIGHT_404_OR_PRIVATE`, `ERR_BRANCH_NOT_FOUND`, `ERR_SESSION_NOT_FOUND` |

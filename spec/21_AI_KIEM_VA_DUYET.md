@@ -156,7 +156,7 @@ Phạm vi `codeText`: analyze, questions ⇒ `nodeCodeText(node)`; overview ⇒ 
 
 ### Quét từ cấm (GUARD-07)
 
-Nguyên từ, không phân biệt hoa thường, theo Unicode; khoảng trắng trong từ quét khớp `\s+`. Chỉ quét văn bản AI, không quét câu trả lời người học.
+Nguyên từ, không phân biệt hoa thường, theo Unicode; khoảng trắng trong từ quét khớp `\s+`. Chỉ quét văn bản AI, không quét câu trả lời người học. Danh sách từ cấm ở mọi chỗ gọi `findForbidden` (kết quả `forbiddenKeywords(...)` và `forbidden_external_keywords`) luôn cộng thêm `BAD_WORDS` (`src/lib/moderation.ts`, D-65); `BAD_WORDS` không bị gỡ cấm theo GUARD-06. Như vậy chữ AI có từ xấu bị bắt bằng mã sẵn có (A6, O3, Q5, follow-up) rồi gọi lại.
 
 ```typescript
 const wordRe = (k: string) => new RegExp(

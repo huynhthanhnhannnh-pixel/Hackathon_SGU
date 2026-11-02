@@ -1,14 +1,14 @@
 # Dữ liệu và API
 
-> Tài liệu giải thích chi tiết về cơ sở dữ liệu, 13 endpoint API, cơ chế phân quyền bảo mật hàng, giao dịch chống xung đột và cách quản lý trạng thái trong SimpliFey. Tài liệu này dành cho thành viên phát triển hệ thống và các bạn sinh viên muốn hiểu rõ kiến trúc vận hành phía máy chủ mà không cần đọc văn bản đặc tả kỹ thuật phức tạp.
+> Tài liệu giải thích chi tiết về cơ sở dữ liệu, 14 endpoint API, cơ chế phân quyền bảo mật hàng, giao dịch chống xung đột và cách quản lý trạng thái trong SimpliFey. Tài liệu này dành cho thành viên phát triển hệ thống và các bạn sinh viên muốn hiểu rõ kiến trúc vận hành phía máy chủ mà không cần đọc văn bản đặc tả kỹ thuật phức tạp.
 
 ```mermaid
 flowchart LR
   B["Trình duyệt web<br/>(Client Zustand Store)"] -- "Gửi request kèm token" --> R["Route Handlers (/api/*)<br/>Xác thực và chuyển tiếp"]
   R --> S["Dịch vụ máy chủ (Server)<br/>Xử lý nghiệp vụ học tập"]
-  S -- "Chỉ máy chủ được ghi (service-role)" --> D[("Postgres DB<br/>(Supabase)")]
+  S -- "Truy vấn và ghi qua DATABASE_URL (Supavisor)" --> D[("Postgres DB<br/>(Supabase)")]
   S -- "Gọi AI ngoài transaction" --> A["Gemini AI API"]
-  S --> M["Cache RAM 1 instance<br/>Lưu tạm đồ thị phân tích"]
+  S --> M["Cache RAM theo bản sao<br/>Bản gốc ở session_snapshots"]
   B -. "Chỉ đọc dữ liệu của mình (RLS)" .-> D
 ```
 
@@ -21,13 +21,13 @@ Trong các đồ án web bán hàng mà sinh viên chúng ta thường làm, d�
 Trong một hệ thống học tập qua mã nguồn thực tế như SimpliFey, cách làm tự do đó có nhiều rủi ro: database phình to, kết nối database bị giữ khi chờ AI, và trình duyệt có thể thấy trước đáp án của câu hỏi hoặc thông tin nhạy cảm. Để tránh các vấn đề này, SimpliFey đặt ra 8 nguyên tắc:
 
 1. **Không lưu file mã nguồn vào cơ sở dữ liệu:** Postgres hoàn toàn không lưu file mã nguồn đầy đủ, file zip hay cây cú pháp AST của repo (những dữ liệu này chỉ nằm trong RAM khi phân tích rồi giải phóng ngay). Thứ duy nhất có code được lưu vào Postgres là kết quả engine của phiên (`StaticEngineResult` gồm các node, đoạn code đã cắt của từng bước `trace_steps[].snippet`, `dto_snippet`, tên hàm, danh sách file, tọa độ) ở bảng `session_snapshots` (1 dòng / phiên, ghi cùng lúc tạo phiên theo D-59). Mục đích là để mọi lần vào lại phiên, người học luôn thấy đúng cùng đoạn code đó mà không cần tải lại zip hay chạy lại engine. Ngoài ra, cơ sở dữ liệu chỉ lưu trữ thông tin tài khoản, điểm kỹ năng, thông tin phiên học, tiến độ, câu trả lời, và các văn bản AI đã qua kiểm định an toàn (Mục 3.3).
-2. **Máy chủ là nơi ghi dữ liệu duy nhất:** Trình duyệt web của người học hoàn toàn không có quyền trực tiếp thêm, sửa hay xóa bất kỳ dòng dữ liệu nào trong bất kỳ bảng nào của Postgres. Mọi hành động làm thay đổi dữ liệu (từ việc tạo phiên học, lưu câu hỏi, ghi nhận lượt trả lời, đến việc tính toán điểm kỹ năng) bắt buộc phải gửi yêu cầu qua các endpoint của route handler trên máy chủ. Máy chủ sau khi kiểm tra tính hợp lệ mới dùng khóa bí mật quản trị (service-role key) để ghi vào database.
+2. **Máy chủ là nơi ghi dữ liệu duy nhất:** Trình duyệt web của người học hoàn toàn không có quyền trực tiếp thêm, sửa hay xóa bất kỳ dòng dữ liệu nào trong bất kỳ bảng nào của Postgres. Mọi hành động làm thay đổi dữ liệu (từ việc tạo phiên học, lưu câu hỏi, ghi nhận lượt trả lời, đến việc tính toán điểm kỹ năng) bắt buộc phải gửi yêu cầu qua các endpoint của route handler trên máy chủ. Máy chủ sau khi kiểm tra tính hợp lệ mới thực hiện truy vấn và ghi vào database qua chuỗi kết nối bảo mật `DATABASE_URL` (kết nối Supavisor Transaction Pooler, D-65).
 3. **Trả về dữ liệu theo danh sách trường cho phép:** Mỗi endpoint API khi trả lời trình duyệt đều phải thông qua một hàm ánh xạ tường minh. Hệ thống nghiêm cấm việc sao chép nguyên đối tượng thô từ database hoặc từ AI để gửi về máy khách. Điều này ngăn chặn việc vô tình làm lộ các ý niệm sai lệch (misconception), đáp án mẫu chuẩn khi câu hỏi chưa kết thúc, hoặc các danh sách file hướng dẫn đáng ngờ được quét trong repo.
 4. **Mọi yêu cầu đều cần xác thực phiên:** Người dùng đăng nhập thông qua tài khoản GitHub bằng Supabase Auth. Mọi request gửi tới các endpoint API bắt buộc phải kèm theo mã token truy cập trong header `Authorization: Bearer <access_token>`. Máy chủ sẽ xác thực tính hợp lệ của token này với Supabase Auth. Nếu thiếu token hoặc token không hợp lệ, hệ thống sẽ từ chối ngay với mã lỗi `ERR_UNAUTHENTICATED`.
 5. **Kiểm tra nghiêm ngặt quyền sở hữu phiên học:** Khi người học thao tác với mã định danh phiên (`session_id`) hoặc lần học (`run_id`), máy chủ luôn kiểm tra xem phiên đó có đúng là do người dùng hiện tại tạo ra hay không. Nếu phiên không tồn tại hoặc thuộc về người khác, hệ thống sẽ trả về mã lỗi `ERR_SESSION_NOT_FOUND`. Hệ thống không bao giờ trả về thông báo kiểu "phiên này là của người khác" nhằm bảo vệ quyền riêng tư cho người dùng.
 6. **Kiểm soát và đếm định mức token trên máy chủ:** Sau mỗi lần gọi AI thực tế (không tính những lần lấy dữ liệu có sẵn từ bộ nhớ đệm cache), máy chủ sẽ cộng dồn số lượng token tiêu thụ vào trường `tokens_used` của phiên học trong bảng `learning_sessions`. Trước mỗi lần chuẩn bị gọi AI mới, máy chủ kiểm tra nếu số token đã dùng chạm hoặc vượt quá hạn mức quy định của phiên thì sẽ chặn lại và trả về mã lỗi `ERR_TOKEN_QUOTA_EXCEEDED`.
 7. **Tách biệt hoàn toàn lời gọi AI ra ngoài giao dịch database:** Nếu giữ transaction của database trong lúc chờ AI phản hồi, kết nối và khóa bị giữ suốt thời gian đó. Vì vậy, máy chủ luôn đọc dữ liệu cần thiết ra trước, kết thúc đọc, sau đó gọi AI hoàn toàn bên ngoài transaction. Chỉ sau khi AI đã trả về kết quả và kết quả được tính toán xong xuôi, máy chủ mới mở một transaction ngắn để lưu kết quả vào database.
-8. **Thiết kế phù hợp với môi trường serverless trên Vercel:** Hệ thống được triển khai trên nền tảng Vercel Functions tại khu vực Singapore (`sin1`). Do cơ chế của môi trường serverless, bộ nhớ đệm RAM chứa kết quả phân tích đồ thị hay các cơ chế kiểm soát số luồng chỉ tồn tại trong phạm vi của một tiến trình (instance) đơn lẻ. Chúng có tác dụng giúp hệ thống xử lý nhanh hơn trong điều kiện lý tưởng, nhưng hệ thống không bao giờ phụ thuộc vào chúng. Khi bộ nhớ đệm RAM bị trượt do chuyển instance, máy chủ chỉ cần đọc lại kết quả đã lưu của phiên từ bảng `session_snapshots` trong Postgres (D-59). Ngoài ra, file `.zip` do người dùng tải lên bị giới hạn dung lượng tối đa 4.5 MB để tuân thủ giới hạn kích thước gói tin gửi lên của Vercel, trong khi việc nạp qua đường link GitHub không bị giới hạn này.
+8. **Thiết kế phù hợp với môi trường container trên Cloud Run:** Hệ thống được triển khai chính trên Google Cloud Run tại khu vực `asia-southeast1` (Singapore), có thể chạy nhiều bản sao container đồng thời; Vercel (`sin1`) chỉ đóng vai trò là bản dự phòng nóng khi demo (D-27, D-64). Do cơ chế môi trường container nhiều bản sao, bộ nhớ đệm RAM chứa kết quả phân tích đồ thị hay các cơ chế kiểm soát số luồng chỉ tồn tại trong phạm vi của từng bản sao container đơn lẻ (bản gốc nằm ở bảng `session_snapshots` trong Postgres theo D-59). Chúng có tác dụng giúp hệ thống xử lý nhanh hơn trong điều kiện lý tưởng, nhưng hệ thống không bao giờ phụ thuộc vào chúng. Khi bộ nhớ đệm RAM bị trượt (do rơi vào bản sao khác hoặc bản sao khởi động lại), máy chủ chỉ cần đọc lại kết quả đã lưu của phiên từ bảng `session_snapshots` trong Postgres. Ngoài ra, giữ trần `CONFIG.MAX_UPLOAD_BYTES` (4.5 MB) làm hạn mức tải lên file `.zip` an toàn chung, trong khi việc nạp qua đường link GitHub không bị giới hạn này.
 
 Tra chi tiết: spec/03_API_VA_LUU_TRU.md Mục 1.
 
@@ -37,7 +37,7 @@ Tra chi tiết: spec/03_API_VA_LUU_TRU.md Mục 1.
 
 Trong các bài tập lớn ở trường, chúng ta thường có thói quen tạo một hoặc hai bảng thật lớn rồi nhồi nhét tất cả thông tin vào các cột kiểu chuỗi hoặc JSON. Tuy nhiên, khi hệ thống cần mở rộng và hỗ trợ học tập lâu dài, cách thiết kế đó sẽ bộc lộ nhược điểm: không thể tái sử dụng điểm kỹ năng giữa các kho lưu trữ (repo) khác nhau, khó truy vết lịch sử làm bài, và không thể phân quyền bảo mật chi tiết.
 
-Cơ sở dữ liệu của SimpliFey được chuẩn hóa thành 9 bảng chuyên biệt, mỗi bảng chịu trách nhiệm cho một phần dữ liệu độc lập:
+Cơ sở dữ liệu của SimpliFey được chuẩn hóa thành 10 bảng chuyên biệt (sau khi thêm bảng ai_usage theo D-66), mỗi bảng chịu trách nhiệm cho một phần dữ liệu độc lập:
 
 ```mermaid
 erDiagram
@@ -49,12 +49,13 @@ erDiagram
   node_runs ||--o{ question_attempts : "ghi nhận từng lượt trả lời"
   profiles ||--o{ dispute_reports : "người học gửi báo sai"
   node_runs ||--o{ dispute_reports : "báo sai trên lần học"
+  learning_sessions ||--o{ ai_usage : "chi phí L2 (D-66)"
   ai_cache {
     text cache_key PK
   }
 ```
 
-### 2.1. Chi tiết 9 bảng và lý do tách bảng
+### 2.1. Chi tiết 10 bảng và lý do tách bảng
 
 1. **Bảng `profiles` (Hồ sơ người dùng):**
    - *Lưu gì:* Mã định danh người dùng `user_id` (khóa chính, liên kết trực tiếp với bảng `auth.users` của Supabase), tên hiển thị `display_name`, và thời điểm tạo tài khoản `created_at`.
@@ -83,6 +84,9 @@ erDiagram
 9. **Bảng `dispute_reports` (Báo cáo thắc mắc kết quả chấm):**
    - *Lưu gì:* Mã người báo `user_id`, mã lần học `run_id`, số thứ tự câu hỏi `question_index`, nội dung phản ánh `note` (tối đa 500 ký tự), và thời điểm gửi.
    - *Vì sao tách bảng:* Khi người học thấy AI chấm chưa đúng và bấm nút "Báo sai", hệ thống sẽ xử lý phục hồi điểm tự động ngay lập tức trên máy chủ mà không cần con người duyệt thủ công. Bảng này được tách riêng để ghi nhận lại nhật ký phục vụ việc đội ngũ phát triển rà soát chất lượng prompt về sau.
+10. **Bảng `ai_usage` (Lưu vết chi phí AI cấp độ L2 — D-66):**
+   - *Lưu gì:* Mã tự tăng `id`, mã phiên `session_id` (khóa ngoại liên kết với `learning_sessions` qua `ON DELETE CASCADE`), loại lời gọi `call_kind` (`ANALYZE`, `OVERVIEW`, `QUESTIONS`, `GRADE`), số token đầu vào `tokens_in`, số token đầu ra `tokens_out`, chi phí ước tính `cost_usd` (kiểu `numeric(8,6)`), và thời điểm gọi `created_at`.
+   - *Vì sao tách bảng:* Phục vụ giám sát chi phí L2 độc lập theo từng lời gọi AI của phiên học mà không làm phình to bảng `learning_sessions`. Server ghi ngoài transaction học tập. Bảng không có chính sách RLS cho client (client không đọc trực tiếp).
 
 ### 2.2. Chi tiết cấu trúc câu hỏi `RunQuestion` trong bảng `node_runs`
 
@@ -109,15 +113,15 @@ Trường `questions` trong bảng `node_runs` lưu trữ một mảng các đ�
 
 RLS là tính năng mạnh mẽ của Postgres cho phép thiết lập quyền đọc ghi dữ liệu đến từng dòng dựa vào danh tính của người dùng đang đăng nhập (`auth.uid()`):
 
-- **Bật RLS trên toàn bộ 9 bảng:** Mọi truy cập trực tiếp từ phía client đều bị kiểm soát nghiêm ngặt.
+- **Bật RLS trên toàn bộ 10 bảng:** Mọi truy cập trực tiếp từ phía client đều bị kiểm soát nghiêm ngặt.
 - **Quyền đọc (`SELECT`) của trình duyệt:**
   - Người học chỉ được phép đọc các dòng dữ liệu thuộc về chính mình trong các bảng: `profiles`, `skill_states`, `learning_sessions`, `dispute_reports` khi thỏa mãn điều kiện `auth.uid() = user_id`.
   - Đối với bảng `node_progress`, người học chỉ được đọc những dòng có `session_id` liên kết với phiên học thuộc quyền sở hữu của mình.
 - **Các bảng cấm hoàn toàn quyền đọc của trình duyệt:**
-  - Bảng `ai_cache`, `node_runs`, `question_attempts`, và `session_snapshots` **không thiết lập bất kỳ chính sách truy cập nào cho client**.
+  - Bảng `ai_cache`, `ai_usage`, `node_runs`, `question_attempts`, và `session_snapshots` **không thiết lập bất kỳ chính sách truy cập nào cho client** (D-66).
   - Lý do: Bảng `node_runs` chứa đáp án mẫu chuẩn (`reference_answer`) và các ý bắt buộc (`must_have_points`). Nếu cấp quyền đọc cho client, người học có thể mở công cụ phát triển (DevTools) của trình duyệt để xem trộm đáp án trước khi nộp bài. Lịch sử làm bài trong `question_attempts` cũng chỉ được xem thông qua endpoint API chuyên dụng sau khi máy chủ đã lọc thông tin.
 - **Quyền ghi (`INSERT`, `UPDATE`, `DELETE`):**
-  - **Không có bất kỳ chính sách ghi nào dành cho client trên toàn bộ cơ sở dữ liệu.** Trình duyệt không thể tự ý gọi lệnh SQL để chèn hay sửa dữ liệu. Mọi thao tác ghi bắt buộc phải đi qua route handler máy chủ và được thực thi bằng khóa đặc quyền quản trị (service-role key).
+  - **Không có bất kỳ chính sách ghi nào dành cho client trên toàn bộ cơ sở dữ liệu.** Trình duyệt không thể tự ý gọi lệnh SQL để chèn hay sửa dữ liệu. Mọi thao tác ghi bắt buộc phải đi qua route handler máy chủ và được thực thi an toàn qua chuỗi kết nối `DATABASE_URL` (D-65).
 
 ### 2.4. Giao dịch (Transaction), Khóa dòng (Row Locking) và kịch bản 2 tab cùng nộp bài
 
@@ -167,7 +171,7 @@ Tra chi tiết: spec/03_API_VA_LUU_TRU.md Mục 3, Mục 6.2, spec/02_CONTRACTS.
 
 ## 3. Định danh phiên, Cache RAM và Đọc kết quả đã lưu
 
-Một câu hỏi rất thực tế mà nhiều bạn sinh viên hay thắc mắc là: *"Nếu không lưu file mã nguồn repo vào cơ sở dữ liệu, thì khi người học tắt máy tính đi ngủ hoặc khi nền tảng Vercel tắt tiến trình serverless sau vài phút không có người truy cập, hôm sau quay lại hệ thống làm thế nào để mở lại đúng bài học đang dở mà không bị mất dữ liệu?"*
+Một câu hỏi rất thực tế mà nhiều bạn sinh viên hay thắc mắc là: *"Nếu không lưu file mã nguồn repo vào cơ sở dữ liệu, thì khi người học tắt máy tính đi ngủ hoặc khi container Cloud Run tự động co giãn sau một khoảng thời gian không có người truy cập, hôm sau quay lại hệ thống làm thế nào để mở lại đúng bài học đang dở mà không bị mất dữ liệu?"*
 
 Câu trả lời nằm ở sự kết hợp giữa **Bộ khóa định danh phiên học**, **Cơ chế cache RAM 2 tầng**, và **Bảng lưu kết quả engine của phiên `session_snapshots` (D-59)**.
 
@@ -193,7 +197,7 @@ Trong phát triển phần mềm, mã nguồn trên một nhánh (như `main`) t
 
 Để tránh lỗi này, SimpliFey quy định: **Mọi phiên học đều gắn chặt với commit SHA và snapshot kết quả engine đã lưu lúc tạo phiên (`session_snapshots`, D-39, D-59)**. Khi người học vào lại phiên, hệ thống đọc trực tiếp kết quả đã lưu, hoàn toàn không chạy lại engine hay tải lại file zip. Người học luôn thấy đúng cùng đoạn code đó. Nếu sau này repo trên GitHub có commit mới, người học dán link mới sẽ nhận commit SHA mới và tạo ra một phiên học mới độc lập.
 
-### 3.3. Bộ nhớ đệm Cache RAM 2 tầng trên Vercel
+### 3.3. Bộ nhớ đệm Cache RAM 2 tầng trên Cloud Run
 
 Để người học không phải chờ đợi phân tích lại mã nguồn mỗi khi chuyển qua lại giữa các màn hình, máy chủ duy trì một bộ nhớ đệm RAM theo giải thuật loại bỏ phần tử ít dùng nhất (LRU - Least Recently Used):
 - **Tầng 1 (Ánh xạ đường dẫn):** Lưu trữ liên kết giữa đường link repo đã chuẩn hóa (`owner/repo` kèm thư mục con `subdir`) với mã `snapshot_id` tương ứng.
@@ -201,7 +205,7 @@ Trong phát triển phần mềm, mã nguồn trên một nhánh (như `main`) t
 
 Bộ nhớ đệm RAM này có sức chứa tối đa 20 bản ghi (`CONFIG.INGESTION_CACHE_MAX_ENTRIES`) và thời gian sống tối đa 10 phút (`CONFIG.INGESTION_CACHE_TTL_MS`).
 
-**Lưu ý quan trọng về môi trường Serverless:** Do được triển khai trên Vercel Functions, mỗi tiến trình (instance) serverless sở hữu một vùng nhớ RAM hoàn toàn độc lập và có thể bị tắt đi bất kỳ lúc nào khi không có yêu cầu. Bộ nhớ đệm RAM chỉ có tác dụng hỗ trợ tăng tốc độ trong điều kiện cùng một instance phục vụ các yêu cầu liên tiếp. Kiến trúc của SimpliFey được thiết kế để không bao giờ phụ thuộc sống còn vào bộ nhớ đệm RAM này.
+**Lưu ý quan trọng về môi trường nhiều bản sao Cloud Run:** Do được triển khai trên Google Cloud Run (có thể co giãn nhiều bản sao container) và Vercel làm dự phòng nóng, mỗi bản sao container sở hữu một vùng nhớ RAM độc lập và có thể co giãn theo tải. Bộ nhớ đệm RAM theo từng bản sao chỉ có tác dụng hỗ trợ tăng tốc độ trong điều kiện cùng một bản sao phục vụ các yêu cầu liên tiếp. Bản gốc luôn nằm an toàn ở bảng `session_snapshots` trong Postgres (D-59). Kiến trúc của SimpliFey được thiết kế để không bao giờ phụ thuộc sống còn vào bộ nhớ đệm RAM này.
 
 ### 3.4. Cơ chế đọc kết quả engine qua hàm `getSessionStaticResult(session)`
 
@@ -314,11 +318,11 @@ Tra chi tiết: spec/03_API_VA_LUU_TRU.md Mục 5, spec/01_KIEN_TRUC_VA_LUONG.md
 
 ---
 
-## 5. Chi tiết 13 Endpoint trong hệ thống SimpliFey
+## 5. Chi tiết 14 Endpoint trong hệ thống SimpliFey
 
-Hệ thống cung cấp đúng 13 endpoint API phục vụ toàn bộ vòng đời nạp repo, phân tích kiến trúc, học tập phương pháp Feynman và quản lý tài khoản. Mọi endpoint đều yêu cầu gửi kèm token xác thực phiên Supabase qua header `Authorization: Bearer <access_token>`.
+Hệ thống cung cấp đúng 14 endpoint API (gồm 13 endpoint nghiệp vụ học tập và 1 endpoint `GET /api/health` kiểm tra sức khỏe hệ thống). Mọi endpoint nghiệp vụ đều yêu cầu gửi kèm token xác thực phiên Supabase qua header `Authorization: Bearer <access_token>` (ngoại lệ `GET /api/health` không cần xác thực).
 
-### 5.1. Bảng tra cứu tổng quan 13 endpoint
+### 5.1. Bảng tra cứu tổng quan 14 endpoint
 
 | STT | Endpoint | Ai gọi & Khi nào | Chức năng chính | Ghi vào bảng nào | Gọi AI | Lỗi riêng |
 | :-: | :-- | :-- | :-- | :-- | :-: | :-- |
@@ -335,6 +339,7 @@ Hệ thống cung cấp đúng 13 endpoint API phục vụ toàn bộ vòng đ�
 | 11 | `POST /api/report-wrong` | Trình duyệt, khi bấm nút "Báo sai" cho câu trượt | Cắm cờ, hoàn lại điểm nếu còn khớp, tính lại màu node | Ghi `dispute_reports`, `node_runs`, hoàn `skill_states`, đổi `node_progress` | Không | `ERR_REPORT_NOT_ALLOWED` |
 | 12 | `POST /api/demo/persona` | Trình duyệt, khi chọn hồ sơ trong menu demo | Ghi đè 16 kỹ năng của tài khoản hiện tại | Ghi đè 16 dòng trong `skill_states` | Không | `ERR_DEMO_MODE_DISABLED` |
 | 13 | `GET /api/sessions/{id}/progress` | Trình duyệt, khi tải lại trang hoặc đồng bộ | Đọc tiến độ các node và token đã dùng | Không ghi (chỉ đọc) | Không | — |
+| 14 | `GET /api/health` | Uptime probe Cloud Run, smoke test CI/CD | Kiểm tra tình trạng sống của dịch vụ máy chủ (trả về HTTP 200 "ok") | Không ghi | Không | — |
 
 ### 5.2. Luồng xử lý chi tiết từng endpoint
 
@@ -449,6 +454,12 @@ Hệ thống cung cấp đúng 13 endpoint API phục vụ toàn bộ vòng đ�
 - **Làm gì:** Máy chủ chỉ đọc dữ liệu từ database: lấy khung đồ thị `graph_skeleton` từ bảng `learning_sessions`, kết hợp với các dòng tiến độ từ `node_progress` và `node_runs`, sau đó chạy hàm thuần `deriveNodeStates` để trả về trạng thái chi tiết của toàn bộ các node trong phiên học kèm tổng số token đã dùng. Endpoint này hoàn toàn không gọi AI và không chạy lại engine phân tích tĩnh.
 - **Ghi gì vào bảng nào:** Không ghi dữ liệu, chỉ đọc.
 - **Lỗi có thể gặp:** `ERR_SESSION_NOT_FOUND`.
+
+#### 14. `GET /api/health`
+- **Ai gọi & Khi nào:** Bộ kiểm tra sức khỏe của Cloud Run (startup probe, liveness probe) hoặc workflow CI/CD GitHub Actions khi chạy smoke test tự động sau khi deploy (D-64).
+- **Làm gì:** Không cần đăng nhập (ngoại lệ API-04), không gọi DB, không gọi AI, không ghi log body request. Trả về ngay lập tức HTTP 200 với chuỗi văn bản plain text `"ok"` (tiêu tốn 0 token). Dùng để xác nhận container đã khởi động hoàn tất và sẵn sàng tiếp nhận lưu lượng mạng.
+- **Ghi gì vào bảng nào:** Không ghi dữ liệu, chỉ đọc và trả về `ok`.
+- **Lỗi có thể gặp:** Không có lỗi riêng.
 
 Tra chi tiết: spec/03_API_VA_LUU_TRU.md Mục 2, Mục 6, spec/02_CONTRACTS.md Mục 8, 9.
 
@@ -674,15 +685,19 @@ Trong môi trường vận hành thực tế, các sự cố về mạng, dịch
 
 ### 7.3. Danh mục biến môi trường trên máy chủ
 
-Để hệ thống hoạt động an toàn và chính xác, các biến môi trường sau đây cần được thiết lập trên môi trường máy chủ Vercel:
+Để hệ thống hoạt động an toàn và chính xác, các biến môi trường sau đây cần được thiết lập trên môi trường máy chủ Cloud Run (lấy từ Secret Manager, D-64) và bản dự phòng Vercel (khớp `spec/03` Mục 8):
 
 | Tên biến môi trường | Phạm vi sử dụng | Ý nghĩa và lưu ý bảo mật |
 | :-- | :-- | :-- |
-| `GEMINI_API_KEY` | Chỉ máy chủ (Server-only) | Khóa API bí mật dùng để kết nối với dịch vụ Gemini AI của Google phục vụ 4 tác vụ phân tích và chấm điểm. Biến này không được gửi về phía trình duyệt web. |
-| `GITHUB_TOKEN` | Chỉ máy chủ (Server-only) | Token chỉ đọc repo công khai, dùng để lấy danh sách file khi tải chọn lọc repo lớn (D-63). Thiếu token thì hệ thống dùng phần zip đã cắt và báo cảnh báo. |
+| `DATABASE_URL` | Chỉ máy chủ (Server-only) | Kết nối Postgres qua Supavisor Transaction Pooler (port 6543) bằng driver `postgres` 3.x, `prepare: false`. Chứa mật khẩu database, cấm ghi log (D-65); trên Cloud Run lấy từ Secret Manager (D-64). |
+| `GEMINI_BACKEND` | Chỉ máy chủ (Server-only) | Chọn kênh gọi AI: `"vertex"` (mặc định Cloud Run production/staging) hoặc `"studio"` (Vercel dự phòng nóng, dev) (D-66). |
+| `GOOGLE_CLOUD_PROJECT` | Chỉ máy chủ (Server-only) | Project ID của Google Cloud, bắt buộc khi `GEMINI_BACKEND="vertex"`; Cloud Run tự nạp hoặc cấu hình biến môi trường (D-66). |
+| `AI_DISABLED` | Chỉ máy chủ (Server-only) | Khóa khẩn cấp toàn bộ lời gọi AI khi nhận cảnh báo chạm ngân sách 100% (`"true"` ⇒ trả ngay `ERR_AI_UNAVAILABLE`; mặc định `"false"` — D-66). |
+| `GEMINI_API_KEY` | Chỉ máy chủ (Server-only) | Khóa API bí mật khi gọi Gemini qua Google AI Studio. Chỉ bắt buộc khi `GEMINI_BACKEND="studio"`; Cloud Run production/staging gọi qua Vertex AI bằng service account nên không cần biến này (D-64, D-66). |
+| `GITHUB_TOKEN` | Chỉ máy chủ (Server-only) | Token chỉ đọc repo công khai, dùng để lấy danh sách file khi tải chọn lọc repo lớn (D-63); trên Cloud Run lấy từ Secret Manager (D-64). Thiếu token thì hệ thống dùng phần zip đã cắt và báo cảnh báo. |
 | `NEXT_PUBLIC_SUPABASE_URL` | Công khai (Client và Server) | Địa chỉ URL của dự án Supabase, cho phép trình duyệt khởi tạo kết nối và thực hiện đăng nhập OAuth với GitHub. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Công khai (Client và Server) | Khóa công khai ẩn danh của Supabase (`sb_publishable_...`), có quyền hạn bị giới hạn bởi các chính sách bảo mật hàng RLS. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Chỉ máy chủ (Server-only) | Khóa bí mật đặc quyền quản trị cao nhất của Supabase (`sb_secret_...`). Khóa này cho phép máy chủ vượt qua các rào chắn RLS để thực hiện toàn bộ các tác vụ ghi dữ liệu học tập vào Postgres một cách an toàn. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Chỉ máy chủ (Server-only) | Khóa bí mật đặc quyền quản trị cao nhất của Supabase (`sb_secret_...`), dùng dự phòng thao tác quản trị; không dùng cho truy vấn bảng thông thường (D-65); trên Cloud Run lấy từ Secret Manager (D-64). |
 | `DEMO_MODE` | Chỉ máy chủ (Server-only) | Cờ bật/tắt chế độ Demo trên backend. Khi được đặt giá trị là `"true"`, endpoint chọn hồ sơ mẫu `/api/demo/persona` mới được phép hoạt động. |
 | `NEXT_PUBLIC_DEMO_MODE` | Công khai (Client) | Cờ thông báo cho giao diện người dùng biết có hiển thị menu chọn hồ sơ persona demo hay không. Biến này đặt cùng giá trị với `DEMO_MODE`, và máy chủ vẫn tự kiểm `DEMO_MODE`. |
 

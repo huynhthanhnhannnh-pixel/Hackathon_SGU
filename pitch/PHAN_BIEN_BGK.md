@@ -105,7 +105,7 @@ Mỗi câu chỉ một người trả lời, người đỡ chỉ thêm khi đư
 **A6. "Không bán thì lấy gì duy trì? Ai trả tiền?"** (dự kiến hỏi ở chung kết)
 Đ: Nhóm chọn hướng **mã nguồn mở**, không thương mại hóa, không bán cho trường (D-33):
 - Người dùng tự clone repo, tự điền API key Gemini của mình trong `.env`, tự chạy. Chi phí AI do chính người dùng trả theo key của họ; nhóm không gánh tiền AI cho ai.
-- Bản chạy thử của nhóm dùng gói free của Vercel và Supabase.
+- Bản chạy thử của nhóm dùng Google Cloud Run (credit GCP) và gói free của Supabase (Vercel làm bản dự phòng khi demo, D-64).
 - Giá trị nhóm theo đuổi là **nghiên cứu học thuật** (AI ảo giác, độ tin cậy khi AI chấm bài, BKT trên kỹ năng kiến trúc) và kinh nghiệm cho CV.
 
 ### B. Engine & bản đồ
@@ -245,11 +245,11 @@ Hai cơ chế đầu chỉ là tối ưu trong 1 instance, đúng sai của hệ
 - Sau khi dựng xong bản đồ, người học chỉ đọc và nộp text ngắn; Vercel tự tăng số instance theo request.
 - Nút thắt dự kiến là quota gói Free của Gemini và giới hạn của gói free Vercel / Supabase. Bản thi nhắm tới nhóm nhỏ người học đồng thời; con số cụ thể chỉ nói sau khi đo.
 
-**E7. "Tại sao chọn Vercel? Vercel serverless làm mất cache RAM thì sao?"**
-Đ: Đúng là trên Vercel, cache RAM và semaphore chỉ sống trong 1 instance và có thể mất bất kỳ lúc nào. Nhóm chấp nhận điều đó và thiết kế để **không dựa vào cache** (D-27):
-1. **Phiên gắn commit SHA (D-39):** trượt cache ⇒ đọc kết quả engine đã lưu của phiên trong `session_snapshots` (D-59) ⇒ bản đồ y hệt, tiến độ ghép lại từ Postgres.
-2. **Tiến độ, câu hỏi, đáp án đều ở Postgres**, không ở RAM ⇒ request rơi vào instance nào cũng chấm đúng (D-36).
-3. **Đổi lại:** miễn phí, deploy khi merge vào `main`, cùng vùng Singapore với Supabase, và người tự cài từ mã nguồn mở dùng được gói free (D-33).
+**E7. "Tại sao chọn Google Cloud Run? Chạy nhiều bản sao thì cache RAM và dữ liệu ra sao?"**
+Đ: Cloud Run là Serverless Container chuẩn doanh nghiệp, cho phép tự động co giãn và chạy Next.js nguyên khối ổn định với RAM 2 GiB và timeout 300s (D-64). Về cache RAM, hệ thống tuân thủ thiết kế không phụ thuộc vào trạng thái bộ nhớ:
+1. **Phiên gắn commit SHA (D-39):** cache RAM trong container chỉ là bộ đệm LRU tăng tốc độ; trượt cache ⇒ đọc kết quả engine đã lưu trong `session_snapshots` (D-59) ⇒ bản đồ và lát cắt y hệt.
+2. **Tiến độ, câu hỏi, đáp án đều ở Postgres**, không ở RAM ⇒ request rơi vào bản sao nào cũng xử lý và chấm điểm nhất quán (D-36).
+3. **Multi-cloud hợp lý:** Cloud Run (`asia-southeast1`) và Supabase Postgres (`ap-southeast-1`) cùng đặt tại Singapore cho độ trễ kết nối thấp (< 5 ms, ước tính, chưa kiểm chứng); nhóm giữ thêm Vercel làm bản dự phòng nóng khi demo (Phương án C).
 Từ D-59, phiên `.zip` cũng mở lại được vì đoạn code đã cắt được lưu theo phiên.
 
 **E8. "Hệ thống có nguy cơ bị tấn công thực thi mã từ xa (RCE) không?"**
@@ -269,6 +269,35 @@ Rủi ro còn lại nằm ở thư viện giải nén / parser (zip bomb, file d
 Nhóm kiểm soát bằng:
 1. Kiểm tra dashboard và ping DB trước giờ thi (`doc-de-hieu/01_deploy.md`).
 2. Có sẵn **Chế độ Offline (`Ctrl+Shift+D`)** chạy độc lập với database và mạng ngoài.
+
+### F. Trả lời nhanh khi bị hỏi về Hạ tầng Cloud Run & Đám mây (D-64)
+
+**F1. "Sao chọn GCP mà không chọn AWS?"**  
+Đ: SimpliFey sử dụng mô hình Google Gemini làm lõi AI nhận thức; chạy trên GCP cho phép ứng dụng kết nối trực tiếp vào Vertex AI bằng service account nội bộ với độ trễ thấp và bảo mật cao không cần lưu API key. Ngoài ra, Cloud Run cho phép triển khai container Next.js độc lập và nhanh chóng hơn nhiều so với cấu hình ECS/ALB phức tạp của AWS trong khung thời gian 21 giờ. Cả hai nền tảng đều cấp credit tài trợ, nên việc chọn GCP tối ưu cho dự án.
+
+**F2. "Sao chọn Cloud Run mà không dùng máy ảo (Compute Engine / EC2)?"**  
+Đ: Máy ảo đòi hỏi nhóm phải tự tay cấu hình hệ điều hành, cài đặt tường lửa, cấu hình Nginx reverse proxy và gia hạn chứng chỉ SSL thủ công, tiềm ẩn nhiều điểm lỗi đơn lẻ (SPOF) trong lúc thi. Cloud Run là nền tảng Serverless Container chuẩn doanh nghiệp, tự động cấp phát HTTPS, quản lý tài nguyên theo tải và cô lập môi trường thực thi an toàn. Nhờ đó, nhóm tiết kiệm được nhiều thời gian thiết lập hạ tầng (ước tính 3–4 giờ, chưa kiểm chứng) để tập trung hoàn thiện tính năng lõi và độ ổn định khi demo.
+
+**F3. "Cloud Run không có security group thì bảo mật mạng thế nào?"**  
+Đ: Cloud Run quản lý an ninh mạng thông qua cơ chế `ingress` control được phân tầng rõ ràng (ở đây mở public HTTPS an toàn dưới sự bảo vệ chống tấn công DDoS tự động của Google Cloud Edge). Toàn bộ dữ liệu truyền tải đều bắt buộc qua TLS/HTTPS với chứng chỉ được Google tự động cấp phát và luân phiên. Ở tầng dịch vụ, quyền thực thi và gọi API được kiểm soát chặt chẽ bằng Google Cloud IAM (gán role `roles/run.invoker` cho `allUsers`) và HTTPS thay vì chỉ dựa vào lọc IP truyền thống.
+
+**F4. "Chạy nhiều bản sao thì cache RAM và kết nối DB ra sao?"**  
+Đ: Về cache RAM, hệ thống tuân thủ INV-04 và D-59: snapshot lát cắt mã nguồn được lưu trữ bền vững trong bảng `session_snapshots` của Postgres, nên cache RAM trong container chỉ là bộ đệm tạm thời (LRU) tăng tốc độ, không ảnh hưởng tính đúng đắn khi mở phiên ở bản sao khác. Về cơ sở dữ liệu, mọi bản sao Cloud Run đều kết nối qua connection pooler Supavisor của Supabase (Transaction mode, port 6543, `prepare: false`, D-65); với `max-instances = 4` và driver `postgres` cấu hình `max: 5`, tổng client kết nối là 20 kết nối (ước tính), nhỏ hơn nhiều so với giới hạn 200 client của Supavisor (nguồn: https://supabase.com/docs/guides/platform/compute-and-disk). Nút thắt thực tế là Default Pool Size (15 kết nối thật tới Postgres), khi lượng truy vấn dồn dập các request sẽ xếp hàng chờ tại pooler mà không làm tràn kết nối Postgres.
+
+**F5. "Hệ thống có chuẩn doanh nghiệp không?"**  
+Đ: Hệ thống được thiết kế bám sát theo các trụ cột của Google Cloud Architecture Framework: ứng dụng container hóa phi trạng thái, dữ liệu bí mật tách biệt hoàn toàn vào Secret Manager, danh tính dịch vụ xác thực bằng service account với nguyên tắc đặc quyền tối thiểu. Nhóm thực hiện phương châm Làm đơn giản hơn ở những phần không ảnh hưởng đến độ tin cậy của sản phẩm (ví dụ triển khai qua script CLI tự động hóa thay vì dựng Terraform phức tạp), hoàn toàn phù hợp với thực tiễn phát triển nhanh của các doanh nghiệp startup.
+
+**F6. "Sao app ở GCP mà database lại ở Supabase trên AWS?"**  
+Đ: Cả Cloud Run (`asia-southeast1`) và Supabase (`ap-southeast-1`) đều đặt tại trung tâm dữ liệu Singapore, kết nối qua các tuyến peering cáp quang biển với độ trễ liên vùng thấp (đo đạc thực tế thông thường < 5 ms, ước tính, chưa kiểm chứng), không gây nghẽn hiệu năng. Việc giữ Supabase giúp nhóm tận dụng trọn vẹn hạ tầng Supavisor và cơ chế xác thực Supabase Auth đã được kiểm chứng an toàn mà không tốn công sức di chuyển dữ liệu mạo hiểm trong 21 giờ. Đây là mô hình Multi-Cloud thực tế rất phổ biến hiện nay, cho phép tận dụng thế mạnh chuyên biệt của từng nhà cung cấp.
+
+**F7. "Khóa Gemini để ở đâu, có lộ không?"**  
+Đ: Trên Cloud Run production, ứng dụng hoàn toàn không sử dụng `GEMINI_API_KEY`. Ứng dụng gọi mô hình Gemini thông qua dịch vụ Vertex AI (`location: "global"`) bằng danh tính của chính service account (`roles/aiplatform.user`) gắn kèm container, được Google tự động cấp và luân chuyển token ngắn hạn trong metadata server nội bộ; Vercel dự phòng dùng key AI Studio trả phí (D-66). Do không có chuỗi khóa tĩnh nào trên Cloud Run nên bớt được rủi ro lộ khóa bí mật (credit cuộc thi trả được Vertex hay không: chưa kiểm chứng).
+
+**F8. "Nhóm cân bằng chi phí, chất lượng, tốc độ thế nào?"**  
+Đ: Nhóm dùng Tree-sitter bóc tách cấu trúc 0 token cho bản đồ DAG, chỉ gọi AI ở 4 điểm cần suy luận ngữ nghĩa. Với mô hình `gemini-3.5-flash-lite` trên Vertex AI `global`, chi phí ước tính chỉ ~0,05 USD người học đầu và ~0,03 USD người học sau mỗi repo nhờ `ai_cache` tiết kiệm ~38,6% tiền (chi phí phân tích repo ban đầu chỉ ~$0.018). Tỷ lệ trúng cache phân tích = (N − 1)/N với N người học cùng repo. Nhóm ép JSON schema, tắt thinking budget, khống chế output tối đa 500–900 token, giúp tốc độ phản hồi 6,5–8s (đo ngày 31/10) và chất lượng đầu ra ổn định với chi phí tiết kiệm (ước tính).
+
+**F9. "Môi trường staging của nhóm hoạt động thế nào?"**  
+Đ: Nhóm dùng service Cloud Run độc lập `simplifey-staging` (co về 0 bản sao khi không dùng để tiết kiệm credit) và kết nối database Supabase dev/staging riêng (mô hình D2) để không làm bẩn dữ liệu demo. Mỗi khi merge PR vào `main`, GitHub Actions tự động deploy lên staging và chạy smoke test tự động (kiểm tra `/api/health` và ingest thử nghiệm repo demo). Sau khi smoke test đạt, Trưởng tích hợp (Vai A) kiểm tra ổn định rồi mới bấm duyệt để bung code lên Production (`simplifey-prod`), tránh rủi ro lỗi bung thẳng lên bản thuyết trình.
 
 *"Dưới 1,5 giây đã đo chưa?" — xem dòng tương ứng ở Mục 6.*
 
@@ -328,15 +357,15 @@ BGK hỏi tới hạng mục nào thì trích đúng dòng đó. Khi lệch, `sp
 | Hạng mục | Chọn | Vì sao chọn | Không chọn | Vì sao không |
 | :-- | :-- | :-- | :-- | :-- |
 | **Frontend** | **Next.js 15, React 19, ReactFlow, Monaco, Zustand** | ReactFlow hợp với đồ thị DAG; Monaco chuẩn code viewer; Zustand nhẹ, ít re-render thừa (`spec/01` §3, `spec/30`). | Nuxt, SvelteKit, Canvas tự vẽ | Tốn thời gian dựng buồng lái 3 cột trong 21h; ReactFlow và Monaco hoàn thiện nhất cho sơ đồ và mã nguồn. |
-| **Backend** | **Next.js 15 Route Handlers chạy trên Vercel Functions** | Chia sẻ kiểu dữ liệu (`src/contracts/`) giữa client và server; một repo, một lần deploy (`spec/03` API-08). | Tách Fastify/Express; Python FastAPI | Tách backend tăng chi phí tích hợp và deploy lúc thi. |
-| **AI (LLM)** | **Google Gemini (`CONFIG.LLM_MODEL` qua SDK `@google/genai`)** | Hỗ trợ JSON `responseSchema`; chi phí ước tính ~0,05 USD người học đầu / ~0,03 USD người học sau mỗi repo, chưa đo (`spec/02` §1.1). | GPT-4o, Claude 3.5 Sonnet | Giá token cao hơn ở thời điểm chọn; nhóm chỉ cần 1 nhà cung cấp cho bản thi. |
+| **Backend** | **Next.js 15 Route Handlers chạy trên Google Cloud Run (`asia-southeast1`, D-64)** | Chia sẻ kiểu dữ liệu (`src/contracts/`) giữa client và server; một repo, chạy container độc lập, tự co giãn 1–4 bản sao (`spec/03` API-08, `spec/05`). | Tách Fastify/Express; Python FastAPI | Tách backend tăng chi phí tích hợp và deploy lúc thi. |
+| **AI (LLM)** | **Google Gemini (`CONFIG.LLM_MODEL` qua SDK `@google/genai`) trên Vertex AI (`location: "global"`, service account `roles/aiplatform.user`); Vercel dự phòng dùng AI Studio trả phí (D-66)** | Hỗ trợ JSON `responseSchema`; xác thực an toàn qua service account không API key trên Cloud Run; chi phí ước tính ~0,05 USD người đầu / ~0,03 USD người sau mỗi repo; chi phí phân tích mỗi repo 7 node ~$0.018; tỷ lệ trúng cache = (N − 1)/N; credit cuộc thi trả được Vertex hay không: chưa kiểm chứng (`spec/02` §1.1, `spec/05`). | GPT-4o, Claude 3.5 Sonnet | Giá token cao hơn ở thời điểm chọn; nhóm chỉ cần 1 nhà cung cấp cho bản thi. |
 | **Database** | **Supabase Postgres (AWS Singapore `ap-southeast-1`)** | ACID cho BKT và transaction chấm điểm; RLS bảo vệ dữ liệu; cùng vùng Singapore với host (`spec/03` §3). | MongoDB, Firestore, SQLite | BKT cần toàn vẹn giao dịch (`BEGIN ... SELECT FOR UPDATE`); NoSQL dễ xung đột khi nhiều tab nộp bài cùng lúc. |
 | **Cache & Queue** | **RAM LRU Cache + Semaphore FIFO trong 1 instance; `ai_cache` ở Postgres** | Cache RAM (`CONFIG.INGESTION_CACHE_TTL_MS`) và semaphore (`CONFIG.MAX_CONCURRENT_INGESTIONS`) chỉ giúp nhanh, **không được dựa vào**: trượt cache ⇒ dựng lại theo commit SHA (`spec/03` §4, D-27, D-39). | Redis, RabbitMQ, BullMQ ở bản thi | Tăng độ phức tạp và rủi ro mạng trong 21h (`spec/00` D-31). |
-| **Logging** | **Pino (JSON 1 dòng ra `stdout`)** | Vercel thu log của Function; log JSON dễ lọc theo `session_id`, `node_id`, `tokens_used`; cấu hình `serverExternalPackages: ['pino']` (D-28). | Winston, Morgan | Winston cấu hình cồng kềnh; Morgan chỉ ghi log HTTP thô. |
-| **Monitoring** | **Log + Vercel Observability + dashboard Supabase** | Có sẵn, không mất thời gian cấu hình lúc thi (D-29). | Datadog, Prometheus + Grafana | Cấu hình vượt thời gian cho phép của hackathon 21h. |
-| **CI/CD** | **GitHub Actions (`ci.yml`) + Vercel Git Integration** | Actions chạy `typecheck`, `lint`, `vitest` cho mọi PR; người giữ Vercel merge vào `main` để deploy (D-30). | Jenkins, GitLab CI, Deploy thủ công | Quy trình merge có kiểm soát giảm xung đột và lỗi thao tác tay trong giờ thi. |
-| **Deployment** | **Vercel gói free, region `sin1` (Singapore)** | Miễn phí, deploy khi merge vào `main` (D-30), cùng vùng với Supabase. Chấp nhận mất cache RAM giữa các instance vì đọc lại từ `session_snapshots` (D-27, D-59). | Railway, Render, Fly.io | Tốn phí hoặc cần tự quản lý tiến trình; nhóm theo hướng mã nguồn mở, người tự cài dùng gói free được (D-33). |
-| **File Storage** | **KHÔNG lưu file nguồn; chỉ lưu đoạn code đã cắt của phiên (D-59)** | `spec/01` INV-04: không lưu file mã nguồn (không lưu file code đầy đủ, file zip, cây cú pháp). Thứ duy nhất có code được lưu là đoạn code đã cắt của các node trong phiên (mỗi bước tối đa vài chục dòng, đã che secret) ở bảng `session_snapshots` (`spec/03`), để mọi lần mở lại phiên người học thấy đúng cùng đoạn code; phiên `.zip` cũng mở lại được; client không đọc trực tiếp bảng này; xóa tài khoản thì xóa theo. Upload `.zip` ≤ `CONFIG.MAX_UPLOAD_BYTES` (giới hạn body của Vercel). | AWS S3, Google Cloud Storage, Supabase Storage | Lưu cả file mã nguồn hay zip lên đám mây tạo nguy cơ rò rỉ; chỉ cần đoạn code đã cắt (nhỏ, nằm trong Postgres). |
+| **Logging** | **Pino (JSON 1 dòng ra `stdout`) + Google Cloud Logging** | Cloud Logging tự động thu thập log JSON từ stdout container; dễ lọc theo `session_id`, `node_id`, `tokens_used`; cấm log mã nguồn và secret (D-28, D-64). | Winston, Morgan | Winston cấu hình cồng kềnh; Morgan chỉ ghi log HTTP thô. |
+| **Monitoring** | **Google Cloud Monitoring (Metrics, `uptime check`) + Cloud Logging + dashboard Supabase** | Chuẩn doanh nghiệp, giám sát khả dụng liên tục và cảnh báo sớm mà không tốn công cấu hình phức tạp (D-29, D-64). | Datadog, Prometheus + Grafana | Cấu hình vượt thời gian cho phép của hackathon 21h. |
+| **CI/CD** | **GitHub Actions (`ci.yml`, `security.yml`, `deploy.yml`) + Staging S2** | Pipeline tự động hóa: kiểm tra code (lint, typecheck, vitest) trên mọi PR; merge vào `main` tự deploy Staging S2 (`simplifey-staging`), chạy smoke test tự động (/api/health và ingest); Vai A duyệt để deploy Production (`simplifey-prod`) (D-30). | Jenkins, GitLab CI, Deploy thủ công | Tự động hóa đa tầng, môi trường staging độc lập ngăn lỗi bung thẳng lên bản demo, có cổng duyệt kiểm soát phát hành. |
+| **Deployment** | **Google Cloud Run (`asia-southeast1`, D-64); Vercel dự phòng demo (Phương án C)** | Đạt tiêu chí đám mây Google; cấp phát HTTPS tự động, rollback tức thì, `min-instances = 1` chống cold-start; Vercel `sin1` làm dự phòng nóng (< 5s chuyển tab). Chấp nhận mất cache RAM giữa các bản sao vì đọc từ `session_snapshots` (D-27, D-59, D-64). | Compute Engine (máy ảo), AWS ECS | Máy ảo tốn công cấu hình firewall/SSL thủ công; ECS cấu hình mạng VPC/ALB tốn nhiều giờ trong 21h. |
+| **File Storage** | **KHÔNG lưu file nguồn; chỉ lưu đoạn code đã cắt của phiên (D-59)** | `spec/01` INV-04: không lưu file mã nguồn (không lưu file code đầy đủ, file zip, cây cú pháp). Thứ duy nhất có code được lưu là đoạn code đã cắt của các node trong phiên (mỗi bước tối đa vài chục dòng, đã che secret) ở bảng `session_snapshots` (`spec/03`), để mọi lần mở lại phiên người học thấy đúng cùng đoạn code; phiên `.zip` cũng mở lại được; client không đọc trực tiếp bảng này; xóa tài khoản thì xóa theo. Upload `.zip` ≤ `CONFIG.MAX_UPLOAD_BYTES` (trần upload an toàn chung, D-27, D-64). | AWS S3, Google Cloud Storage, Supabase Storage | Lưu cả file mã nguồn hay zip lên đám mây tạo nguy cơ rò rỉ; chỉ cần đoạn code đã cắt (nhỏ, nằm trong Postgres). |
 | **API Docs** | **Đặc tả nội bộ tại `spec/02_CONTRACTS.md` & `spec/03_API_VA_LUU_TRU.md`** | Mọi endpoint, schema request/response, mã lỗi TypeScript ở một nguồn duy nhất. | Swagger / OpenAPI UI công khai | Mọi route cần phiên Supabase; không phát hành API công khai trong hackathon. |
 | **Auth** | **Supabase Auth (GitHub OAuth)** | Bắt buộc đăng nhập GitHub trước khi dùng; lưu tiến độ theo tài khoản (`spec/03` §2, D-44). | Auth0, NextAuth tự dựng, đăng nhập ẩn danh | Supabase Auth tích hợp sẵn RLS; không tự quản lý session hay JWT; bỏ tài khoản dùng tạm để đơn giản hóa luồng dữ liệu. |
 | **Code Sandbox** | **KHÔNG CÓ / KHÔNG CẦN (Chỉ phân tích tĩnh)** | `spec/01` INV-03: chỉ bóc tách cú pháp tĩnh bằng Tree-sitter, không biên dịch hay chạy code người dùng. | Docker Sandbox, Firecracker microVM | Hệ thống là gia sư kiến trúc, không phải Online Judge; không chạy code nên không có đường thực thi code người dùng. |

@@ -23,7 +23,7 @@
 
 | Nhóm | Nội dung |
 | :-- | :-- |
-| **Có trong spec phải chạy** (D-04) | Bản đồ tất định 0 token; 4 lời gọi AI; cổng gác; câu hỏi theo kỹ năng + 3 nấc gợi ý; BKT ở server; node đã thạo vẫn hỏi 1 câu (D-34); mài mòn kiểu Duolingo, chỉ hiển thị (D-35); đăng nhập GitHub bắt buộc (D-44); mở lại phiên theo commit SHA (D-39); persona; chế độ Offline; Language Registry; chạy trên Vercel + Supabase gói free (D-27) |
+| **Có trong spec phải chạy** (D-04) | Bản đồ tất định 0 token; 4 lời gọi AI; cổng gác; câu hỏi theo kỹ năng + 3 nấc gợi ý; BKT ở server; node đã thạo vẫn hỏi 1 câu (D-34); mài mòn kiểu Duolingo, chỉ hiển thị (D-35); đăng nhập GitHub bắt buộc (D-44); mở lại phiên theo commit SHA (D-39); persona; chế độ Offline; Language Registry; chạy trên Cloud Run + Supabase (Vercel dự phòng demo, D-64) |
 | **Có thể bị cắt nếu trễ** (`doc-de-hieu/07_ke_hoach_21h.md` Mục 3) ⇒ làm đầu tiên sau thi | Resolver Java/Go/Dart và tầng `STRUCTURAL`; "Báo sai"; màn hình lịch sử; phần AI của Tổng quan |
 | **Đã đặc tả, tắt bằng cờ** | Câu thứ 2 cho kỹ năng NOVICE (`NOVICE_SECOND_QUESTION`); xoáy vào ý còn hổng (`GAP_TARGETING`) |
 | **Chưa có — là roadmap** | Chạy với LLM local; cờ nghi dán; nhập giọng nói; repo private qua GitHub App; VS Code/JetBrains |
@@ -44,7 +44,7 @@ Theo lịch D-47, vòng 3 chỉ cách vòng 2 khoảng 1 ngày (08/11 → 09/11/
 
 | # | Chủ đề | Quyết định |
 | :-: | :-- | :-- |
-| R1 | Hạ tầng | Giữ **Vercel + Supabase gói free** như bản thi (D-27, API-08); cache RAM chỉ để nhanh, không được dựa vào. Chỉ tách ingest ra worker riêng khi log cho thấy Function chạm giới hạn thời gian / RAM của Vercel, hoặc `ERR_SERVER_BUSY` xuất hiện thường xuyên. Người tự cài có thể chạy `next start` trên máy mình |
+| R1 | Hạ tầng | Giữ **Google Cloud Run (`asia-southeast1`) + Supabase** như bản thi (D-64; Vercel dự phòng demo Phương án C); cache RAM chỉ để nhanh, không được dựa vào (đọc `session_snapshots`). Chỉ tách ingest ra worker riêng khi log cho thấy chạm giới hạn tài nguyên container, hoặc `ERR_SERVER_BUSY` xuất hiện thường xuyên. Người tự cài có thể chạy bằng npm (`npm run dev`) hoặc Docker container (D-45) |
 | R2 | Cache | Bản phân tích node và tổng quan được cache dùng chung ở Postgres (`ai_cache`, D-37); câu hỏi **không** cache. Redis chỉ thêm khi cần chia sẻ cache RAM `StaticEngineResult` giữa các instance. **Không** dùng Explicit Context Caching. Tận dụng Implicit Caching bằng cách đặt phần tĩnh của prompt lên đầu |
 | R3 | Quan sát cho BKT | Mỗi câu cho **1 kết quả** cho đúng 1 kỹ năng: `PASS_FIRST` / `PASS_AFTER_HINT` / `FAILED`. Khi fit thì giữ quan sát nhị phân, và mô hình hóa lượt có gợi ý bằng tham số đoán riêng (đang dùng `BKT_P_G_HINT`) |
 | R4 | Lát cắt | Giữ **Scoped Call-Chain Slicing** (`SLICE_MAX_HOPS`). Không hứa PDG hay program slicing theo nghĩa Weiser. Lát cắt bám biến chỉ là tùy chọn best-effort và phải có đo đạc |
@@ -75,11 +75,14 @@ Theo lịch D-47, vòng 3 chỉ cách vòng 2 khoảng 1 ngày (08/11 → 09/11/
 **KPI mục tiêu:** người ngoài nhóm tự cài và chạy được theo README; pilot tình nguyện 15–30 SV đủ dữ liệu cho GĐ2; kiểm soát trần lượt AI. Mọi KPI chỉ được báo sau khi **đo baseline**.
 
 **Công nghệ**
-- **Tự cài đặt:** README hướng dẫn clone, điền key trong `.env`, tạo project Supabase, deploy lên Vercel hoặc chạy máy cá nhân.
+- **Tự cài đặt:** README hướng dẫn 2 cách (D-45): chạy trực tiếp bằng Node/npm là chính (`npm install && npm run dev`), hoặc chạy bằng Docker container là phụ (`docker run`); điền key trong `.env`, kết nối Supabase, hoặc tự deploy lên Cloud Run / Vercel.
 - **Trần lượt AI toàn web mỗi ngày:** đặt trần lượt gọi AI toàn web mỗi ngày trước khi đưa link rộng rãi; hết lượt thì hệ thống thông báo rõ và chỉ sang README hướng dẫn tự chạy bằng key cá nhân.
 - **Bảng mới:** `llm_calls` (token vào/ra, token trúng cache, độ trễ, `LLM_MODEL`, `PROMPT_VERSION`, cổng gác chặn gì) — dữ liệu cho câu hỏi nghiên cứu về AI ảo giác.
 - **Log nộp bài:** mở rộng `question_attempts` vốn chỉ thêm, không sửa. Thêm `latency_ms`, số lần dán, thời gian gõ, tier, `focus`, `PROMPT_VERSION`, model. Đây là dữ liệu để fit ở GĐ2, nên phải thiết kế ngay.
 - **Rate-limit theo user/IP** cho `/api/*`. Bản thi mới có quota token theo phiên (`SESSION_TOKEN_QUOTA`), đếm ở server.
+- **Vận hành & Giám sát:** Phân công người trực (on-call rotation), bảng theo dõi sự cố (incident post-mortem log), chính sách sao lưu định kỳ, quy trình dọn dữ liệu cũ (xóa `session_snapshots` và `learning_sessions` của phiên không hoạt động lâu ngày, khớp D-59).
+- **An toàn & Bảo mật nâng cao:** Đặt trần AI theo người và theo ngày; dùng `zod` xác thực mọi route API; thiết lập CSP (Content Security Policy) chặt chẽ; bật bộ lọc an toàn Gemini (safety settings); kiểm tra từ xấu ở cả đầu ra AI.
+- **Đảm bảo chất lượng AI:** Quy trình đổi model (chạy qua bộ test trước khi đổi); kiểm thử thiên lệch (bias testing); định kỳ lập báo cáo đánh giá (evaluation report).
 - **Tuân thủ:** màn hình xin đồng ý theo Nghị định 13/2023; ẩn danh khi xuất dữ liệu nghiên cứu; dùng API trả phí cho pilot.
 
 **Thuật toán, thành phần mới**
@@ -215,7 +218,7 @@ Kiến trúc module hóa một chiều (`spec/04` §4) cho phép mở rộng tu�
 
 ```mermaid
 flowchart LR
-    B1["Bậc 1: Bản thi<br/>Vercel + cache RAM theo instance + Semaphore"]
+    B1["Bậc 1: Bản thi<br/>Cloud Run + cache RAM theo bản sao + Semaphore"]
     B2["Bậc 2: Cache dùng chung<br/>Upstash Redis"]
     B3["Bậc 3: Tách Ingest Worker<br/>Hàng đợi pgmq / BullMQ"]
     B4["Bậc 4: Hàng đợi gọi AI<br/>Rate-limited LLM Queue + Paid Billing"]
@@ -225,7 +228,7 @@ flowchart LR
 
 | Bậc kiến trúc | Dấu hiệu cần nâng bậc | Thay đổi trong Code | Hạ tầng bổ sung |
 | :-- | :-- | :-- | :-- |
-| **Bậc 1** *(Bản thi)* | Khởi đầu demo, nhóm nhỏ người học. | Giữ nguyên kiến trúc hiện tại (`spec/04`). | Vercel gói free (`sin1`) + Supabase Free + Gemini API. |
+| **Bậc 1** *(Bản thi)* | Khởi đầu demo, nhóm nhỏ người học. | Giữ nguyên kiến trúc hiện tại (`spec/05`). | Google Cloud Run (`asia-southeast1`, D-64) + Supabase Free + Gemini API (Vercel dự phòng demo). |
 | **Bậc 2: Cache dùng chung** | Log cho thấy nhiều lần đọc lại `session_snapshots` từ Postgres vì trượt cache RAM giữa các instance. | Chuyển LRU cache `StaticEngineResult` sang bộ nhớ dùng chung. | **Upstash Redis** gói free làm tầng đệm dùng chung. |
-| **Bậc 3: Tách Ingest Worker** | Ingest chạm giới hạn thời gian / RAM của Vercel Functions; `ERR_SERVER_BUSY` thường xuyên. | Tách `engine/*` thành Worker riêng; `/api/ingest` đẩy job vào queue và trả job ID để polling. | Hàng đợi **`pgmq` (Supabase Queues)** chạy trên Postgres, hoặc BullMQ. |
+| **Bậc 3: Tách Ingest Worker** | Ingest chạm giới hạn thời gian / RAM của Cloud Run container (hoặc Vercel Functions dự phòng); `ERR_SERVER_BUSY` thường xuyên. | Tách `engine/*` thành Worker riêng; `/api/ingest` đẩy job vào queue và trả job ID để polling. | Hàng đợi **`pgmq` (Supabase Queues)** chạy trên Postgres, hoặc BullMQ. |
 | **Bậc 4: Hàng đợi gọi AI** | Chạm trần quota gói Free của Gemini. | Chuyển `analyze-node`, `analyze-overview` qua worker bất đồng bộ theo batch. | Gắn Google Cloud Billing (Paid Tier, không dùng dữ liệu để huấn luyện); hàng đợi có rate-limit (vd Upstash QStash). |

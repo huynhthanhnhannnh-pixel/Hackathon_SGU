@@ -5,14 +5,14 @@
 ## Đọc nhanh
 
 - **Luật thi (Mục 4):** repo thi **trống** lúc bắt đầu, BTC chỉ nhận commit trong giờ thi, **cấm bulk-commit code viết sẵn**, **mọi thành viên phải có commit**; spec là tài liệu đọc, không phải code: không chép nguyên khối vào repo thi trong một commit.
-- **Trước giờ thi:** làm hết Bước 0 ở [`01_deploy.md`](01_deploy.md) Mục 3.
-- **Mốc chính (Mục 2):** H+1 13:00 `contracts/*`; H+8 20:00 lát dọc 1; H+12 00:00 CN lát dọc 2; H+16 04:00 đủ endpoint; H+17 05:00 đóng băng tính năng, kiểm Definition of Done (`spec/50` Mục 5); H+21 09:00 ngừng code.
+- **Trước giờ thi:** làm hết Bước 0 ở [`01_deploy.md`](01_deploy.md) Mục 3; tạo project GCP, Secret Manager, dựng Workload Identity Federation (WIF) và secret dự phòng, tạo tài khoản bot smoke test, tạo GitHub Environment `production` (Vai A duyệt), và **đánh thức 2 project Supabase** (Supabase tạm dừng project free sau 1 tuần không hoạt động — https://supabase.com/pricing).
+- **Mốc chính (Mục 2):** H+1 13:00 `contracts/*`; H+8 20:00 lát dọc 1; H+12 00:00 CN lát dọc 2; H+15 03:00 giờ cắt Dockerfile (D-64); H+16 04:00 đủ endpoint; H+17 05:00 đóng băng tính năng, kiểm Definition of Done (`spec/50` Mục 5); H+21 09:00 ngừng code.
 - **Trễ mốc ≥ 1 giờ (Mục 3):** cắt từ trên xuống theo thứ tự ở Mục 3; danh sách không bao giờ cắt nằm cuối Mục 3.
 
 ```mermaid
 flowchart LR
     K["H0–H1 · src/contracts/* (A gõ, B & C review)"] --> A & B & C & D & E
-    A["Vai A · Trưởng tích hợp<br/>DB, API, ghép, merge, Vercel"]
+    A["Vai A · Trưởng tích hợp<br/>DB, API, CI/CD deploy.yml, duyệt production, Cloud Run"]
     B["Vai B · Engine<br/>Tầng 0–2, AST, đồ thị"]
     C["Vai C · AI + BKT<br/>Prompt, cổng gác, chấm, BKT"]
     D["Vai D · Giao diện<br/>Bản đồ, Monaco, Cockpit"]
@@ -24,10 +24,10 @@ flowchart LR
 ## 1. Năm vai song song & điểm nối
 
 Nhóm chia 5 vai:
-- **Vai A — Trưởng tích hợp:** Thiết lập dự án, DB migration (gồm bảng `session_snapshots`, D-59), auth, API routes, ghép nối, review & merge PR, deploy Vercel.
+- **Vai A — Trưởng tích hợp:** Thiết lập dự án, DB migration (gồm bảng `session_snapshots`, D-59, đánh index nhanh `node_runs`, `dispute_reports`), auth, API routes (tối ưu `/api/sessions` tránh N+1, không tải skeleton), ghép nối, review & merge PR; thiết lập pipeline CI/CD (`ci.yml`, `security.yml`, dựng `deploy.yml` đầu giờ, duyệt production trên GitHub Actions, D-30); deploy Cloud Run chính và Vercel dự phòng (D-64); viết Dockerfile trên nhánh riêng ở H+8–12, thử build + deploy revision có tag không nhận traffic trước H+12.5 (dậy H+15 chỉ merge hoặc bỏ); cấu hình driver `postgres` 3.x qua Supavisor Transaction Pooler (`prepare: false`), headers bảo mật trong `next.config.ts`, và bật các tính năng an ninh GitHub (Dependabot alerts/updates, Secret scanning push protection, CodeQL default setup) (D-65).
 - **Vai B — Engine:** Tầng 0 (tải repo, lọc rác), Tầng 1 (parser, AST, đồ thị gọi hàm), Tầng 2 (lát cắt, layout Dagre, hàng điểm bắt đầu D-55, nối node thuật toán D-56), mẫu entry mobile và `main` (D-57, D-58).
-- **Vai C — AI + BKT:** Lời gọi Gemini (`gemini-3.5-flash-lite`), prompt & responseSchema, cổng gác `guard/*`, gọi lại kèm lý do, ghi mã lỗi, chấm bài, `bkt-engine`.
-- **Vai D — Giao diện:** Cột 1 Bản đồ (ReactFlow), Cột 2 Code (Monaco), Cột 3 Cockpit (X-Ray, Feynman, Tổng quan), chế độ offline.
+- **Vai C — AI + BKT:** Lời gọi Gemini (`gemini-3.5-flash-lite`), prompt & responseSchema, cổng gác `guard/*`, gọi lại kèm lý do, ghi mã lỗi, chấm bài, `bkt-engine`, bộ lọc an toàn (`src/lib/moderation.ts` che secret, PII email/SĐT/CCCD, chặn từ xấu 0 token trả `ERR_ANSWER_INAPPROPRIATE`, kiểm từ xấu ở chữ AI (GUARD-07)) (D-65).
+- **Vai D — Giao diện:** Cột 1 Bản đồ (ReactFlow), Cột 2 Code (Monaco, tự host Monaco, không tải CDN; tải chậm Monaco và ReactFlow bằng `next/dynamic` cho demo không cần mạng ngoài), Cột 3 Cockpit (X-Ray, Feynman, Tổng quan), chế độ offline (D-65).
 - **Vai E — Kiểm thử, demo, slide:** Fixture, chạy bộ test `50`, chạy thử repo demo, duyệt tay output AI, ghi lỗi thành ca test trong review/loi_da_gap.md, video demo dự phòng, slide thuyết trình.
 
 **Điểm nối để không ai phải chờ:**
@@ -41,12 +41,12 @@ Nhóm chia 5 vai:
 
 | Giờ | Mục tiêu | A | B | C | D | E |
 | :-- | :-- | :-- | :-- | :-- | :-- | :-- |
-| H+0–1 | Khung, contracts | Khởi tạo, `contracts`, thử deploy | Thử 3 giả định tải repo | Gọi thử API AI | Khung trang | Fixture |
+| H+0–1 | Khung, contracts | Khởi tạo, `contracts`, dựng `deploy.yml`, thử deploy | Thử 3 giả định tải repo | Gọi thử API AI | Khung trang | Fixture |
 | H+1–4 | Chạy bằng dữ liệu giả | Bảng (gồm `session_snapshots`), auth, `/api/me` | Tải, lọc repo | BKT + test | Bản đồ từ fixture | Test `50` |
 | H+4–8 | Lát dọc 1 | Nối ingest, analyze | Bản đồ thật (gồm D-55, D-56) | Phân tích + cổng gác | Tab 1 | Chạy repo demo |
-| H+8–12 | Lát dọc 2 | Nối enrich, evaluate | Sửa theo repo demo, tải chọn lọc (D-63) | Câu hỏi, chấm, gợi ý | Tab 2, đổi màu | Kịch bản A, B |
+| H+8–12 | Lát dọc 2 | Nối enrich, evaluate; Dockerfile (nhánh riêng) | Sửa theo repo demo, tải chọn lọc (D-63) | Câu hỏi, chấm, gợi ý | Tab 2, đổi màu | Kịch bản A, B |
 | H+12–15 | Giao agent, ngủ xoay | Phiên, API còn lại (giao agent, ngủ từ H+12.5) | Python, entry `main` và màn hình React Native (D-57, D-58) | Tổng quan | Lịch sử, offline (giao agent, ngủ từ H+12.5) | Test lỗi, slide |
-| H+15–17 | Đủ endpoint (H+16), đóng băng (H+17) | Kiểm việc agent, merge, deploy | Ngủ | Duyệt tay, bundle | Kiểm việc agent, sửa giao diện | Ngủ |
+| H+15–17 | Đủ endpoint (H+16), đóng băng (H+17) | Kiểm việc agent, merge Dockerfile hoặc bỏ (giờ cắt H+15), deploy Cloud Run | Ngủ | Duyệt tay, bundle | Kiểm việc agent, sửa giao diện | Ngủ |
 | H+17–19 | Tập demo | Sửa lỗi | Sửa lỗi | Ngủ tới H+18.5, rồi sửa lỗi | Sửa lỗi | Definition of Done (H+17), video dự phòng |
 | H+19–21 | Về đích | Commit cuối | Kiểm | Kiểm | Kiểm | Slide, nộp |
 
@@ -57,6 +57,7 @@ Nhóm chia 5 vai:
 - **H+4 (16:00):** UI hiện bản đồ từ fixture; `bkt-engine` + `plan` + `derive` qua test `50`; ingest tải + lọc repo demo trong RAM.
 - **H+8 (20:00):** **Lát dọc 1:** dán link repo demo ⇒ engine thật ⇒ bản đồ thật ⇒ bấm node ⇒ Tab 1 từ `analyze-node` thật.
 - **H+12 (00:00 CN):** **Lát dọc 2:** enrich ⇒ nộp ⇒ chấm ⇒ gợi ý ⇒ BKT ⇒ đổi màu ⇒ mở khóa, ghi Postgres; mài mòn ở kỹ năng của node đang mở (D-35).
+- **H+15 (03:00):** **Giờ cắt Dockerfile (D-64):** Vai A dậy lúc H+15 chỉ quyết định merge hoặc bỏ, không viết thêm. Nếu Dockerfile trên nhánh riêng build và deploy revision có tag không nhận traffic thành công (trước H+12.5) thì merge vào `main` để Cloud Run ưu tiên build; nếu chưa xong thì dừng ngay và bỏ, giữ cách deploy `--source` qua Buildpacks để không ảnh hưởng mốc đóng băng H+17.
 - **H+16 (04:00):** Mọi endpoint của `03` chạy; mở lại phiên; offline mode; persona; tổng quan; Python resolver.
 - **H+17 (05:00):** **Đóng băng tính năng.** Duyệt tay output AI repo demo (`21` Mục duyệt tay) ⇒ ghi `mock_bundle.json`; deploy bản chạy thật.
 - **H+19 (07:00):** Sửa lỗi từ buổi tập demo; chạy 3 lần mỗi câu trả lời trong kịch bản; quay video dự phòng.
@@ -85,7 +86,7 @@ Không bao giờ cắt: bản đồ tất định, Tab 1, câu hỏi + chấm + 
 - Mỗi người commit **phần của mình**, nhỏ và thường xuyên (mục tiêu ≤ ~200 dòng / commit), message dạng `feat(engine): cắt link về gốc repo` / `fix(ai): …`.
 - Không dán nguyên một file lớn từ spec vào một commit; code được gõ hoặc sinh trong giờ thi theo spec rồi chỉnh.
 - Không commit `spec/`, `pitch/`, `doc-de-hieu/` vào repo thi (giữ ở repo tài liệu này).
-- **Quy trình nhánh + PR (D-30):** Mọi người làm trên nhánh riêng, mở PR; GitHub Actions chạy CI (`typecheck`, `lint`, test); chỉ Vai A (người giữ Vercel) bấm merge commit vào `main` để deploy.
+- **Quy trình nhánh + PR (D-30):** Mọi người làm trên nhánh riêng, mở PR; GitHub Actions chạy `ci.yml` và `security.yml`; Vai A review và merge vào `main`; workflow `deploy.yml` tự động deploy lên Staging S2 và chạy smoke test; Vai A bấm duyệt tại GitHub Environment `production` để deploy lên `simplifey-prod` (D-30, D-64).
 - Không commit `.env*` (chỉ `.env.example`), `.kb/`, `AGENTS.md`, `CLAUDE.md`.
 
 ### Cách làm với agent

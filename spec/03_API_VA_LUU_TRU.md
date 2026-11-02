@@ -1,22 +1,22 @@
 # 03 — API, LƯU TRỮ & GIAO DỊCH
 
-> Quy định 13 endpoint, lược đồ Postgres, RLS, khóa cache AI, suy ra trạng thái node và các luồng ghi. Người đọc: cả nhóm; Vai A cài đặt, gọi hàm của Vai B (`10`, `11`) và Vai C (`20`–`22`).
+> Quy định 14 endpoint, lược đồ Postgres, RLS, khóa cache AI, suy ra trạng thái node và các luồng ghi. Người đọc: cả nhóm; Vai A cài đặt, gọi hàm của Vai B (`10`, `11`) và Vai C (`20`–`22`).
 > **Trong repo thi:** route handler ở `src/app/api/**/route.ts` (mỏng: xác thực → gọi service → map lỗi); nghiệp vụ ở `src/server/*.ts`; SQL ở `supabase/migrations/0001_init.sql`.
 > **Kiểu:** `02_CONTRACTS.md` (Mục 5–9). **Hằng số:** `CONFIG.*`. Luồng nghiệp vụ tổng thể: `01_KIEN_TRUC_VA_LUONG.md`.
 
 ## Đọc nhanh
 
-- Nhận request ở 13 endpoint (kiểu ở `02` Mục 8) ⇒ xác thực phiên Supabase, kiểm `session_id` thuộc người gọi ⇒ gọi service ở `src/server/*.ts` ⇒ trả response dựng theo danh sách trường cho phép.
+- Nhận request ở 14 endpoint (kiểu ở `02` Mục 8; riêng `/api/health` trả text `ok`) ⇒ xác thực phiên Supabase, kiểm `session_id` thuộc người gọi ⇒ gọi service ở `src/server/*.ts` ⇒ trả response dựng theo danh sách trường cho phép.
 - Server là nơi ghi duy nhất vào Postgres; Postgres không chứa file nguồn, chỉ lưu đoạn code đã cắt của phiên trong `session_snapshots` (API-01, API-02, D-59).
 - `evaluate-feynman`: đọc câu hỏi + đáp án từ DB, kiểm không khóa ⇒ gọi AI ngoài transaction ⇒ transaction ngắn ghi lượt và BKT; ghi hỏng ⇒ `ERR_PERSISTENCE_UNAVAILABLE`, người học bấm "Thử lại" (Mục 6.2).
 - Trạng thái node suy ra khi đọc từ khung đồ thị + `node_progress` (`deriveNodeStates`, Mục 5.1); `LOCKED` không bao giờ được lưu.
-- Chạy trên Vercel; cache RAM chỉ giúp nhanh, bản gốc của phiên ở `session_snapshots` (API-08).
+- Chạy trên Cloud Run (Vercel dự phòng, D-64); cache RAM chỉ giúp nhanh, bản gốc của phiên ở `session_snapshots` (API-08).
 
 ```mermaid
 flowchart LR
   B["Trình duyệt"] -- "/api/* + Bearer token" --> R["route.ts<br/>xác thực · gọi service · map lỗi"]
   R --> S["src/server/*<br/>nghiệp vụ"]
-  S -- "ghi duy nhất (service-role)" --> D[("Postgres")]
+  S -- "ghi duy nhất (DATABASE_URL)" --> D[("Postgres")]
   S -- "ngoài transaction" --> A["Gemini"]
   S --> M["Cache RAM 1 instance<br/>StaticEngineResult (bản sao)"]
   B -. "chỉ select (RLS)" .-> D
@@ -24,8 +24,8 @@ flowchart LR
 
 | Mục | Nói về | Code (file / hàm chính) |
 | :-: | :-- | :-- |
-| 1 | Nguyên tắc: không lưu file nguồn, server ghi duy nhất, xác thực, quota token, AI ngoài transaction, Vercel | — |
-| 2 | 13 endpoint (request → response, bảng ghi, lỗi riêng); `GET /api/sessions` | `src/app/api/**/route.ts` |
+| 1 | Nguyên tắc: không lưu file nguồn, server ghi duy nhất, xác thực, quota token, AI ngoài transaction, Cloud Run | — |
+| 2 | 14 endpoint (request → response, bảng ghi, lỗi riêng); `GET /api/sessions`, `GET /api/health` | `src/app/api/**/route.ts` |
 | 3 | Lược đồ Postgres; 3.1 `RunQuestion`; 3.2 RLS; 3.3 khóa cache AI | `supabase/migrations/0001_init.sql` |
 | 4 | Khóa phiên, cache RAM, đọc `StaticEngineResult` của phiên | `getSessionStaticResult` |
 | 5 | Suy ra trạng thái node (5.1), mài mòn (5.2), kế hoạch không rỗng (5.3), đổi persona (5.4) | `deriveNodeStates` (`src/lib/derive.ts`) |
@@ -44,13 +44,13 @@ flowchart LR
 ## 1. Nguyên tắc
 
 - **Không lưu file nguồn.** Postgres không chứa file code, buffer zip, AST. Code duy nhất được lưu là đoạn code đã cắt của các node (`trace_steps[].snippet`, `dto_snippet`) trong `StaticEngineResult` của phiên, bảng `session_snapshots` (D-59). Được lưu thêm: tài khoản, điểm kỹ năng, phiên học (snapshot + khung đồ thị), tiến độ, câu trả lời của người học, văn bản AI **đã qua kiểm** trong `ai_cache` và `node_runs` (câu hỏi, đáp án mẫu — D-36), tên bước / tên hàm (API-01).
-- **Server là nơi ghi duy nhất.** Client không có quyền `insert/update/delete` trên bảng nào; mọi lệnh ghi đi qua route handler bằng service-role key (API-02).
+- **Server là nơi ghi duy nhất.** Client không có quyền `insert/update/delete` trên bảng nào; mọi lệnh ghi đi qua route handler bằng driver `postgres` (`DATABASE_URL`), không qua service-role key (API-02).
 - **Trả về theo danh sách trường cho phép.** Mỗi response dựng bằng một hàm map tường minh (`toClientResult`, `toAnalysisView`, `toEvaluateResponse`…). Cấm spread object thô của AI hay của DB vào response, để không lộ `misconception`, đáp án, `suspicious_instruction_files` (API-03).
-- **Mọi request cần phiên Supabase.** Header `Authorization: Bearer <access_token>`; server xác thực bằng `supabase.auth.getUser(token)`. Thiếu / sai ⇒ `ERR_UNAUTHENTICATED` (API-04).
+- **Mọi request cần phiên Supabase.** Header `Authorization: Bearer <access_token>`; server xác thực bằng `supabase.auth.getUser(token)`. Thiếu / sai ⇒ `ERR_UNAUTHENTICATED` (API-04). Ngoại lệ duy nhất: `GET /api/health` không cần đăng nhập (D-64).
 - **Kiểm quyền sở hữu.** `session_id` (và `run_id`) phải thuộc `user_id` hiện tại, nếu không ⇒ `ERR_SESSION_NOT_FOUND`; không tiết lộ đó là phiên của người khác (API-05).
 - **Đếm token ở server.** Sau mỗi lời gọi AI thật (không tính trúng cache), cộng `usage_metadata` vào `learning_sessions.tokens_used`. Trước mỗi lời gọi AI: `tokens_used ≥ CONFIG.SESSION_TOKEN_QUOTA` ⇒ `ERR_TOKEN_QUOTA_EXCEEDED` (API-06).
 - **Gọi AI ngoài transaction.** Không giữ khóa DB trong lúc chờ AI (D-18, API-07).
-- **Triển khai trên Vercel** (region `sin1`, D-27). Cache RAM `StaticEngineResult`, semaphore ingest và in-flight map chỉ sống trong 1 instance: giúp nhanh hơn, **không được dựa vào**. Cache trượt ⇒ đọc `session_snapshots` (Mục 4). Upload zip ≤ `CONFIG.MAX_UPLOAD_BYTES` (giới hạn body của Vercel); link GitHub không bị giới hạn này (API-08).
+- **Triển khai chính trên Google Cloud Run** (region `asia-southeast1`, D-64), dự phòng Vercel (`sin1`). Cache RAM `StaticEngineResult`, semaphore ingest và in-flight map chỉ sống trong 1 instance: giúp nhanh hơn, **không được dựa vào**. Cache trượt ⇒ đọc `session_snapshots` (Mục 4). Upload zip ≤ `CONFIG.MAX_UPLOAD_BYTES` (trần upload an toàn chung, D-27); link GitHub không bị giới hạn này (API-08).
 
 ---
 
@@ -71,6 +71,7 @@ flowchart LR
 | 11 | `POST /api/report-wrong` | `ReportWrongRequest` → `ReportWrongResponse` | Mục 6.4 | — | `ERR_REPORT_NOT_ALLOWED` |
 | 12 | `POST /api/demo/persona` | `PersonaRequest` → `PersonaResponse` | Ghi đè 16 dòng `skill_states` của **tài khoản hiện tại** | — | `ERR_DEMO_MODE_DISABLED` |
 | 13 | `GET /api/sessions/{session_id}/progress` | — → `ProgressResponse` | — (chỉ đọc DB, không engine, không AI) | — | — |
+| 14 | `GET /api/health` | — → 200 `ok` | — | — | — |
 
 ### Lỗi chung
 
@@ -82,7 +83,7 @@ Không lặp ở cột "Lỗi riêng":
 ### `GET /api/sessions`
 
 Mỗi `LearningSessionSummary` được tính khi đọc, không lưu:
-- `completed_count` / `failed_count` đếm `node_progress.status`; `total_nodes = graph_skeleton.length`.
+- Truy vấn nhanh, tránh N+1: chỉ lấy các cột cần thiết, không lấy `graph_skeleton` đầy đủ qua mạng mà dùng `jsonb_array_length(graph_skeleton)` để tính `total_nodes`; `completed_count` và `failed_count` đếm từ `node_progress.status` bằng `LEFT JOIN` / `GROUP BY` trong một truy vấn duy nhất thay vì truy vấn lặp từng phiên.
 - `engine_version ≠ CONFIG.ENGINE_VERSION` ⇒ `can_resume = false`, `resume_blocker = "ENGINE_UPDATED"`.
 - Còn lại ⇒ `true`, `null` (mọi phiên, kể cả `.zip`, mở lại từ `session_snapshots` — D-59).
 
@@ -179,6 +180,7 @@ create table node_runs (                               -- 1 lần học 1 node (
   finished_at timestamptz
 );
 create unique index node_runs_one_open on node_runs (session_id, node_id) where finished_at is null;
+create index on node_runs (session_id, node_id);
 
 create table question_attempts (                       -- Chỉ thêm, không sửa
   id             bigint generated always as identity primary key,
@@ -207,6 +209,17 @@ create table ai_cache (                                -- D-37: văn bản AI đ
   created_at    timestamptz not null default now()
 );
 
+create table ai_usage (                                -- D-66: lưu vết chi phí L2 từng lời gọi AI; client không đọc (Mục 3.2)
+  id          bigint generated always as identity primary key,
+  session_id  uuid not null references learning_sessions on delete cascade,
+  call_kind   text not null check (call_kind in ('ANALYZE','OVERVIEW','QUESTIONS','GRADE')),
+  tokens_in   int not null,
+  tokens_out  int not null,
+  cost_usd    numeric(8,6) not null,
+  created_at  timestamptz not null default now()
+);
+create index on ai_usage (session_id);
+
 create table dispute_reports (                         -- Nút "Báo sai" (D-22) — để nhóm đọc lại
   id             bigint generated always as identity primary key,
   user_id        uuid not null references profiles on delete cascade,
@@ -215,17 +228,19 @@ create table dispute_reports (                         -- Nút "Báo sai" (D-22)
   note           text not null check (char_length(note) <= 500),           -- = CONFIG.REPORT_NOTE_MAX_CHARS
   created_at     timestamptz not null default now()
 );
+create index on dispute_reports (run_id);
+create index on dispute_reports (user_id);
 ```
 
 ### 3.1. `node_runs.questions` (jsonb) — kiểu `RunQuestion`
 
-Kiểu `RunQuestion`: `02` Mục 7 (D-61). Cột chứa câu hỏi + đáp án nên client không đọc (Mục 3.2).
+Kiểu `RunQuestion`: `02` Mục 7 (D-61). Cột chứa câu hỏi + đáp án nên client không đọc (Mục 3.2). Kiểu `// nội bộ`: `AiUsageRow = { id: number; session_id: string; call_kind: "ANALYZE" | "OVERVIEW" | "QUESTIONS" | "GRADE"; tokens_in: number; tokens_out: number; cost_usd: number; created_at: string }` lưu vết chi phí L2 (D-66).
 
 ### 3.2. Bảo mật hàng (RLS)
 
 - Bật RLS trên **mọi** bảng.
 - `select` cho client: `profiles`, `skill_states`, `learning_sessions`, `dispute_reports` khi `auth.uid() = user_id`; `node_progress` khi `session_id` thuộc phiên của `auth.uid()`.
-- `ai_cache`, `node_runs`, `question_attempts`, `session_snapshots`: **không có chính sách nào** cho client (chứa đáp án — INV-07; chứa `symbol_whitelist`, `suspicious_instruction_files` — API-03; đọc qua endpoint).
+- `ai_cache`, `ai_usage`, `node_runs`, `question_attempts`, `session_snapshots`: **không có chính sách nào** cho client (chứa đáp án — INV-07; chứa `symbol_whitelist`, `suspicious_instruction_files` — API-03; đọc qua endpoint).
 - Không có chính sách `insert/update/delete` cho client ở bất kỳ bảng nào (API-02).
 
 ### 3.3. Khóa cache AI
@@ -286,6 +301,8 @@ Chỉ ghi `skill_states` (Mục 6.7); UI gọi lại `GET /api/me`. Trạng thá
 
 ## 6. Luồng ghi
 
+Mọi lời gọi AI thành công (`analyze-node`, `analyze-overview`, `enrich-node`, `evaluate-feynman`): server ghi 1 dòng vào `ai_usage` (`session_id`, `call_kind`, `tokens_in`, `tokens_out`, `cost_usd`) ngoài transaction học; lỗi ghi DB ở bước này chỉ log cảnh báo, không làm hỏng request của người học (D-66).
+
 ### 6.1. `enrich-node` — tạo run, lưu câu hỏi + đáp án
 
 ```typescript
@@ -316,18 +333,19 @@ async function enrichNode(req: EnrichNodeRequest, userId: string): Promise<Enric
 
 ```mermaid
 flowchart TD
-  A["POST /api/evaluate-feynman"] --> B{"1 · Độ dài"}
-  B -- "sai" --> EB["ERR_ANSWER_TOO_*<br/>không tính lượt"]
-  B -- "đúng" --> C{"2 · Đọc DB, không khóa<br/>run · câu hỏi · đáp án (D-36)"}
+  A["POST /api/evaluate-feynman"] --> B{"1 · Độ dài & Từ ngữ"}
+  B -- "sai độ dài" --> EB["ERR_ANSWER_TOO_*<br/>không tính lượt"]
+  B -- "có từ xấu" --> EIN["ERR_ANSWER_INAPPROPRIATE<br/>0 token · không tính lượt"]
+  B -- "hợp lệ" --> C{"2 · Đọc DB, không khóa<br/>run · câu hỏi · đáp án (D-36)"}
   C -- "DB lỗi" --> EC["ERR_PERSISTENCE_UNAVAILABLE<br/>không gọi AI, không tính lượt"]
   C -- "câu đã xong · lệch lượt · trùng lần trước" --> ED["ERR_QUESTION_FINISHED · ERR_ATTEMPT_OUT_OF_SYNC<br/>ERR_ANSWER_DUPLICATE · không tính lượt"]
   C -- "hợp lệ" --> D{"3 · isInjection?"}
   D -- "có" --> D1["injectionGrading<br/>0 token, vẫn tính 1 lượt"]
-  D -- "không" --> D2["gradeWithAI"]
+  D -- "không" --> D2["gradeWithAI<br/>(che secret, PII bằng maskSensitive)"]
   D2 -- "hết quota · AI hỏng" --> EE["ERR_TOKEN_QUOTA_EXCEEDED · ERR_AI_UNAVAILABLE<br/>không tính lượt"]
   D1 --> F["decidePass + decideFollowUp"]
   D2 -- "có kết quả" --> F
-  F --> G{"4 · Transaction ngắn<br/>khóa run · ghi lượt · câu xong ⇒ BKT · finalizeRunIfDone"}
+  F --> G{"4 · Transaction ngắn<br/>khóa run · ghi lượt (che PII) · BKT · finalizeRunIfDone"}
   G -- "ghi xong" --> OK["EvaluateFeynmanResponse"]
   G -- "DB lỗi sau DB_RETRY_DELAYS_MS" --> RC["ERR_PERSISTENCE_UNAVAILABLE<br/>bỏ kết quả chấm, không tính lượt · Thử lại (D-40)"]
 ```
@@ -338,30 +356,32 @@ async function evaluateFeynman(req: EvaluateFeynmanRequest, userId: string): Pro
   const now = Date.now();
   // 1. Đầu vào (0 token, 0 DB)
   validateAnswerLength(req.student_answer);                              // src/lib/similarity.ts, dùng chung với client: số ký tự không phải khoảng trắng < ANSWER_MIN_CHARS ⇒ _TOO_SHORT; độ dài thô > ANSWER_MAX_CHARS ⇒ _TOO_LONG
+  if (hasInappropriateWords(req.student_answer)) throw ERR_ANSWER_INAPPROPRIATE; // moderation.ts: có từ xấu ⇒ 400, không tính lượt, không gọi AI (D-65)
+  const cleanAnswer = maskSensitive(redactSecrets(req.student_answer).code); // secret ⇒ <REDACTED_SECRET>, PII ⇒ *** trước khi gọi AI và lưu
 
   // 2. Đọc KHÔNG khóa — DB lỗi ⇒ ERR_PERSISTENCE_UNAVAILABLE, không gọi AI
   const { run, session } = await readForGrading(req, userId);           // run thuộc phiên của userId, 1 ≤ question_index ≤ n — sai ⇒ ERR_SESSION_NOT_FOUND
   const q = run.questions[req.question_index - 1];                      // Câu hỏi + đáp án mẫu + ý bắt buộc đọc từ DB (D-36)
   if (run.finished_at || q.finished) throw ERR_QUESTION_FINISHED;
   if (req.attempt_number !== q.attempts_used + 1) throw ERR_ATTEMPT_OUT_OF_SYNC;
-  if (q.last_answer && similarity(req.student_answer, q.last_answer) >= CONFIG.ANSWER_DUPLICATE_SIMILARITY) throw ERR_ANSWER_DUPLICATE;
+  if (q.last_answer && similarity(cleanAnswer, q.last_answer) >= CONFIG.ANSWER_DUPLICATE_SIMILARITY) throw ERR_ANSWER_DUPLICATE;
 
-  // 3. Chấm (ngoài transaction)
+  // 3. Chấm (ngoài transaction, gửi cleanAnswer đã che)
   const maxAttempts = CONFIG.MAX_ATTEMPTS_PER_QUESTION;
   const t = { ...q, steps: run.steps, forbidden_external_keywords: run.forbidden_external_keywords }; // GradeContext (20 AI-27)
-  const grading = isInjection(req.student_answer)                       // 21: chuẩn hóa NFC rồi chỉ bắt mẫu câu lệnh
+  const grading = isInjection(cleanAnswer)                              // 21: chuẩn hóa NFC rồi chỉ bắt mẫu câu lệnh
     ? injectionGrading(q)                                               // 0 điểm, OFF_TOPIC, không gợi ý, 0 token — VẪN tính 1 lượt
-    : await gradeWithAI(t, req.student_answer, req.attempt_number, maxAttempts, session); // 20: không code_context (D-36); quota ⇒ ERR_TOKEN_QUOTA_EXCEEDED; hỏng ⇒ ERR_AI_UNAVAILABLE
-  const isPassed = decidePass(grading, q.must_have_points, req.student_answer);        // D-13
-  const followUp = decideFollowUp(grading, req.attempt_number, maxAttempts, isPassed, t, req.student_answer); // 20, 21
+    : await gradeWithAI(t, cleanAnswer, req.attempt_number, maxAttempts, session); // 20: không code_context (D-36); quota ⇒ ERR_TOKEN_QUOTA_EXCEEDED; hỏng ⇒ ERR_AI_UNAVAILABLE
+  const isPassed = decidePass(grading, q.must_have_points, cleanAnswer); // D-13
+  const followUp = decideFollowUp(grading, req.attempt_number, maxAttempts, isPassed, t, cleanAnswer); // 20, 21
 
   // 4. Transaction ngắn — DB lỗi sau CONFIG.DB_RETRY_DELAYS_MS ⇒ ERR_PERSISTENCE_UNAVAILABLE, bỏ kết quả chấm (D-40)
   return withDbRetry(() => db.tx(async (tx) => {
     const run2 = await tx.lockRun(run.id);                               // SELECT … FOR UPDATE
     const q2 = run2.questions[req.question_index - 1];
     if (q2.finished || q2.attempts_used !== req.attempt_number - 1) throw ERR_ATTEMPT_OUT_OF_SYNC; // Bỏ kết quả chấm
-    await tx.insertAttempt(run2.id, q2, req, grading, isPassed);         // 4.1
-    q2.attempts_used += 1; q2.last_answer = req.student_answer;          // 4.2
+    await tx.insertAttempt(run2.id, q2, { ...req, student_answer: cleanAnswer }, grading, isPassed); // 4.1: lưu câu trả lời đã che
+    q2.attempts_used += 1; q2.last_answer = cleanAnswer;                 // 4.2
     let skillChange: SkillChange | null = null;
     if (isPassed || q2.attempts_used === maxAttempts) {                  // 4.3 Câu xong
       q2.finished = true; q2.ended_by = "ANSWER";
@@ -393,7 +413,7 @@ Quy tắc mở đáp án: `question.reveal` chỉ có khi câu `finished` (đạ
 1. Khóa run. Câu phải có `outcome = FAILED`, `ended_by = ANSWER`, `disputed = false`; ngược lại `ERR_REPORT_NOT_ALLOWED`.
 2. Đặt `disputed = true`.
 3. Nếu `skill_states.p_mastery` của kỹ năng đúng bằng `p_after` (sai số `CONFIG.BKT_REVERT_EPSILON`): đặt lại `p_mastery = p_before` (`p_before` là điểm **đã decay** dùng làm tiên nghiệm lúc cập nhật), `practice_count -= 1`, giữ nguyên `last_practiced_at` và `correct_count` (`revertSkillChange`, `22`).
-4. Insert `dispute_reports`.
+4. Insert `dispute_reports` (ghi chú `note` được che theo thứ tự `maskSensitive(redactSecrets(note).code)` trước khi lưu; secret ⇒ `<REDACTED_SECRET>`, PII ⇒ `***`).
 5. Tính lại màu node (Mục 6.5, câu `disputed` bị bỏ qua).
 6. Trả `ReportWrongResponse`.
 
@@ -423,6 +443,10 @@ Run xong khi mọi câu `finished`. Câu `DROPPED` và câu `disputed` không t�
 - Ngược lại upsert đủ 16 dòng `skill_states`: `p_mastery = PERSONAS[mode].initial_p_mastery`, `last_practiced_at = now − days_idle · CONFIG.MS_PER_DAY`, `practice_count = 1`, `correct_count = 1`.
 - Chỉ tài khoản đang đăng nhập; nhóm dùng tài khoản demo riêng, không dùng tài khoản thật của thành viên.
 
+### 6.8. `GET /api/health` — Healthcheck (D-64)
+
+Không cần đăng nhập (ngoại lệ API-04), không gọi DB, không gọi AI, không log body request. Trả về ngay HTTP 200 với body `ok` (`text/plain`, 0 token). Dùng làm startup probe cho Cloud Run (`05`) và smoke test cho CI/CD.
+
 ---
 
 ## 7. Sự cố & tình huống biên
@@ -435,7 +459,7 @@ Run xong khi mọi câu `finished`. Câu `DROPPED` và câu `disputed` không t�
 | Hết quota phiên | `ERR_TOKEN_QUOTA_EXCEEDED` cho mọi lời gọi AI mới; câu đang làm không nộp được; chế độ Offline chỉ dành cho repo demo |
 | Commit bị force-push xóa / repo bị xóa hoặc chuyển private | Phiên cũ vẫn học tiếp từ `session_snapshots` (D-59); dán link mới ⇒ phiên mới |
 | Chế độ Offline (`Ctrl+Shift+D`) | Không gọi API học; không ghi Postgres; nhãn "Chế độ Offline — dữ liệu ghi lại, không lưu tiến độ" |
-| Câu trả lời chứa thông tin cá nhân | Lưu ≤ `ANSWER_MAX_CHARS`, chỉ đọc qua API của chủ tài khoản, xóa theo tài khoản |
+| Câu trả lời chứa thông tin cá nhân / secret | Đã che secret ⇒ `<REDACTED_SECRET>`, PII (email, SĐT, CCCD) ⇒ `***` trước khi gửi AI và lưu DB; xóa theo tài khoản (D-65) |
 
 ---
 
@@ -443,9 +467,13 @@ Run xong khi mọi câu `finished`. Câu `DROPPED` và câu `disputed` không t�
 
 | Biến | Dùng cho | Ghi chú |
 | :-- | :-- | :-- |
-| `GEMINI_API_KEY` | 4 lời gọi AI | Không bao giờ gửi xuống client |
-| `GITHUB_TOKEN` | Tải chọn lọc repo lớn (`10` Mục 4A) | Chỉ server; token chỉ đọc repo công khai; thiếu ⇒ ING-49 |
+| `DATABASE_URL` | Kết nối Postgres qua Supavisor Transaction Pooler (port 6543) | Driver `postgres` 3.x, `prepare: false`, chứa mật khẩu DB, chỉ server, cấm ghi log (D-65); trên Cloud Run lấy từ Secret Manager (D-64) |
+| `GEMINI_BACKEND` | Chọn kênh gọi AI | `"vertex"` (mặc định Cloud Run production/staging) hoặc `"studio"` (Vercel dự phòng, dev) (D-66) |
+| `GOOGLE_CLOUD_PROJECT` | Project ID của Google Cloud | Bắt buộc khi `GEMINI_BACKEND="vertex"`; Cloud Run tự nạp hoặc cấu hình env (D-66) |
+| `AI_DISABLED` | Khóa khẩn cấp toàn bộ lời gọi AI | `"true"` khi nhận cảnh báo ngân sách 100% ⇒ trả ngay `ERR_AI_UNAVAILABLE`; mặc định `"false"` (D-66) |
+| `GEMINI_API_KEY` | 4 lời gọi AI qua Google AI Studio | Chỉ bắt buộc khi `GEMINI_BACKEND="studio"`; Cloud Run gọi qua Vertex AI bằng service account, không có key này (D-64, D-66) |
+| `GITHUB_TOKEN` | Tải chọn lọc repo lớn (`10` Mục 4A) | Chỉ server; token chỉ đọc repo công khai; thiếu ⇒ ING-49; trên Cloud Run lấy từ Secret Manager (D-64) |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client đăng nhập GitHub | Công khai được; `NEXT_PUBLIC_SUPABASE_ANON_KEY` nhận publishable key `sb_publishable_…` |
-| `SUPABASE_SERVICE_ROLE_KEY` | Mọi lệnh ghi ở server | Chỉ server; nhận secret key `sb_secret_…` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Dự phòng thao tác quản trị Supabase; không dùng cho truy vấn bảng | Chỉ server; nhận secret key `sb_secret_…`; trên Cloud Run lấy từ Secret Manager (D-64) |
 | `DEMO_MODE` | Bật `/api/demo/persona` | `"true"` chỉ ở máy demo |
 | `NEXT_PUBLIC_DEMO_MODE` | Client chỉ dùng để hiện menu Persona | Đặt cùng giá trị với `DEMO_MODE`; server vẫn kiểm `DEMO_MODE` |

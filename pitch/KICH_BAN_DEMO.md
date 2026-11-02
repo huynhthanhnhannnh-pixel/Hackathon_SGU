@@ -222,7 +222,7 @@ Lúc đó ô vừa mở và 1–2 ô kế tiếp sẽ hiện "đang phân tích�
 
 **30 phút trước khi lên**
 - [ ] Bật mạng di động; laptop cắm sạc; thử máy chiếu; zoom trình duyệt để chữ ở cột đang dùng đọc được từ cuối phòng.
-- [ ] Server deploy đang chạy, `DEMO_MODE=true`, `GET /api/me` trả lời bình thường.
+- [ ] Server deploy đang chạy trên Cloud Run (và mở sẵn tab Vercel dự phòng), `DEMO_MODE=true`, `GET /api/health` trả `ok`, `GET /api/me` trả lời bình thường.
 - [ ] Nạp sẵn grammar bằng cách quét **một repo khác**. Không quét repo demo trong 10 phút (`INGESTION_CACHE_TTL_MS`) trước giờ lên, để số trên đồng hồ là một lần tải và dựng thật, không phải trúng cache RAM.
 - [ ] Dùng 1 tài khoản GitHub demo đăng nhập sẵn, reset tiến độ bằng "Xóa tài khoản" để có tiến độ trống (đổi persona **không** xóa tiến độ node); chọn persona `NEWBIE`.
 - [ ] Copy sẵn link repo demo; mở file ghi chú câu A–C ở cửa sổ phụ; mở terminal ở thư mục repo thi, gõ sẵn lệnh câu D.
@@ -302,4 +302,17 @@ Mã câu liên quan ở `PHAN_BIEN_BGK.md`: C2, C3, C4, C8, D1, D2.
 
 Mã câu liên quan ở `PHAN_BIEN_BGK.md`: C1, C9, Mục 4.
 
-Slide S1, S2, S3 chưa có, nhóm làm cùng slide chính và nộp trước 09g30. Chỉ nói "đã đo" khi có số thật.
+### 7.4 Bộ lọc an toàn
+
+- **Người nói:** Vai C
+- **Câu mồi:** "Dữ liệu nhạy cảm, secret và thông tin cá nhân đều được lọc bằng code thuần 0 token trước khi gửi AI hoặc lưu trữ."
+- **Bản 30 giây:** "Dạ, hệ thống bảo vệ an toàn bằng code thuần 0 token. Cửa nhận repo che secret thành `<REDACTED_SECRET>`, che email, số điện thoại VN, CCCD và từ xấu bằng `***`, giữ nguyên số dòng. Cửa câu trả lời chặn ngay từ xấu rõ nghĩa, trả lỗi không mất lượt và không gọi AI; câu trả lời hợp lệ được che secret và PII trước khi gửi AI và lưu DB; chữ AI cũng được kiểm từ xấu qua cổng gác. Từ kỹ thuật như kill, attack, hack không bị chặn nhầm."
+- **Bản 2 phút:**
+  - Hàm thuần `maskSensitive` (`src/lib/moderation.ts`), 0 token, chạy trước mọi thao tác lưu trữ hay gửi AI.
+  - Cửa repo: che email, số điện thoại VN, CCCD 12 số, token API (`sk-`, `github_pat_`, JWT `eyJ`, chuỗi trong \` \`) và từ xấu; giữ nguyên số dòng code để marker dòng Monaco không bị lệch.
+  - Cửa câu trả lời: kiểm từ xấu ngay sau bước độ dài; có từ xấu trả `ERR_ANSWER_INAPPROPRIATE` (400), không tính lượt, không gọi AI.
+  - Che các mẫu PII và secret phổ biến trước khi gửi prompt cho AI chấm và trước khi ghi vào `question_attempts`. Ghi chú "Báo sai" cũng được che.
+  - Từ xấu chỉ gồm từ có dấu và cụm rõ nghĩa; không bắt từ không dấu mơ hồ, không chặn từ kỹ thuật (`kill`, `attack`, `hack`).
+- **Slide phụ:** Slide phụ S4: "Bộ lọc an toàn" — sơ đồ lọc 2 cửa (repo và bài làm), các lớp che PII/secret và chặn từ xấu 0 token.
+
+Slide S1, S2, S3, S4 chưa có, nhóm làm cùng slide chính và nộp trước 09g30. Chỉ nói "đã đo" khi có số thật.
