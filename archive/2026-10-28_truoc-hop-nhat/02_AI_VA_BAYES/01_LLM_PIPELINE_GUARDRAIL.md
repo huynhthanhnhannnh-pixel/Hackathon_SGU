@@ -233,7 +233,7 @@ NHIỆM VỤ: Phân tích đoạn code và xuất Structured JSON chuẩn theo S
   },
   "feynman_question": "Trong processCheckout, vòng lặp chạy qua items và mỗi vòng gọi updateStock. Hãy giải thích vì sao cách này làm máy chủ chậm khi 100 người cùng bấm mua (có thể dùng ví dụ đời thường nếu muốn).",
   "target_skills": ["DB_OPTIMIZATION"],
-  "challenge_token": "v2.enc.eyJhbGciOiJBRVMtMjU2LUdDTSI...",
+  "challenge_token": "<chuỗi AES-GCM do server cấp>",
   "is_fallback": false
 }
 ```
