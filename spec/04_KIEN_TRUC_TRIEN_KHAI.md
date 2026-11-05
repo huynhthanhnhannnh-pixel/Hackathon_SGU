@@ -33,7 +33,7 @@ flowchart TD
     Gemini["Google Gemini API<br/>(CONFIG.LLM_MODEL)"]
     Supabase["Supabase Cloud<br/>(Postgres + Auth, AWS Singapore)"]
 
-    User <-- "Giao diện Web 3 cột / REST API JSON<br/>(HTTPS / Bearer Token)" --> System
+    User <-- "Giao diện Web / REST API JSON<br/>(HTTPS / Bearer Token)" --> System
     System -- "HEAD probe & Tải zip vào RAM<br/>(HTTPS, 0 token)" --> GH
     System <-- "4 lời gọi AI có responseSchema<br/>(HTTPS / SDK @google/genai)" --> Gemini
     System <-- "Đọc/Ghi dữ liệu học tập & Auth<br/>(HTTPS / PostgREST & Supavisor)" --> Supabase
@@ -191,7 +191,7 @@ sequenceDiagram
     end
     BE-->>FE: AnalyzeNodeResponse (NodeAnalysisView, không chứa code)
 
-    U->>FE: Chuyển Tab 2 "Thử thách Feynman"
+    U->>FE: Mở phần Feynman "Thử thách Feynman"
     FE->>BE: POST /api/enrich-node (session_id, node_id, mode)
     BE->>DB: Đọc skill_states
     BE->>AI: Sinh câu hỏi (không cache, D-37)
@@ -248,8 +248,8 @@ Bản thi không dùng hàng đợi ngoài (D-31). Mọi cơ chế dưới đây
    - Khi có nhiều request đồng thời yêu cầu cùng một `cache_key` chưa tồn tại trong `ai_cache`, server chỉ gửi duy nhất 1 request tới Gemini API; các request sau cùng lắng nghe chung Promise đang chạy trong RAM.
 3. **Giới hạn tốc độ Gemini (Rate-limit Resilience):**
    - Số lần thử lại: `CONFIG.LLM_MAX_RETRIES`.
-   - Độ trễ chờ: `CONFIG.LLM_RETRY_DELAY_MS` cộng ngẫu nhiên `[0, CONFIG.LLM_RETRY_JITTER_MS)` (chống dồn dập).
-   - Khi gặp HTTP 429 hoặc 503: thử lại với backoff + jitter; vẫn lỗi ⇒ `ERR_AI_UNAVAILABLE` (không trừ lượt nộp của người học).
+   - Độ trễ chờ: theo `retryDelay` của Google khi có (`20` AI-12, D-74).
+   - Vẫn lỗi ⇒ `ERR_AI_UNAVAILABLE` (không trừ lượt nộp của người học).
 4. **Hạn mức phiên (Session Token Quota):**
    - Ngưỡng: `CONFIG.SESSION_TOKEN_QUOTA` token (vào + ra).
    - Server kiểm tra trước mỗi lời gọi AI; vượt ngưỡng ⇒ HTTP 429 `ERR_TOKEN_QUOTA_EXCEEDED` và khóa các lời gọi mới.
@@ -298,7 +298,7 @@ Sử dụng thư viện `pino` xuất log định dạng JSON 1 dòng (NDJSON) r
 }
 ```
 
-Số trong ví dụ chỉ minh họa định dạng, không phải số đo. Dòng log cổng gác chặn dùng `GuardLogEntry` (`02` Mục 5), theo `21` GUARD-22.
+Số trong ví dụ chỉ minh họa định dạng, không phải số đo. Dòng log cổng gác chặn dùng `GuardLogEntry` (`02` Mục 5), theo `21` GUARD-22. Log lỗi Gemini: `20` AI-12.
 
 ### 9.2. Danh sách CẤM ghi log tuyệt đối (Bảo mật mã nguồn)
 
@@ -308,6 +308,9 @@ Số trong ví dụ chỉ minh họa định dạng, không phải số đo. Dò
 3. **Thông tin định danh & Token:** Không ghi header `Authorization`, bearer token, refresh token.
 4. **Dữ liệu bài làm của người học:** Không ghi nội dung câu trả lời `student_answer`.
 5. Dòng `guard_blocked` chỉ có các trường của `GuardLogEntry`; `node_id` giữ như Mục 9.1; không ghi thêm tên hàm, văn bản AI hoặc tên trong `GuardIssue`.
+
+- **Lỗi lạ:** ghi thêm `error_name` và `error_message` đã che secret; không ghi biến môi trường, body request.
+- **Khởi động:** kiểm biến môi trường bắt buộc 1 lần ở `instrumentation.ts`, thiếu ⇒ log `error`.
 
 ---
 
@@ -366,7 +369,7 @@ Pipeline gồm 3 workflow tự động hóa:
   1. `verify`: Chạy lại lint, typecheck, unit test.
   2. `deploy-staging`: Xác thực GCP qua Workload Identity Federation (WIF, dự phòng secret key JSON; quyền IAM xem `05`) ⇒ deploy lên `simplifey-staging` qua `gcloud run deploy --source` (hoặc image từ Artifact Registry sau khi merge Dockerfile ở H+15).
   3. `smoke-test`: Kiểm tra tự động sau deploy staging: `GET /api/health` = 200; `POST /api/ingest` repo demo Q-03 kèm Bearer token lấy từ tài khoản bot (`grant_type=password`, `05`). Đạt khi 200, có `session_id`, `result.nodes.length >= CONFIG.DISPLAY_MIN_NODES`. Thất bại ⇒ dừng pipeline, chặn mở cổng duyệt.
-  4. `deploy-production`: Gắn GitHub Environment `production` (cổng duyệt thủ công, duy nhất Vai A duyệt) ⇒ sau khi duyệt, xác thực GCP ⇒ deploy lên `simplifey-prod` (dùng cùng source hoặc cùng image digest đã qua kiểm chứng ở staging) ⇒ kiểm tra uptime check.
+  4. `deploy-production`: Gắn GitHub Environment `production` (cổng duyệt thủ công, duy nhất Vai A duyệt) ⇒ sau khi duyệt, xác thực GCP ⇒ deploy lên `simplifey-prod` (cùng source, hoặc image prod build từ cùng commit với bản đã qua staging, D-72) ⇒ kiểm tra uptime check.
 
 ```mermaid
 flowchart TD
@@ -430,7 +433,7 @@ Bản thi phục vụ mục tiêu thử thách 21 giờ. Bảng dưới đây ch
 ```
 .
 ├── README.md · LICENSE                          # README có mục "Tự cài đặt" (D-45); LICENSE MIT (D-49)
-├── package.json · tsconfig.json · next.config.ts · tailwind.config.ts · .env.example
+├── package.json · tsconfig.json · next.config.ts · postcss.config.mjs · .env.example · .nvmrc
 ├── supabase/migrations/0001_init.sql            # 03 Mục 3
 ├── scripts/{review-run,record-bundle}.ts        # Duyệt tay output AI + ghi mock_bundle (21)
 ├── review/                                      # Bảng kiểm & kết quả duyệt tay (21) — không chứa code repo demo
@@ -461,7 +464,7 @@ Bản thi phục vụ mục tiêu thử thách 21 giờ. Bảng dưới đây ch
     ├── lib/{bkt-engine,plan,derive,similarity}.ts   # 22 — hàm thuần dùng chung server + client
     ├── lib/{api,offline,messages}.ts            # Client gọi API có kiểu · bản Offline cùng chữ ký · bảng thông điệp lỗi (30)
     ├── store/workbench.ts                       # Zustand (30)
-    └── components/{landing,header,canvas,code,cockpit}/*.tsx  # 30
+    └── components/{auth,canvas,code,home,how-it-works,layout,roadmap,roadmap-detail,ui}/*.tsx  # 30
 ```
 
 ---
@@ -472,13 +475,14 @@ Chốt **phiên bản chính xác ở giờ H+0** bằng lệnh cài đặt, ghi
 
 | Gói | Dòng | Dùng cho |
 | :-- | :-- | :-- |
+| Node.js | 22 LTS (`engines` `>=22 <23`, `.nvmrc`) | Runtime dev, CI, Cloud Run, Vercel (D-68) |
 | `next`, `react`, `react-dom` | Next 15 App Router, React 19 | Khung |
 | `typescript` | 5.x, `strict: true` | Không `any` |
 | `@xyflow/react` | 12.x (ReactFlow) | Canvas |
 | `@dagrejs/dagre` | 1.x | Layout |
 | `@monaco-editor/react` | 4.x | Code viewer (read-only) |
 | `zustand` | 5.x | Store |
-| `tailwindcss` | 3.4 hoặc 4.x | Giao diện |
+| `tailwindcss` | 4.x | Giao diện; cấu hình bằng `@theme` trong `globals.css`, không có `tailwind.config.ts` (D-67) |
 | `web-tree-sitter` + file `.wasm` của từng grammar | Cùng ABI với grammar | Parser |
 | `fflate` | 0.8.x | Giải nén zip trong RAM |
 | `@google/genai` | 1.x | Gemini, structured output |
@@ -489,7 +493,7 @@ Chốt **phiên bản chính xác ở giờ H+0** bằng lệnh cài đặt, ghi
 
 **Nguồn grammar `.wasm`** (`public/grammars/`, tên file theo `LanguageAdapter.wasm_grammar`): ưu tiên `.wasm` phát hành sẵn của grammar chính thức (`tree-sitter-typescript`, `tree-sitter-python`, …) hoặc gói npm `tree-sitter-wasms`; không có ⇒ tự build bằng `npx tree-sitter build --wasm` (cần Emscripten hoặc Docker). Mọi grammar phải cùng ABI với bản `web-tree-sitter` đã pin.
 
-**Nạp grammar trên Cloud Run & Docker standalone (D-61, D-64):** engine chỉ chạy trong `POST /api/ingest` (mở lại phiên đọc `session_snapshots`, không parse lại). Với Docker standalone, toàn bộ `public/grammars/*.wasm` và `public/` được copy trực tiếp vào image container stage runner, truy cập cục bộ qua `fs.readFile(path.join(process.cwd(), "public/grammars", adapter.wasm_grammar))` mà không lo thiếu file; trên Vercel dự phòng giữ `outputFileTracingIncludes: { "/api/ingest": ["./public/grammars/*.wasm", "./node_modules/web-tree-sitter/*.wasm"] }` trong `next.config.ts`. Route `ingest` đặt `export const runtime = "nodejs"`; `Parser.init({ locateFile })` trỏ tới `tree-sitter.wasm` trong `node_modules/web-tree-sitter/`.
+**Nạp grammar và truy vấn trên Cloud Run & Docker standalone (D-61, D-64, D-70):** engine chỉ chạy trong `POST /api/ingest` (mở lại phiên đọc `session_snapshots`, không parse lại). Docker: stage runner chép `public/` (gồm `public/grammars/*.wasm`) và `queries/`, đọc bằng `fs.readFile(path.join(process.cwd(), ...))` theo `adapter.wasm_grammar`, `adapter.query_file`; `next.config.ts` giữ `outputFileTracingIncludes: { "/api/ingest": ["./public/grammars/*.wasm", "./node_modules/web-tree-sitter/*.wasm", "./queries/*.scm"] }` (Vercel và `standalone`). Route `ingest` đặt `export const runtime = "nodejs"`; `Parser.init({ locateFile })` trỏ tới `tree-sitter.wasm` trong `node_modules/web-tree-sitter/`.
 
 > ⚠️ **Phải kiểm chứng ở H+1:** nạp được grammar TS/JS + Python bằng `initParsers()` (`11` ENG-11). Kiểm trên môi trường Staging S2 (và bản Vercel dự phòng): ingest repo demo thành công. **Fallback (D-32):** lệch ABI ⇒ đổi bản `web-tree-sitter` trong `package.json` cho khớp với grammar `.wasm` đã có sẵn, không tự build lại grammar.
 

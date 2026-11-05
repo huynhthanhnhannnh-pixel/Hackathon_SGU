@@ -36,6 +36,7 @@ Mô hình BKT ghi nhận năng lực kỹ năng: luôn hỏi ít nhất 1 câu c
 | `spec/` | Đặc tả để code: quyết định, kiến trúc, contract + `CONFIG`, API/DB, engine, AI, BKT, UI, test | **Có — nguồn duy nhất** |
 | `pitch/` | Kịch bản demo, phản biện BGK, roadmap sau cuộc thi | Không (lệch thì `spec/` đúng) |
 | `doc-de-hieu/` | Bản giải thích cho người đọc, hướng dẫn dựng hệ thống, kế hoạch 21 giờ | Không, riêng lịch 21 giờ thì `07_ke_hoach_21h.md` là nơi gốc |
+| `quy-trinh-code-21h/` | Phiếu việc 21 giờ theo vai, danh sách lỗi, phân tích sửa tài liệu | Không (lệch thì `spec/` đúng) |
 | `references/` | Thể lệ cuộc thi (`thele.md`), giáo trình thuật toán minh họa | Thể lệ là ràng buộc ngoài |
 | `archive/` | Tài liệu cũ, gồm toàn bộ bản trước hợp nhất (`2026-10-28_truoc-hop-nhat/`) và mẫu giao diện cũ (`prototype/`) | Không |
 
