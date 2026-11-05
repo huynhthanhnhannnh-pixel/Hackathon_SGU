@@ -32,7 +32,7 @@
 export const CONFIG = {
   // ---------- Phiên bản (đổi ⇒ khóa cache mới) ----------
   ENGINE_VERSION: "1.6.0",      // Đổi khi đổi bất kỳ luật Tầng 0–2 làm đổi đồ thị / node_id (D-10, D-53 … D-58, D-61, D-63, D-65)
-  PROMPT_VERSION: "1.0.0",            // Đổi khi đổi prompt hoặc responseSchema của 4 lời gọi AI
+  PROMPT_VERSION: "1.1.0",            // Đổi khi đổi prompt hoặc responseSchema của 4 lời gọi AI (D-74)
 
   // ---------- Tầng 0: tải & lọc (10_ENGINE_INGEST) ----------
   MAX_STREAM_BYTES: 15 * 1024 * 1024, // Byte nén tải từ GitHub
@@ -52,7 +52,8 @@ export const CONFIG = {
   SELECTIVE_TIMEOUT_MS: 15000,        // Hạn `10` Mục 4A; đo lại ở H+1 (D-63)
   SELECTIVE_FETCH_CONCURRENCY: 16,
   AUTO_SCOPE_CHILD_RATIO: 0.5,        // `10` ING-47
-  PREFLIGHT_TIMEOUT_MS: 300,
+  PREFLIGHT_TIMEOUT_MS: 1500,
+  PREFLIGHT_PAGE_TIMEOUT_MS: 12000,  // Chỉ gọi trang repo khi archive/HEAD.zip trả 404 (10 Mục 2)
   PREFLIGHT_RETRY_DELAY_MS: 1000,     // Thử lại probe 1 lần
   DEFAULT_BRANCH_FALLBACKS: ["main", "master", "dev"],
   MAX_CONCURRENT_INGESTIONS: 4,       // Semaphore trong 1 instance, hàng đợi FIFO (D-31)
@@ -60,7 +61,7 @@ export const CONFIG = {
   INGESTION_CACHE_TTL_MS: 10 * 60 * 1000,
   INGESTION_CACHE_MAX_ENTRIES: 20,    // LRU StaticEngineResult trong RAM — chỉ để nhanh, không được dựa vào (D-27)
   SECRET_MIN_VALUE_LENGTH: 6,
-  UNSUPPORTED_LANGUAGE_RATIO: 0.5,    // > 50% byte code thuộc tier UNSUPPORTED và 0 file code ⇒ ERR_UNSUPPORTED_LANGUAGE
+  UNSUPPORTED_LANGUAGE_RATIO: 0.5,    // > 50% byte code thuộc tier UNSUPPORTED ⇒ ERR_UNSUPPORTED_LANGUAGE
   MONOREPO_DOMINANT_RATIO: 0.7,
   GRAPH_CONFIDENCE_HIGH_RATIO: 0.8,   // ≥ 80% byte thuộc RESOLVED ⇒ HIGH
   GRAPH_CONFIDENCE_LOW_RATIO: 0.5,    // ≥ 50% byte thuộc STRUCTURAL ⇒ LOW
@@ -118,10 +119,13 @@ export const CONFIG = {
   LLM_TIMEOUT_MS: 30000,              // Đo lại ở H+1
   LLM_MAX_RETRIES: 1,                 // Lỗi mạng / 429 / 503 / JSON hỏng / bị cổng gác chặn ⇒ gọi lại 1 lần; bị chặn thì kèm lý do (AI-37)
   LLM_RETRY_DELAY_MS: 500,            // Chờ trước khi gọi lại sau 429 / 503
+  LLM_RETRY_DELAY_MAX_MS: 20000,      // Trần retryDelay từ server, vượt ⇒ không gọi lại (D-74 R1)
   LLM_RETRY_JITTER_MS: 100,           // Cộng ngẫu nhiên [0, JITTER)
   GUARD_FEEDBACK_MAX_CHARS: 400,     // Trần khối <guard_feedback> khi gọi lại (AI-37)
   GRADING_QUOTE_MIN_CHARS: 3,         // Đoạn trích (đã chuẩn hóa) ngắn hơn ⇒ ý đó không tính (D-13)
   LLM_MAX_OUTPUT_TOKENS: { ANALYZE: 900, OVERVIEW: 600, QUESTIONS: 900, GRADE: 500 },
+  LLM_PRICE_INPUT_USD_PER_M: 0.30,    // USD / 1 triệu token vào (D-69)
+  LLM_PRICE_OUTPUT_USD_PER_M: 2.50,   // USD / 1 triệu token ra, gồm token suy nghĩ (D-69)
   ANALYZE_CONCURRENCY: 3,             // Số lời gọi analyze-node chạy cùng lúc / phiên
   SESSION_TOKEN_QUOTA: 200000,        // Tổng token vào + ra / phiên học, đếm ở server
   ANALYSIS_MIN_SKILLS: 1,
@@ -130,6 +134,8 @@ export const CONFIG = {
   WEAK_POINTS_PER_SKILL_MAX: 1,
   MUST_HAVE_POINTS_MIN: 2,
   MUST_HAVE_POINTS_MAX: 3,
+  HISTORY_MISSED_POINTS_MAX: 3,       // Số ý bắt buộc đã hụt tối đa nạp vào prompt đặt câu hỏi (D-74 A5b)
+  GRADE_REFERENCED_MAX: 3,            // Số tên hàm node khác tối đa tra khi chấm (D-74 M1)
   FLOW_ANSWER_MIN_STEPS: 2,           // Đáp án câu FLOW phải nhắc tên ở ≥ 2 bước
   FEEDBACK_MAX_SENTENCES: 2,
 
@@ -166,7 +172,6 @@ export const CONFIG = {
   REPORT_NOTE_MAX_CHARS: 500,         // = check char_length(note) của dispute_reports
 
   // ---------- Giao diện (30_UI) ----------
-  UI_PANE_WIDTHS_PCT: [25, 45, 30],
   UI_PRESENTATION_FOCUS_PCT: 60,      // Cột đang chọn ở chế độ trình chiếu; 2 cột còn lại chia phần còn lại
   UI_PRESENTATION_FONT_SCALE: 1.25,
 
@@ -188,7 +193,7 @@ export const CONFIG = {
 | `evaluate-feynman` | chưa đo, dự kiến cùng bậc | |
 | Đọc hồ sơ `GET /api/me` | 0.05 – 0.1 s | Server và Supabase cùng vùng |
 | Token: phân tích / tổng quan / đặt câu hỏi / chấm | ~2,000→700 · ~1,500→400 · ~1,600→650 · ~800→200 (vào→ra) | Mỗi lời gọi ra ≤ `LLM_MAX_OUTPUT_TOKENS` |
-| **Người học đầu tiên của 1 repo (7 node, ~15 câu)** | ~37 lời gọi · **~58,500 token** · ~$0.05 | Giá Gemini 3.5 Flash-Lite ($0.30 / 1M vào, $2.50 / 1M ra) |
+| **Người học đầu tiên của 1 repo (7 node, ~15 câu)** | ~37 lời gọi · **~58,500 token** · ~$0.05 | Đơn giá `CONFIG.LLM_PRICE_*` (D-69) |
 | Người học sau cùng repo (trúng cache phân tích) | ~29 lời gọi · ~38,000 token · ~$0.03 | Tốn lượt đặt câu hỏi + chấm (câu hỏi không cache, D-37) |
 | **Người học đầu tiên của repo 20 node** | ~106 lời gọi · **~167,000 token** · ~$0.14 | Tính tỉ lệ từ dòng 7 node, chưa đo |
 | Người học sau, repo 20 node | ~83 lời gọi · ~109,000 token · ~$0.09 | Tính tỉ lệ từ dòng 7 node, chưa đo |
@@ -306,7 +311,7 @@ export interface GraphEdge {
   id: string;                          // `${source}->${target}`
   source: string;
   target: string;
-  confidence: "RESOLVED" | "INFERRED"; // INFERRED nếu chuỗi lời gọi tạo ra cạnh có ≥ 1 cạnh hàm suy luận
+  confidence: "RESOLVED" | "INFERRED"; // INFERRED nếu chuỗi lời gọi tạo ra cạnh có ≥ 1 cạnh hàm suy luận, hoặc là cạnh cây D-73
 }
 
 export type IngestionErrorCode =
@@ -336,7 +341,7 @@ export interface RepoSnapshotKey {
   snapshot_id: string;                 // Commit SHA 40 hex hoặc SHA-256 của TOÀN BỘ buffer zip; phiên gắn cố định (D-39)
   snapshot_id_kind: "COMMIT_SHA" | "ARCHIVE_HASH";
   subdir: string;                      // "" khi phân tích cả repo
-  ref_label: string | null;            // Nhánh mặc định đã phân giải — chỉ hiển thị
+  ref_label: string | null;            // Nhánh mặc định nếu biết; null khi GitHub chỉ trả SHA — chỉ hiển thị
 }
 
 // Bản đầy đủ — CHỈ SERVER: cache RAM + session_snapshots (D-59), không có file nguồn
@@ -451,7 +456,7 @@ export interface NodeAnalysis extends NodeAnalysisRaw {  // Sau khi qua kiểm (
   skeleton_only: boolean;               // true ⇒ phần chữ bị bỏ sau 2 lần trượt gác, chỉ còn skills + khung bước
 }
 
-export interface NodeAnalysisView {     // Gửi trình duyệt (Tab 1)
+export interface NodeAnalysisView {     // Gửi trình duyệt (phần X-Ray)
   node_id: string;
   skills: Array<AnalysisSkill & { file_path: string; line_start: number; line_end: number }>;
   architecture: { patterns: ArchitecturePattern[]; summary: string };
